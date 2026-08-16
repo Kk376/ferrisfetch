@@ -1,0 +1,37 @@
+Package: bash
+Status: install ok installed
+Priority: required
+Section: shells
+Installed-Size: 7420
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: amd64
+Version: 5.2.21-2ubuntu4
+Depends: base-files (>= 2.1.12), debianutils (>= 2.15)
+Description: GNU Bourne Again SHell
+
+Package: curl
+Status: deinstall ok config-files
+Priority: optional
+Section: web
+Installed-Size: 450
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: amd64
+Version: 8.5.0-2ubuntu10
+
+Package: libc6
+Status: hold ok installed
+Priority: required
+Section: libs
+Installed-Size: 12500
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: amd64
+Version: 2.39-0ubuntu8
+Description: GNU C Library: Shared libraries
+
+Package: coreutils
+Status: install ok installed
+Priority: required
+Section: utils
+Installed-Size: 18200
+Architecture: amd64
+Version: 9.4-3ubuntu6

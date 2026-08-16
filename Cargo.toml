@@ -1,0 +1,17 @@
+[package]
+name = "ferrisfetch"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75.0"
+description = "A fast, lightweight Linux system information fetch tool written in Rust"
+readme = "README.md"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+libc = "0.2"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.10"

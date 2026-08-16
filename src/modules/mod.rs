@@ -1,0 +1,184 @@
+use std::str::FromStr;
+
+pub mod colors;
+pub mod cpu;
+pub mod desktop;
+pub mod disk;
+pub mod gpu;
+pub mod kernel;
+pub mod memory;
+pub mod os;
+pub mod packages;
+pub mod shell;
+pub mod terminal;
+pub mod title;
+pub mod uptime;
+
+use crate::context::FetchContext;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ModuleId {
+    Title,
+    Os,
+    Host,
+    Kernel,
+    Uptime,
+    Packages,
+    Shell,
+    Desktop,
+    Terminal,
+    Cpu,
+    Gpu,
+    Memory,
+    Disk,
+    Colors,
+}
+
+impl ModuleId {
+    pub fn all() -> &'static [ModuleId] {
+        &[
+            ModuleId::Title,
+            ModuleId::Os,
+            ModuleId::Host,
+            ModuleId::Kernel,
+            ModuleId::Uptime,
+            ModuleId::Packages,
+            ModuleId::Shell,
+            ModuleId::Desktop,
+            ModuleId::Terminal,
+            ModuleId::Cpu,
+            ModuleId::Gpu,
+            ModuleId::Memory,
+            ModuleId::Disk,
+            ModuleId::Colors,
+        ]
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ModuleId::Title => "title",
+            ModuleId::Os => "os",
+            ModuleId::Host => "host",
+            ModuleId::Kernel => "kernel",
+            ModuleId::Uptime => "uptime",
+            ModuleId::Packages => "packages",
+            ModuleId::Shell => "shell",
+            ModuleId::Desktop => "desktop",
+            ModuleId::Terminal => "terminal",
+            ModuleId::Cpu => "cpu",
+            ModuleId::Gpu => "gpu",
+            ModuleId::Memory => "memory",
+            ModuleId::Disk => "disk",
+            ModuleId::Colors => "colors",
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Option<ModuleId> {
+        s.parse::<ModuleId>().ok()
+    }
+}
+
+impl FromStr for ModuleId {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "title" => Ok(ModuleId::Title),
+            "os" => Ok(ModuleId::Os),
+            "host" => Ok(ModuleId::Host),
+            "kernel" => Ok(ModuleId::Kernel),
+            "uptime" => Ok(ModuleId::Uptime),
+            "packages" | "pkgs" => Ok(ModuleId::Packages),
+            "shell" => Ok(ModuleId::Shell),
+            "desktop" | "de" | "wm" => Ok(ModuleId::Desktop),
+            "terminal" | "term" => Ok(ModuleId::Terminal),
+            "cpu" => Ok(ModuleId::Cpu),
+            "gpu" => Ok(ModuleId::Gpu),
+            "memory" | "mem" => Ok(ModuleId::Memory),
+            "disk" => Ok(ModuleId::Disk),
+            "colors" | "palette" => Ok(ModuleId::Colors),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ModuleOutput {
+    pub id: ModuleId,
+    pub label: String,
+    pub value: String,
+    pub custom_rendered: Option<String>,
+}
+
+pub trait Collector: Send + Sync {
+    fn id(&self) -> ModuleId;
+    fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput>;
+}
+
+pub struct ModuleRegistry {
+    collectors: Vec<Box<dyn Collector>>,
+}
+
+impl ModuleRegistry {
+    pub fn new() -> Self {
+        let collectors: Vec<Box<dyn Collector>> = vec![
+            Box::new(title::TitleCollector),
+            Box::new(os::OsCollector),
+            Box::new(os::HostCollector),
+            Box::new(kernel::KernelCollector),
+            Box::new(uptime::UptimeCollector),
+            Box::new(packages::PackagesCollector),
+            Box::new(shell::ShellCollector),
+            Box::new(desktop::DesktopCollector),
+            Box::new(terminal::TerminalCollector),
+            Box::new(cpu::CpuCollector),
+            Box::new(gpu::GpuCollector),
+            Box::new(memory::MemoryCollector),
+            Box::new(disk::DiskCollector),
+            Box::new(colors::ColorsCollector),
+        ];
+
+        Self { collectors }
+    }
+
+    /// Collects metrics from active modules in deterministic registration order.
+    pub fn collect_all(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
+        let mut results = Vec::new();
+
+        for module_id in &ctx.active_modules {
+            if let Some(collector) = self.collectors.iter().find(|c| c.id() == *module_id) {
+                if let Some(output) = collector.collect(ctx) {
+                    results.push(output);
+                }
+            }
+        }
+
+        results
+    }
+}
+
+impl Default for ModuleRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_module_id_from_str() {
+        assert_eq!(ModuleId::from_str("os"), Some(ModuleId::Os));
+        assert_eq!(ModuleId::from_str("mem"), Some(ModuleId::Memory));
+        assert_eq!(ModuleId::from_str("pkgs"), Some(ModuleId::Packages));
+        assert_eq!(ModuleId::from_str("palette"), Some(ModuleId::Colors));
+        assert_eq!(ModuleId::from_str("invalid_mod"), None);
+    }
+
+    #[test]
+    fn test_module_id_all_count() {
+        assert_eq!(ModuleId::all().len(), 14);
+    }
+}

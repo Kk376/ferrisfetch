@@ -1,0 +1,127 @@
+use crate::cli::Cli;
+use crate::modules::os::{detect_os, OsInfo};
+use crate::modules::ModuleId;
+use std::io::IsTerminal;
+
+pub struct FetchContext {
+    pub term_width: u16,
+    pub enable_color: bool,
+    pub os_info: OsInfo,
+    pub disk_target_path: String,
+    pub active_modules: Vec<ModuleId>,
+    pub logo_override: Option<String>,
+    pub no_logo: bool,
+}
+
+impl FetchContext {
+    pub fn new(cli: &Cli) -> Self {
+        let term_width = get_terminal_width();
+        let enable_color = should_enable_color(cli.no_color);
+        let os_info = detect_os();
+        let active_modules = resolve_active_modules(cli);
+
+        Self {
+            term_width,
+            enable_color,
+            os_info,
+            disk_target_path: cli.disk_path.clone(),
+            active_modules,
+            logo_override: cli.logo.clone(),
+            no_logo: cli.no_logo,
+        }
+    }
+}
+
+/// Detects terminal column width via ioctl TIOCGWINSZ or $COLUMNS fallback.
+pub fn get_terminal_width() -> u16 {
+    unsafe {
+        let mut ws: libc::winsize = std::mem::zeroed();
+        if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut ws) == 0 && ws.ws_col > 0 {
+            return ws.ws_col;
+        }
+    }
+
+    if let Ok(cols) = std::env::var("COLUMNS") {
+        if let Ok(c) = cols.trim().parse::<u16>() {
+            if c > 0 {
+                return c;
+            }
+        }
+    }
+
+    80
+}
+
+/// Determines whether colored output should be produced.
+pub fn should_enable_color(no_color_flag: bool) -> bool {
+    if no_color_flag {
+        return false;
+    }
+    if std::env::var_os("NO_COLOR").is_some() {
+        return false;
+    }
+    std::io::stdout().is_terminal()
+}
+
+/// Resolves the active list of modules based on CLI flags.
+pub fn resolve_active_modules(cli: &Cli) -> Vec<ModuleId> {
+    let base_modules: Vec<ModuleId> = if let Some(ref mods) = cli.modules {
+        mods.iter().filter_map(|m| ModuleId::from_str(m)).collect()
+    } else {
+        ModuleId::all().to_vec()
+    };
+
+    if let Some(ref disabled) = cli.disable {
+        let disabled_set: Vec<ModuleId> = disabled
+            .iter()
+            .filter_map(|d| ModuleId::from_str(d))
+            .collect();
+        base_modules
+            .into_iter()
+            .filter(|m| !disabled_set.contains(m))
+            .collect()
+    } else {
+        base_modules
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_active_modules_default() {
+        let cli = Cli {
+            modules: None,
+            disable: None,
+            no_color: false,
+            logo: None,
+            no_logo: false,
+            list_modules: false,
+            disk_path: "/".to_string(),
+        };
+
+        let active = resolve_active_modules(&cli);
+        assert_eq!(active.len(), ModuleId::all().len());
+    }
+
+    #[test]
+    fn test_resolve_active_modules_custom_and_disable() {
+        let cli = Cli {
+            modules: Some(vec![
+                "os".to_string(),
+                "cpu".to_string(),
+                "memory".to_string(),
+            ]),
+            disable: Some(vec!["cpu".to_string()]),
+            no_color: false,
+            logo: None,
+            no_logo: false,
+            list_modules: false,
+            disk_path: "/".to_string(),
+        };
+
+        let active = resolve_active_modules(&cli);
+        assert_eq!(active, vec![ModuleId::Os, ModuleId::Memory]);
+    }
+}

@@ -1,0 +1,191 @@
+use crate::modules::ModuleOutput;
+use crate::output::color::format_label;
+use crate::output::logo::Logo;
+
+/// Calculates the visible printable width of a string, ignoring ANSI escape sequences.
+pub fn visible_width(s: &str) -> usize {
+    let mut in_escape = false;
+    let mut len = 0;
+
+    for c in s.chars() {
+        if c == '\x1b' {
+            in_escape = true;
+        } else if in_escape {
+            if c.is_ascii_alphabetic() {
+                in_escape = false;
+            }
+        } else {
+            len += 1;
+        }
+    }
+    len
+}
+
+/// Renders the complete fetch layout with logo and module info lines.
+pub fn render_layout(
+    logo: Option<&Logo>,
+    outputs: &[ModuleOutput],
+    term_width: u16,
+    enable_color: bool,
+) -> String {
+    let primary_color = logo.map(|l| l.primary_color).unwrap_or("\x1b[38;5;208m");
+
+    // Flatten module outputs into display lines
+    let mut info_lines: Vec<String> = Vec::new();
+    for out in outputs {
+        if let Some(ref custom) = out.custom_rendered {
+            for line in custom.lines() {
+                info_lines.push(line.to_string());
+            }
+        } else if !out.value.is_empty() {
+            let label = format_label(&out.label, primary_color, enable_color);
+            info_lines.push(format!("{} {}", label, out.value));
+        }
+    }
+
+    // When logo is absent, render info lines directly
+    let logo = match logo {
+        Some(l) => l,
+        None => return info_lines.join("\n"),
+    };
+
+    let logo_lines = logo.render_lines(enable_color);
+
+    // Narrow terminal fallback: vertical stacked layout
+    if term_width < 60 {
+        let mut full_output = Vec::new();
+        full_output.extend(logo_lines);
+        if !info_lines.is_empty() {
+            full_output.push(String::new());
+            full_output.extend(info_lines);
+        }
+        return full_output.join("\n");
+    }
+
+    // Side-by-side two-column layout
+    let max_logo_width = logo
+        .raw_lines
+        .iter()
+        .map(|l| visible_width(l))
+        .max()
+        .unwrap_or(0);
+
+    let row_count = std::cmp::max(logo_lines.len(), info_lines.len());
+    let mut rows: Vec<String> = Vec::with_capacity(row_count);
+
+    for i in 0..row_count {
+        let has_logo = i < logo_lines.len();
+        let has_info = i < info_lines.len();
+
+        let l_line = if has_logo { &logo_lines[i] } else { "" };
+        let raw_len = if has_logo {
+            visible_width(logo.raw_lines.get(i).unwrap_or(&""))
+        } else {
+            0
+        };
+
+        let pad_len = max_logo_width.saturating_sub(raw_len);
+        let padding = " ".repeat(pad_len);
+
+        let i_line = if has_info { &info_lines[i] } else { "" };
+
+        if has_info && !i_line.is_empty() {
+            rows.push(format!("{}{}{}{}", l_line, padding, "   ", i_line));
+        } else if has_logo {
+            rows.push(l_line.to_string());
+        } else {
+            rows.push(String::new());
+        }
+    }
+
+    rows.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::modules::ModuleId;
+
+    #[test]
+    fn test_visible_width_plain() {
+        assert_eq!(visible_width("hello world"), 11);
+    }
+
+    #[test]
+    fn test_visible_width_with_ansi() {
+        let text = "\x1b[38;5;208mhello\x1b[0m world";
+        assert_eq!(visible_width(text), 11);
+    }
+
+    #[test]
+    fn test_render_layout_no_logo() {
+        let outputs = vec![
+            ModuleOutput {
+                id: ModuleId::Os,
+                label: "OS".to_string(),
+                value: "Debian GNU/Linux 12".to_string(),
+                custom_rendered: None,
+            },
+            ModuleOutput {
+                id: ModuleId::Kernel,
+                label: "Kernel".to_string(),
+                value: "6.1.0".to_string(),
+                custom_rendered: None,
+            },
+        ];
+
+        let rendered = render_layout(None, &outputs, 80, false);
+        assert_eq!(rendered, "OS: Debian GNU/Linux 12\nKernel: 6.1.0");
+    }
+
+    #[test]
+    fn test_render_layout_vertical_narrow() {
+        let logo = Logo {
+            name: "test",
+            raw_lines: &["AA", "BB"],
+            primary_color: "",
+            accent_color: "",
+        };
+
+        let outputs = vec![ModuleOutput {
+            id: ModuleId::Os,
+            label: "OS".to_string(),
+            value: "Linux".to_string(),
+            custom_rendered: None,
+        }];
+
+        let rendered = render_layout(Some(&logo), &outputs, 50, false);
+        assert_eq!(rendered, "AA\nBB\n\nOS: Linux");
+    }
+
+    #[test]
+    fn test_render_layout_side_by_side() {
+        let logo = Logo {
+            name: "test",
+            raw_lines: &["A", "BBB"],
+            primary_color: "",
+            accent_color: "",
+        };
+
+        let outputs = vec![
+            ModuleOutput {
+                id: ModuleId::Os,
+                label: "OS".to_string(),
+                value: "Linux".to_string(),
+                custom_rendered: None,
+            },
+            ModuleOutput {
+                id: ModuleId::Kernel,
+                label: "Kernel".to_string(),
+                value: "6.1".to_string(),
+                custom_rendered: None,
+            },
+        ];
+
+        let rendered = render_layout(Some(&logo), &outputs, 80, false);
+        let lines: Vec<&str> = rendered.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0], "A     OS: Linux");
+        assert_eq!(lines[1], "BBB   Kernel: 6.1");
+    }
+}
