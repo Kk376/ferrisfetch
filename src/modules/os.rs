@@ -34,6 +34,10 @@ pub fn parse_os_release(content: &str) -> OsInfo {
             {
                 val = &val[1..val.len() - 1];
             }
+            let val = val.trim();
+            if val.is_empty() {
+                continue;
+            }
 
             match key {
                 "PRETTY_NAME" => pretty_name = Some(val.to_string()),
@@ -280,5 +284,27 @@ ID=custom
         let info = parse_os_release(fixture);
         assert_eq!(info.display_name, "CustomOS 1.0");
         assert_eq!(info.distro_id, "custom");
+    }
+
+    #[test]
+    fn test_parse_os_release_empty_or_corrupted() {
+        let empty_info = parse_os_release("");
+        assert_eq!(empty_info.display_name, "Linux");
+        assert_eq!(empty_info.distro_id, "linux");
+        assert!(empty_info.distro_like.is_empty());
+
+        let corrupted = "garbage text without equals\nrandom words\n";
+        let corrupt_info = parse_os_release(corrupted);
+        assert_eq!(corrupt_info.display_name, "Linux");
+        assert_eq!(corrupt_info.distro_id, "linux");
+    }
+
+    #[test]
+    fn test_parse_os_release_unquoted() {
+        let unquoted = "NAME=CustomArch\nID=arch\nID_LIKE=arch\nPRETTY_NAME=Custom Arch Linux\n";
+        let info = parse_os_release(unquoted);
+        assert_eq!(info.display_name, "Custom Arch Linux");
+        assert_eq!(info.distro_id, "arch");
+        assert_eq!(info.distro_like, vec!["arch"]);
     }
 }

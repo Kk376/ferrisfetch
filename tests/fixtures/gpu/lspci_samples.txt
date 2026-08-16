@@ -1,0 +1,2 @@
+00:02.0 "VGA compatible controller" "Intel Corporation" "CometLake-H GT2 [UHD Graphics]" -r02 "Dell" "Device 099f"
+01:00.0 "3D controller" "NVIDIA Corporation" "TU117M [GeForce GTX 1650 Ti Mobile]" -ra1 "Dell" "Device 099f"

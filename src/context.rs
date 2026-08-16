@@ -60,6 +60,11 @@ pub fn should_enable_color(no_color_flag: bool) -> bool {
     if std::env::var_os("NO_COLOR").is_some() {
         return false;
     }
+    if let Ok(term) = std::env::var("TERM") {
+        if term == "dumb" {
+            return false;
+        }
+    }
     std::io::stdout().is_terminal()
 }
 
@@ -71,7 +76,7 @@ pub fn resolve_active_modules(cli: &Cli) -> Vec<ModuleId> {
         ModuleId::all().to_vec()
     };
 
-    if let Some(ref disabled) = cli.disable {
+    let filtered: Vec<ModuleId> = if let Some(ref disabled) = cli.disable {
         let disabled_set: Vec<ModuleId> = disabled
             .iter()
             .filter_map(|d| ModuleId::from_str(d))
@@ -82,7 +87,17 @@ pub fn resolve_active_modules(cli: &Cli) -> Vec<ModuleId> {
             .collect()
     } else {
         base_modules
+    };
+
+    // Deduplicate preserving appearance order
+    let mut seen = std::collections::HashSet::new();
+    let mut deduped = Vec::new();
+    for m in filtered {
+        if seen.insert(m) {
+            deduped.push(m);
+        }
     }
+    deduped
 }
 
 #[cfg(test)]
@@ -123,5 +138,43 @@ mod tests {
 
         let active = resolve_active_modules(&cli);
         assert_eq!(active, vec![ModuleId::Os, ModuleId::Memory]);
+    }
+
+    #[test]
+    fn test_resolve_active_modules_duplicates_and_invalid() {
+        let cli = Cli {
+            modules: Some(vec![
+                "os".to_string(),
+                "invalid_mod".to_string(),
+                "os".to_string(),
+                "cpu".to_string(),
+                "cpu".to_string(),
+            ]),
+            disable: None,
+            no_color: false,
+            logo: None,
+            no_logo: false,
+            list_modules: false,
+            disk_path: "/".to_string(),
+        };
+
+        let active = resolve_active_modules(&cli);
+        assert_eq!(active, vec![ModuleId::Os, ModuleId::Cpu]);
+    }
+
+    #[test]
+    fn test_resolve_active_modules_all_disabled() {
+        let cli = Cli {
+            modules: Some(vec!["os".to_string(), "cpu".to_string()]),
+            disable: Some(vec!["os".to_string(), "cpu".to_string()]),
+            no_color: false,
+            logo: None,
+            no_logo: false,
+            list_modules: false,
+            disk_path: "/".to_string(),
+        };
+
+        let active = resolve_active_modules(&cli);
+        assert!(active.is_empty());
     }
 }

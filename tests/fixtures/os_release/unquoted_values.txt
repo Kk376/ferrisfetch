@@ -1,0 +1,5 @@
+NAME=CustomArch
+ID=arch
+ID_LIKE=arch
+PRETTY_NAME=Custom Arch Linux 2024
+VERSION_ID=rolling

@@ -1,0 +1,4 @@
+invalid_key_one: some_value
+another_line without colon
+garbage: #!$@%
+some text

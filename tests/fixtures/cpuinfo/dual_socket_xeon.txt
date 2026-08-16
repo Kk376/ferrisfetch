@@ -1,0 +1,21 @@
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 85
+model name	: Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz
+stepping	: 7
+physical id	: 0
+siblings	: 48
+core id		: 0
+cpu cores	: 24
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 85
+model name	: Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz
+stepping	: 7
+physical id	: 1
+siblings	: 48
+core id		: 0
+cpu cores	: 24

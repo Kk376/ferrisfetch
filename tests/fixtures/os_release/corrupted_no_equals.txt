@@ -1,0 +1,5 @@
+this is a corrupted file
+with no key-value pairs
+just random text lines
+and punctuation !!! ???
+### comment only line

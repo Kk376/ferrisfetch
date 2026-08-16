@@ -1,0 +1,21 @@
+processor	: 0
+vendor_id	: AuthenticAMD
+cpu family	: 25
+model		: 1
+model name	: AMD EPYC 7763 64-Core Processor
+stepping	: 1
+physical id	: 0
+siblings	: 128
+core id		: 0
+cpu cores	: 64
+
+processor	: 1
+vendor_id	: AuthenticAMD
+cpu family	: 25
+model		: 1
+model name	: AMD EPYC 7763 64-Core Processor
+stepping	: 1
+physical id	: 0
+siblings	: 128
+core id		: 1
+cpu cores	: 64

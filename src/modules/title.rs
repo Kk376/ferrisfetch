@@ -56,6 +56,28 @@ pub fn get_hostname() -> String {
     "localhost".to_string()
 }
 
+/// Formats the title line (`user@host`) and matching underline.
+pub fn format_title(
+    user: &str,
+    host: &str,
+    primary_color: Option<&str>,
+    enable_color: bool,
+) -> String {
+    let title_plain = format!("{}@{}", user, host);
+    let divider_len = title_plain.chars().count();
+    let divider_plain = "-".repeat(divider_len);
+
+    if enable_color {
+        let primary = primary_color.unwrap_or("\x1b[38;5;208m");
+        let user_styled = format!("{}{}{}", primary, bold(user, true), RESET);
+        let host_styled = format!("{}{}{}", primary, bold(host, true), RESET);
+        let line1 = format!("{}@{}", user_styled, host_styled);
+        format!("{}\n{}", line1, divider_plain)
+    } else {
+        format!("{}\n{}", title_plain, divider_plain)
+    }
+}
+
 pub struct TitleCollector;
 
 impl Collector for TitleCollector {
@@ -67,25 +89,15 @@ impl Collector for TitleCollector {
         let user = get_username();
         let host = get_hostname();
         let title_plain = format!("{}@{}", user, host);
-        let divider_len = title_plain.chars().count();
-        let divider_plain = "-".repeat(divider_len);
 
-        let custom_rendered = if ctx.enable_color {
-            let logo = match_logo(
-                ctx.logo_override.as_deref(),
-                &ctx.os_info.distro_id,
-                &ctx.os_info.distro_like,
-            );
-            let primary = logo.map(|l| l.primary_color).unwrap_or("\x1b[38;5;208m");
+        let logo = match_logo(
+            ctx.logo_override.as_deref(),
+            &ctx.os_info.distro_id,
+            &ctx.os_info.distro_like,
+        );
+        let primary = logo.map(|l| l.primary_color);
 
-            let user_styled = format!("{}{}{}", primary, bold(&user, true), RESET);
-            let host_styled = format!("{}{}{}", primary, bold(&host, true), RESET);
-            let line1 = format!("{}@{}", user_styled, host_styled);
-            let line2 = divider_plain;
-            format!("{}\n{}", line1, line2)
-        } else {
-            format!("{}\n{}", title_plain, divider_plain)
-        };
+        let custom_rendered = format_title(&user, &host, primary, ctx.enable_color);
 
         Some(ModuleOutput {
             id: ModuleId::Title,
@@ -106,5 +118,23 @@ mod tests {
         let host = get_hostname();
         assert!(!user.is_empty());
         assert!(!host.is_empty());
+    }
+
+    #[test]
+    fn test_format_title_plain() {
+        let rendered = format_title("ferris", "crab", None, false);
+        assert_eq!(rendered, "ferris@crab\n-----------");
+    }
+
+    #[test]
+    fn test_format_title_long_hostname() {
+        let user = "admin";
+        let host = "super-long-hostname-node-123.region-east.internal.cloud";
+        let rendered = format_title(user, host, None, false);
+        let lines: Vec<&str> = rendered.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].len(), lines[1].len());
+        assert_eq!(lines[0], format!("{}@{}", user, host));
+        assert_eq!(lines[1], "-".repeat(lines[0].len()));
     }
 }

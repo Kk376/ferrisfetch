@@ -1,0 +1,7 @@
+Package: corrupt1
+Status: bad status format
+Section: admin
+
+Random line without colon
+Package: corrupt2
+Status: half-installed

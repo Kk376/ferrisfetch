@@ -99,3 +99,85 @@ fn test_disk_path_flag() {
     assert!(stdout.contains("Disk:"));
     assert!(stdout.contains('%'));
 }
+
+#[test]
+fn test_disk_path_invalid_does_not_panic() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.args([
+        "--no-color",
+        "--no-logo",
+        "-m",
+        "disk",
+        "--disk-path",
+        "/path/that/does/not/exist_12345",
+    ]);
+    let assert = cmd.assert().success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    // Disk module should cleanly produce no output rather than crashing
+    assert_eq!(stdout.trim(), "");
+}
+
+#[test]
+fn test_duplicate_and_invalid_module_args() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.args([
+        "--no-color",
+        "--no-logo",
+        "-m",
+        "os,invalid_module_xyz,os,kernel,cpu,cpu",
+    ]);
+    let assert = cmd.assert().success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    // OS, Kernel, CPU should appear exactly once
+    assert_eq!(stdout.matches("OS:").count(), 1);
+    assert_eq!(stdout.matches("Kernel:").count(), 1);
+    assert_eq!(stdout.matches("CPU:").count(), 1);
+    assert!(!stdout.contains("invalid_module_xyz"));
+}
+
+#[test]
+fn test_combine_modules_and_disable_flags() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.args([
+        "--no-color",
+        "--no-logo",
+        "-m",
+        "os,kernel,cpu,memory,uptime",
+        "-d",
+        "cpu,uptime",
+    ]);
+    let assert = cmd.assert().success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    assert!(stdout.contains("OS:"));
+    assert!(stdout.contains("Kernel:"));
+    assert!(stdout.contains("Memory:"));
+    assert!(!stdout.contains("CPU:"));
+    assert!(!stdout.contains("Uptime:"));
+}
+
+#[test]
+fn test_various_logo_overrides() {
+    let logos = [
+        ("debian", "_____"),
+        ("ubuntu", "---(_)"),
+        ("arch", "/\\"),
+        ("fedora", "_____"),
+        ("mint", "___________"),
+        ("tux", ".--."),
+    ];
+
+    for (name, snippet) in logos {
+        let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+        cmd.args(["--no-color", "--logo", name, "-m", "os"]);
+        let assert = cmd.assert().success();
+        let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+        assert!(
+            stdout.contains(snippet),
+            "Logo override '{}' did not produce expected pattern '{}'",
+            name,
+            snippet
+        );
+    }
+}

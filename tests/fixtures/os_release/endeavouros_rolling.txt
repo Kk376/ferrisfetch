@@ -1,0 +1,11 @@
+NAME="EndeavourOS"
+PRETTY_NAME="EndeavourOS"
+ID=endeavouros
+ID_LIKE=arch
+BUILD_ID=2024.04.08
+ANSI_COLOR="38;2;127;74;156"
+HOME_URL="https://endeavouros.com"
+DOCUMENTATION_URL="https://discovery.endeavouros.com"
+SUPPORT_URL="https://forum.endeavouros.com"
+BUG_REPORT_URL="https://forum.endeavouros.com/c/arch-based-related-questions/bug-reports"
+LOGO=endeavouros

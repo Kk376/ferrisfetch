@@ -21,7 +21,13 @@ pub fn clean_cpu_model(raw: &str) -> String {
         .replace("Dual-Core", "")
         .replace("Quad-Core", "")
         .replace("Six-Core", "")
-        .replace("Eight-Core", "");
+        .replace("Eight-Core", "")
+        .replace("12-Core", "")
+        .replace("16-Core", "")
+        .replace("24-Core", "")
+        .replace("32-Core", "")
+        .replace("64-Core", "")
+        .replace("128-Core", "");
 
     // Strip clock speed patterns like "@ 2.60GHz"
     if let Some(idx) = cleaned.find('@') {
@@ -29,11 +35,15 @@ pub fn clean_cpu_model(raw: &str) -> String {
     }
 
     let tokens: Vec<&str> = cleaned.split_whitespace().collect();
-    tokens.join(" ")
+    tokens.join(" ").trim_end_matches(',').trim().to_string()
 }
 
 /// Parses `/proc/cpuinfo` into model, logical core count, and physical socket count.
 pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
+    if content.trim().is_empty() {
+        return None;
+    }
+
     let mut model_name: Option<String> = None;
     let mut processor_count = 0;
     let mut physical_ids = HashSet::new();
@@ -51,6 +61,15 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
             match key.as_str() {
                 "model name" | "model_name" | "hardware" | "cpu model" => {
                     if model_name.is_none() && !val.is_empty() {
+                        model_name = Some(val.to_string());
+                    }
+                }
+                "cpu" => {
+                    // PowerPC / POWER architectures (e.g. "cpu : POWER9, altivec supported")
+                    if model_name.is_none()
+                        && !val.is_empty()
+                        && val.chars().any(|c| c.is_alphabetic())
+                    {
                         model_name = Some(val.to_string());
                     }
                 }
@@ -78,6 +97,10 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
                 _ => {}
             }
         }
+    }
+
+    if model_name.is_none() && processor_count == 0 {
+        return None;
     }
 
     let model = model_name.unwrap_or_else(|| "Unknown CPU".to_string());
@@ -180,5 +203,40 @@ physical id	: 0
         assert_eq!(info.cores, 2);
         assert_eq!(info.sockets, 1);
         assert_eq!(clean_cpu_model(&info.model), "Intel Core i7-10750H");
+    }
+
+    #[test]
+    fn test_parse_cpu_info_empty() {
+        assert_eq!(parse_cpu_info(""), None);
+        assert_eq!(parse_cpu_info("   \n\n  \t "), None);
+    }
+
+    #[test]
+    fn test_parse_cpu_info_malformed() {
+        let malformed = "some_random_key: some_value\nanother_line\n";
+        assert_eq!(parse_cpu_info(malformed), None);
+    }
+
+    #[test]
+    fn test_parse_cpu_info_dual_socket() {
+        let fixture = r#"
+processor	: 0
+model name	: Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz
+physical id	: 0
+
+processor	: 1
+model name	: Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz
+physical id	: 1
+"#;
+        let info = parse_cpu_info(fixture).unwrap();
+        assert_eq!(info.cores, 2);
+        assert_eq!(info.sockets, 2);
+        assert_eq!(clean_cpu_model(&info.model), "Intel Xeon Gold 6248R");
+    }
+
+    #[test]
+    fn test_clean_cpu_model_multi_core_tokens() {
+        let raw = "AMD EPYC 7763 64-Core Processor";
+        assert_eq!(clean_cpu_model(raw), "AMD EPYC 7763");
     }
 }

@@ -7,6 +7,67 @@ const KNOWN_WMS: &[&str] = &[
     "compiz", "marco", "sway", "hyprland", "wayfire", "river", "labwc",
 ];
 
+/// Identifies active Wayland window manager from environment signatures.
+pub fn detect_wayland_wm_from_env(
+    hyprland_sig: bool,
+    swaysock: bool,
+    wayfire_cfg: bool,
+    river_sock: bool,
+    labwc_pid: bool,
+) -> Option<&'static str> {
+    if hyprland_sig {
+        Some("Hyprland")
+    } else if swaysock {
+        Some("Sway")
+    } else if wayfire_cfg {
+        Some("Wayfire")
+    } else if river_sock {
+        Some("River")
+    } else if labwc_pid {
+        Some("labwc")
+    } else {
+        None
+    }
+}
+
+/// Formats DE, WM, and session type into a clean string.
+pub fn format_desktop_info(
+    de: Option<&str>,
+    wm: Option<&str>,
+    session_type: Option<&str>,
+) -> Option<String> {
+    let de_clean = de.map(|s| s.trim()).filter(|s| !s.is_empty());
+    let wm_clean = wm.map(|s| s.trim()).filter(|s| !s.is_empty());
+    let sess_clean = session_type
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && s.to_lowercase() != "tty");
+
+    match (de_clean, wm_clean, sess_clean) {
+        (Some(d), Some(w), Some(sess)) => {
+            if d.to_lowercase() == w.to_lowercase()
+                || (d.to_lowercase() == "gnome" && w.to_lowercase() == "mutter")
+                || (d.to_lowercase() == "kde" && w.to_lowercase() == "kwin")
+            {
+                Some(format!("{} ({})", d, capitalize_first(sess)))
+            } else {
+                Some(format!("{} (WM: {}, {})", d, w, capitalize_first(sess)))
+            }
+        }
+        (Some(d), Some(w), None) => {
+            if d.to_lowercase() == w.to_lowercase() {
+                Some(d.to_string())
+            } else {
+                Some(format!("{} (WM: {})", d, w))
+            }
+        }
+        (Some(d), None, Some(sess)) => Some(format!("{} ({})", d, capitalize_first(sess))),
+        (Some(d), None, None) => Some(d.to_string()),
+        (None, Some(w), Some(sess)) => Some(format!("{} ({})", w, capitalize_first(sess))),
+        (None, Some(w), None) => Some(w.to_string()),
+        (None, None, _) => None,
+    }
+}
+
 /// Probes the system for active Desktop Environment (DE), Window Manager (WM), and session type.
 pub fn detect_desktop() -> Option<String> {
     let mut de = None;
@@ -28,16 +89,14 @@ pub fn detect_desktop() -> Option<String> {
     }
 
     // 2. Detect Window Manager via Wayland signatures
-    if std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some() {
-        wm = Some("Hyprland".to_string());
-    } else if std::env::var_os("SWAYSOCK").is_some() {
-        wm = Some("Sway".to_string());
-    } else if std::env::var_os("WAYFIRE_CONFIG_FILE").is_some() {
-        wm = Some("Wayfire".to_string());
-    } else if std::env::var_os("RIVER_SOCKET").is_some() {
-        wm = Some("River".to_string());
-    } else if std::env::var_os("LABWC_PID").is_some() {
-        wm = Some("labwc".to_string());
+    if let Some(wayland_wm) = detect_wayland_wm_from_env(
+        std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some(),
+        std::env::var_os("SWAYSOCK").is_some(),
+        std::env::var_os("WAYFIRE_CONFIG_FILE").is_some(),
+        std::env::var_os("RIVER_SOCKET").is_some(),
+        std::env::var_os("LABWC_PID").is_some(),
+    ) {
+        wm = Some(wayland_wm.to_string());
     }
 
     // 3. Fallback WM check from running processes if WM is not yet identified
@@ -66,39 +125,12 @@ pub fn detect_desktop() -> Option<String> {
     }
 
     // 4. Session type (Wayland / X11 / TTY)
-    let session_type = std::env::var("XDG_SESSION_TYPE")
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty() && s != "tty");
+    let session_type = std::env::var("XDG_SESSION_TYPE").ok();
 
-    // Format output
-    match (de, wm, session_type) {
-        (Some(d), Some(w), Some(sess)) => {
-            if d.to_lowercase() == w.to_lowercase()
-                || (d.to_lowercase() == "gnome" && w.to_lowercase() == "mutter")
-                || (d.to_lowercase() == "kde" && w.to_lowercase() == "kwin")
-            {
-                Some(format!("{} ({})", d, capitalize_first(&sess)))
-            } else {
-                Some(format!("{} (WM: {}, {})", d, w, capitalize_first(&sess)))
-            }
-        }
-        (Some(d), Some(w), None) => {
-            if d.to_lowercase() == w.to_lowercase() {
-                Some(d)
-            } else {
-                Some(format!("{} (WM: {})", d, w))
-            }
-        }
-        (Some(d), None, Some(sess)) => Some(format!("{} ({})", d, capitalize_first(&sess))),
-        (Some(d), None, None) => Some(d),
-        (None, Some(w), Some(sess)) => Some(format!("{} ({})", w, capitalize_first(&sess))),
-        (None, Some(w), None) => Some(w),
-        (None, None, _) => None,
-    }
+    format_desktop_info(de.as_deref(), wm.as_deref(), session_type.as_deref())
 }
 
-fn capitalize_first(s: &str) -> String {
+pub fn capitalize_first(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
         Some(first) => {
@@ -141,5 +173,56 @@ mod tests {
         assert_eq!(capitalize_first("wayland"), "Wayland");
         assert_eq!(capitalize_first("x11"), "X11");
         assert_eq!(capitalize_first("gnome"), "Gnome");
+    }
+
+    #[test]
+    fn test_format_desktop_wayland_wms() {
+        assert_eq!(
+            detect_wayland_wm_from_env(true, false, false, false, false),
+            Some("Hyprland")
+        );
+        assert_eq!(
+            detect_wayland_wm_from_env(false, true, false, false, false),
+            Some("Sway")
+        );
+        assert_eq!(
+            detect_wayland_wm_from_env(false, false, false, true, false),
+            Some("River")
+        );
+        assert_eq!(
+            detect_wayland_wm_from_env(false, false, false, false, false),
+            None
+        );
+    }
+
+    #[test]
+    fn test_format_desktop_info_combinations() {
+        // Headless
+        assert_eq!(format_desktop_info(None, None, None), None);
+        assert_eq!(format_desktop_info(None, None, Some("tty")), None);
+
+        // Sway on Wayland
+        assert_eq!(
+            format_desktop_info(None, Some("Sway"), Some("wayland")),
+            Some("Sway (Wayland)".to_string())
+        );
+
+        // GNOME on Wayland with mutter
+        assert_eq!(
+            format_desktop_info(Some("GNOME"), Some("mutter"), Some("wayland")),
+            Some("GNOME (Wayland)".to_string())
+        );
+
+        // KDE on X11 with kwin
+        assert_eq!(
+            format_desktop_info(Some("KDE"), Some("kwin"), Some("x11")),
+            Some("KDE (X11)".to_string())
+        );
+
+        // Custom WM on X11
+        assert_eq!(
+            format_desktop_info(Some("XFCE"), Some("i3"), Some("x11")),
+            Some("XFCE (WM: i3, X11)".to_string())
+        );
     }
 }

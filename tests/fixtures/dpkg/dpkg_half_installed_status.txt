@@ -1,0 +1,17 @@
+Package: pkg1
+Status: install ok installed
+
+Package: pkg2
+Status: deinstall ok config-files
+
+Package: pkg3
+Status: install ok half-installed
+
+Package: pkg4
+Status: install ok half-configured
+
+Package: pkg5
+Status: install ok unpacked
+
+Package: pkg6
+Status: hold ok installed

@@ -1,0 +1,17 @@
+processor	: 0
+hart		: 0
+isa		: rv64imafdc
+mvendorid	: 0x0
+marchid		: 0x0
+mimpid		: 0x0
+uarch		: generic-rv64
+model name	: rv64imafdc (QEMU RISC-V)
+
+processor	: 1
+hart		: 1
+isa		: rv64imafdc
+mvendorid	: 0x0
+marchid		: 0x0
+mimpid		: 0x0
+uarch		: generic-rv64
+model name	: rv64imafdc (QEMU RISC-V)

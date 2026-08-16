@@ -35,7 +35,9 @@ pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
             return None;
         }
 
-        let percentage = ((used_bytes as f64 / total_bytes as f64) * 100.0).round() as u8;
+        let percentage = ((used_bytes as f64 / total_bytes as f64) * 100.0)
+            .round()
+            .min(100.0) as u8;
 
         Some(DiskUsage {
             total_bytes,
@@ -114,10 +116,40 @@ mod tests {
     }
 
     #[test]
+    fn test_format_disk_usage_tib() {
+        let usage = DiskUsage {
+            total_bytes: 2 * 1024 * 1024 * 1024 * 1024,
+            used_bytes: 1024 * 1024 * 1024 * 1024,
+            free_bytes: 1024 * 1024 * 1024 * 1024,
+            percentage: 50,
+        };
+        let s = format_disk_usage(&usage);
+        assert_eq!(s, "1.00 TiB / 2.00 TiB (50%)");
+    }
+
+    #[test]
+    fn test_format_disk_usage_mib() {
+        let usage = DiskUsage {
+            total_bytes: 500 * 1024 * 1024,
+            used_bytes: 100 * 1024 * 1024,
+            free_bytes: 400 * 1024 * 1024,
+            percentage: 20,
+        };
+        let s = format_disk_usage(&usage);
+        assert_eq!(s, "100 MiB / 500 MiB (20%)");
+    }
+
+    #[test]
     fn test_get_disk_usage_root() {
         let usage = get_disk_usage("/");
         assert!(usage.is_some());
         let u = usage.unwrap();
         assert!(u.total_bytes > 0);
+    }
+
+    #[test]
+    fn test_get_disk_usage_invalid_paths() {
+        assert_eq!(get_disk_usage("/nonexistent_path_xyz_987654"), None);
+        assert_eq!(get_disk_usage("invalid\0nullbyte"), None);
     }
 }

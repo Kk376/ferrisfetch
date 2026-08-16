@@ -7,7 +7,7 @@ use std::mem::MaybeUninit;
 pub fn parse_uptime(content: &str) -> Option<u64> {
     let first_token = content.split_whitespace().next()?;
     let seconds_f64: f64 = first_token.parse().ok()?;
-    if seconds_f64 >= 0.0 {
+    if seconds_f64 >= 0.0 && seconds_f64.is_finite() {
         Some(seconds_f64 as u64)
     } else {
         None
@@ -19,19 +19,20 @@ pub fn format_uptime(total_seconds: u64) -> String {
     let days = total_seconds / 86400;
     let hours = (total_seconds % 86400) / 3600;
     let minutes = (total_seconds % 3600) / 60;
+    let min_label = if minutes == 1 { "min" } else { "mins" };
 
     if days > 0 {
         let day_label = if days == 1 { "day" } else { "days" };
         let hour_label = if hours == 1 { "hour" } else { "hours" };
         format!(
-            "{} {}, {} {}, {} mins",
-            days, day_label, hours, hour_label, minutes
+            "{} {}, {} {}, {} {}",
+            days, day_label, hours, hour_label, minutes, min_label
         )
     } else if hours > 0 {
         let hour_label = if hours == 1 { "hour" } else { "hours" };
-        format!("{} {}, {} mins", hours, hour_label, minutes)
+        format!("{} {}, {} {}", hours, hour_label, minutes, min_label)
     } else {
-        format!("{} mins", minutes)
+        format!("{} {}", minutes, min_label)
     }
 }
 
@@ -82,6 +83,20 @@ mod tests {
     fn test_parse_uptime_standard() {
         let fixture = "1978.59 23627.21\n";
         assert_eq!(parse_uptime(fixture), Some(1978));
+    }
+
+    #[test]
+    fn test_parse_uptime_empty_or_corrupted() {
+        assert_eq!(parse_uptime(""), None);
+        assert_eq!(parse_uptime("   \n\t "), None);
+        assert_eq!(parse_uptime("invalid text"), None);
+        assert_eq!(parse_uptime("-10.5 20.0"), None);
+    }
+
+    #[test]
+    fn test_parse_uptime_zero() {
+        assert_eq!(parse_uptime("0.00 0.00"), Some(0));
+        assert_eq!(format_uptime(0), "0 mins");
     }
 
     #[test]

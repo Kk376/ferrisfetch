@@ -39,6 +39,70 @@ const KNOWN_SHELLS: &[&str] = &[
     "bash", "zsh", "fish", "sh", "dash", "ksh", "csh", "tcsh", "nu", "ion", "elvish", "pwsh",
 ];
 
+/// Extracts and normalizes the shell name from a path or process command.
+pub fn extract_shell_name(path: &str) -> String {
+    let clean = path.trim();
+    if clean.is_empty() {
+        return String::new();
+    }
+
+    let file_name = Path::new(clean)
+        .file_name()
+        .map(|s| s.to_string_lossy())
+        .unwrap_or_else(|| clean.into());
+
+    // Login shells often prepend a hyphen, e.g. "-bash" or "-zsh"
+    file_name.trim_start_matches('-').to_lowercase()
+}
+
+/// Formats shell name with optional version information.
+pub fn format_shell_name_version(
+    shell_name: &str,
+    bash_ver: Option<&str>,
+    zsh_ver: Option<&str>,
+    fish_ver: Option<&str>,
+) -> String {
+    let clean_name = shell_name.trim();
+
+    if clean_name.contains("bash") {
+        if let Some(ver) = bash_ver {
+            let clean_ver = ver.split('(').next().unwrap_or(ver).trim();
+            if !clean_ver.is_empty() {
+                return format!("bash {}", clean_ver);
+            }
+        }
+    } else if clean_name.contains("zsh") {
+        if let Some(ver) = zsh_ver {
+            let clean_ver = ver.trim();
+            if !clean_ver.is_empty() {
+                return format!("zsh {}", clean_ver);
+            }
+        }
+    } else if clean_name.contains("fish") {
+        if let Some(ver) = fish_ver {
+            let clean_ver = ver.trim();
+            if !clean_ver.is_empty() {
+                return format!("fish {}", clean_ver);
+            }
+        }
+    }
+
+    clean_name.to_string()
+}
+
+fn format_shell_with_version(shell_name: &str) -> String {
+    let bash_ver = std::env::var("BASH_VERSION").ok();
+    let zsh_ver = std::env::var("ZSH_VERSION").ok();
+    let fish_ver = std::env::var("FISH_VERSION").ok();
+
+    format_shell_name_version(
+        shell_name,
+        bash_ver.as_deref(),
+        zsh_ver.as_deref(),
+        fish_ver.as_deref(),
+    )
+}
+
 /// Probes process hierarchy or environment to determine active user shell.
 pub fn detect_shell() -> Option<String> {
     let mut current_pid = unsafe { libc::getpid() as u32 };
@@ -50,10 +114,10 @@ pub fn detect_shell() -> Option<String> {
                 break;
             }
             if let Some(name) = get_proc_name(ppid) {
-                let name_lower = name.to_lowercase();
+                let name_clean = extract_shell_name(&name);
                 for &known in KNOWN_SHELLS {
-                    if name_lower == known || name_lower.starts_with(known) {
-                        return Some(format_shell_with_version(&name_lower));
+                    if name_clean == known || name_clean.starts_with(known) {
+                        return Some(format_shell_with_version(&name_clean));
                     }
                 }
             }
@@ -65,42 +129,13 @@ pub fn detect_shell() -> Option<String> {
 
     // Fallback to $SHELL environment variable
     if let Ok(shell_path) = std::env::var("SHELL") {
-        if let Some(name) = Path::new(&shell_path).file_name() {
-            let name_str = name.to_string_lossy().to_lowercase();
-            if !name_str.is_empty() {
-                return Some(format_shell_with_version(&name_str));
-            }
+        let name_clean = extract_shell_name(&shell_path);
+        if !name_clean.is_empty() {
+            return Some(format_shell_with_version(&name_clean));
         }
     }
 
     None
-}
-
-fn format_shell_with_version(shell_name: &str) -> String {
-    if shell_name.contains("bash") {
-        if let Ok(ver) = std::env::var("BASH_VERSION") {
-            let clean_ver = ver.split('(').next().unwrap_or(&ver).trim();
-            if !clean_ver.is_empty() {
-                return format!("bash {}", clean_ver);
-            }
-        }
-    } else if shell_name.contains("zsh") {
-        if let Ok(ver) = std::env::var("ZSH_VERSION") {
-            let clean_ver = ver.trim();
-            if !clean_ver.is_empty() {
-                return format!("zsh {}", clean_ver);
-            }
-        }
-    } else if shell_name.contains("fish") {
-        if let Ok(ver) = std::env::var("FISH_VERSION") {
-            let clean_ver = ver.trim();
-            if !clean_ver.is_empty() {
-                return format!("fish {}", clean_ver);
-            }
-        }
-    }
-
-    shell_name.to_string()
 }
 
 pub struct ShellCollector;
@@ -126,7 +161,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_shell_plain() {
-        assert_eq!(format_shell_with_version("sh"), "sh");
+    fn test_extract_shell_name() {
+        assert_eq!(extract_shell_name("/usr/bin/bash"), "bash");
+        assert_eq!(extract_shell_name("/bin/-zsh"), "zsh");
+        assert_eq!(extract_shell_name("/opt/homebrew/bin/fish"), "fish");
+        assert_eq!(extract_shell_name("/usr/bin/nu"), "nu");
+        assert_eq!(extract_shell_name("sh"), "sh");
+        assert_eq!(extract_shell_name(""), "");
+    }
+
+    #[test]
+    fn test_format_shell_name_version() {
+        assert_eq!(
+            format_shell_name_version("bash", Some("5.2.15(1)-release"), None, None),
+            "bash 5.2.15"
+        );
+        assert_eq!(
+            format_shell_name_version("zsh", None, Some("5.9"), None),
+            "zsh 5.9"
+        );
+        assert_eq!(
+            format_shell_name_version("fish", None, None, Some("3.7.0")),
+            "fish 3.7.0"
+        );
+        assert_eq!(
+            format_shell_name_version("custom_shell", None, None, None),
+            "custom_shell"
+        );
     }
 }

@@ -61,7 +61,8 @@ pub fn parse_meminfo(content: &str) -> Option<MemoryInfo> {
         total.saturating_sub(non_used) + shm
     };
 
-    let percent = ((used as f64 / total as f64) * 100.0).round() as u64;
+    let used = used.min(total);
+    let percent = ((used as f64 / total as f64) * 100.0).round().min(100.0) as u64;
 
     Some(MemoryInfo {
         total_kb: total,
@@ -147,5 +148,29 @@ MemAvailable:     300000 kB
         let info = parse_meminfo(fixture).unwrap();
         let formatted = format_memory(&info);
         assert!(formatted.contains("MiB"));
+    }
+
+    #[test]
+    fn test_parse_meminfo_empty_or_malformed() {
+        assert_eq!(parse_meminfo(""), None);
+        assert_eq!(parse_meminfo("   \n\n\t "), None);
+        assert_eq!(parse_meminfo("SomeGarbageLine: without total"), None);
+        assert_eq!(parse_meminfo("MemTotal: 0 kB"), None);
+    }
+
+    #[test]
+    fn test_parse_meminfo_legacy_fallback() {
+        let fixture = r#"
+MemTotal:        8192000 kB
+MemFree:         1024000 kB
+Buffers:          512000 kB
+Cached:          3072000 kB
+SReclaimable:     512000 kB
+Shmem:            256000 kB
+"#;
+        let info = parse_meminfo(fixture).unwrap();
+        assert_eq!(info.total_kb, 8192000);
+        assert!(info.used_kb > 0);
+        assert!(info.percent > 0);
     }
 }

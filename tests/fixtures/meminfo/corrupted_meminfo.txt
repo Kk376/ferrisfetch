@@ -1,0 +1,3 @@
+MemTotal: -100 kB
+NotAKey: invalid value
+SomeOtherThing: 0

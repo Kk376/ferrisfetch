@@ -15,9 +15,8 @@ pub fn parse_dpkg_status(content: &str) -> usize {
     count
 }
 
-/// Counts installed packages for Debian/Ubuntu family.
-pub fn count_dpkg() -> Option<usize> {
-    let path = Path::new("/var/lib/dpkg/status");
+/// Counts installed packages for Debian/Ubuntu family from a status file path.
+pub fn count_dpkg_from_path(path: &Path) -> Option<usize> {
     if let Ok(content) = fs::read_to_string(path) {
         let count = parse_dpkg_status(&content);
         if count > 0 {
@@ -27,9 +26,30 @@ pub fn count_dpkg() -> Option<usize> {
     None
 }
 
-/// Counts installed packages for Arch Linux family from pacman local database.
-pub fn count_pacman() -> Option<usize> {
-    let pacman_dir = Path::new("/var/lib/pacman/local");
+/// Counts installed packages for Debian/Ubuntu family.
+pub fn count_dpkg() -> Option<usize> {
+    if let Some(count) = count_dpkg_from_path(Path::new("/var/lib/dpkg/status")) {
+        return Some(count);
+    }
+
+    // Fallback: dpkg-query command if status file is inaccessible
+    if let Ok(output) = Command::new("dpkg-query")
+        .args(["-f", "${binary:Package}\n", "-W"])
+        .output()
+    {
+        if output.status.success() {
+            let count = parse_rpm_output(&output.stdout);
+            if count > 0 {
+                return Some(count);
+            }
+        }
+    }
+
+    None
+}
+
+/// Counts installed packages for Arch Linux family from a given pacman local database directory.
+pub fn count_pacman_from_dir(pacman_dir: &Path) -> Option<usize> {
     if let Ok(entries) = fs::read_dir(pacman_dir) {
         let count = entries
             .flatten()
@@ -51,6 +71,19 @@ pub fn count_pacman() -> Option<usize> {
     None
 }
 
+/// Counts installed packages for Arch Linux family from pacman local database.
+pub fn count_pacman() -> Option<usize> {
+    count_pacman_from_dir(Path::new("/var/lib/pacman/local"))
+}
+
+/// Parses raw newline-delimited command output (such as `rpm -qa` or `xbps-query -l`).
+pub fn parse_rpm_output(output: &[u8]) -> usize {
+    output
+        .split(|&b| b == b'\n')
+        .filter(|l| !l.is_empty())
+        .count()
+}
+
 /// Counts installed packages for Red Hat / Fedora family via rpm.
 pub fn count_rpm() -> Option<usize> {
     // Check if rpm databases exist first before invoking rpm
@@ -65,11 +98,7 @@ pub fn count_rpm() -> Option<usize> {
     if has_rpm_db {
         if let Ok(output) = Command::new("rpm").arg("-qa").output() {
             if output.status.success() {
-                let count = output
-                    .stdout
-                    .split(|&b| b == b'\n')
-                    .filter(|l| !l.is_empty())
-                    .count();
+                let count = parse_rpm_output(&output.stdout);
                 if count > 0 {
                     return Some(count);
                 }
@@ -80,11 +109,16 @@ pub fn count_rpm() -> Option<usize> {
     None
 }
 
+/// Parses APK installed db content.
+pub fn parse_apk_installed(content: &str) -> usize {
+    content.lines().filter(|l| l.starts_with("P:")).count()
+}
+
 /// Counts installed packages for Alpine Linux.
 pub fn count_apk() -> Option<usize> {
     let path = Path::new("/lib/apk/db/installed");
     if let Ok(content) = fs::read_to_string(path) {
-        let count = content.lines().filter(|l| l.starts_with("P:")).count();
+        let count = parse_apk_installed(&content);
         if count > 0 {
             return Some(count);
         }
@@ -107,11 +141,7 @@ pub fn count_xbps() -> Option<usize> {
         if count > 0 {
             if let Ok(output) = Command::new("xbps-query").arg("-l").output() {
                 if output.status.success() {
-                    let c = output
-                        .stdout
-                        .split(|&b| b == b'\n')
-                        .filter(|l| !l.is_empty())
-                        .count();
+                    let c = parse_rpm_output(&output.stdout);
                     if c > 0 {
                         return Some(c);
                     }
@@ -122,11 +152,10 @@ pub fn count_xbps() -> Option<usize> {
     None
 }
 
-/// Counts installed Flatpak applications (system and user level).
-pub fn count_flatpak() -> Option<usize> {
+/// Counts installed Flatpak applications from specified system and user paths.
+pub fn count_flatpak_from_dirs(sys_path: &Path, user_path: &Path) -> Option<usize> {
     let mut total = 0;
 
-    let sys_path = Path::new("/var/lib/flatpak/app");
     if let Ok(entries) = fs::read_dir(sys_path) {
         total += entries
             .flatten()
@@ -137,17 +166,14 @@ pub fn count_flatpak() -> Option<usize> {
             .count();
     }
 
-    if let Ok(home) = std::env::var("HOME") {
-        let user_path = Path::new(&home).join(".local/share/flatpak/app");
-        if let Ok(entries) = fs::read_dir(user_path) {
-            total += entries
-                .flatten()
-                .filter(|e| {
-                    e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
-                        && !e.file_name().to_string_lossy().starts_with('.')
-                })
-                .count();
-        }
+    if let Ok(entries) = fs::read_dir(user_path) {
+        total += entries
+            .flatten()
+            .filter(|e| {
+                e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                    && !e.file_name().to_string_lossy().starts_with('.')
+            })
+            .count();
     }
 
     if total > 0 {
@@ -157,10 +183,18 @@ pub fn count_flatpak() -> Option<usize> {
     }
 }
 
-/// Counts installed Snap packages.
-pub fn count_snap() -> Option<usize> {
-    let snap_dir = Path::new("/var/lib/snapd/snaps");
-    if let Ok(entries) = fs::read_dir(snap_dir) {
+/// Counts installed Flatpak applications (system and user level).
+pub fn count_flatpak() -> Option<usize> {
+    let sys_path = Path::new("/var/lib/flatpak/app");
+    let user_path = std::env::var("HOME")
+        .map(|h| Path::new(&h).join(".local/share/flatpak/app"))
+        .unwrap_or_else(|_| Path::new("/nonexistent").to_path_buf());
+    count_flatpak_from_dirs(sys_path, &user_path)
+}
+
+/// Counts installed Snap packages from specified directories.
+pub fn count_snap_from_dirs(snaps_path: &Path, snap_root: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(snaps_path) {
         let count = entries
             .flatten()
             .filter(|e| {
@@ -174,7 +208,6 @@ pub fn count_snap() -> Option<usize> {
         }
     }
 
-    let snap_root = Path::new("/snap");
     if let Ok(entries) = fs::read_dir(snap_root) {
         let count = entries
             .flatten()
@@ -190,6 +223,11 @@ pub fn count_snap() -> Option<usize> {
     }
 
     None
+}
+
+/// Counts installed Snap packages.
+pub fn count_snap() -> Option<usize> {
+    count_snap_from_dirs(Path::new("/var/lib/snapd/snaps"), Path::new("/snap"))
 }
 
 /// Gathers and formats package counts across all active package managers.
@@ -263,5 +301,80 @@ Status: hold ok installed
 Section: libs
 "#;
         assert_eq!(parse_dpkg_status(fixture), 2);
+    }
+
+    #[test]
+    fn test_parse_dpkg_status_empty_or_corrupted() {
+        assert_eq!(parse_dpkg_status(""), 0);
+        assert_eq!(
+            parse_dpkg_status("Package: foo\nStatus: half-installed\n"),
+            0
+        );
+        assert_eq!(parse_dpkg_status("random text\nno valid header\n"), 0);
+    }
+
+    #[test]
+    fn test_parse_rpm_output() {
+        let output =
+            b"coreutils-9.1-1.fc38.x86_64\nbash-5.2.15-3.fc38.x86_64\nglibc-2.37-4.fc38.x86_64\n";
+        assert_eq!(parse_rpm_output(output), 3);
+        assert_eq!(parse_rpm_output(b""), 0);
+        assert_eq!(parse_rpm_output(b"\n\n"), 0);
+    }
+
+    #[test]
+    fn test_parse_apk_installed() {
+        let content = "P:musl\nV:1.2.4\n\nP:busybox\nV:1.36.1\n\nP:alpine-keys\nV:2.4-r1\n";
+        assert_eq!(parse_apk_installed(content), 3);
+        assert_eq!(parse_apk_installed(""), 0);
+    }
+
+    #[test]
+    fn test_count_pacman_from_dir_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path();
+
+        // Initially empty
+        assert_eq!(count_pacman_from_dir(path), None);
+
+        // Add dummy package directories and files
+        fs::create_dir(path.join("coreutils-9.5-1")).unwrap();
+        fs::create_dir(path.join("linux-6.8.9-arch1-1")).unwrap();
+        fs::create_dir(path.join(".hidden-dir")).unwrap();
+        fs::write(path.join("ALPM_DB_VERSION"), "9").unwrap();
+
+        assert_eq!(count_pacman_from_dir(path), Some(2));
+    }
+
+    #[test]
+    fn test_count_pacman_from_dir_nonexistent() {
+        assert_eq!(
+            count_pacman_from_dir(Path::new("/nonexistent_pacman_dir_12345")),
+            None
+        );
+    }
+
+    #[test]
+    fn test_count_flatpak_from_dirs_mock() {
+        let sys_tmp = tempfile::tempdir().unwrap();
+        let user_tmp = tempfile::tempdir().unwrap();
+
+        fs::create_dir(sys_tmp.path().join("org.mozilla.firefox")).unwrap();
+        fs::create_dir(user_tmp.path().join("org.videolan.VLC")).unwrap();
+
+        let count = count_flatpak_from_dirs(sys_tmp.path(), user_tmp.path());
+        assert_eq!(count, Some(2));
+    }
+
+    #[test]
+    fn test_count_snap_from_dirs_mock() {
+        let snaps_tmp = tempfile::tempdir().unwrap();
+        let snap_root_tmp = tempfile::tempdir().unwrap();
+
+        fs::write(snaps_tmp.path().join("core22_1.snap"), b"").unwrap();
+        fs::write(snaps_tmp.path().join("firefox_2.snap"), b"").unwrap();
+
+        let count = count_snap_from_dirs(snaps_tmp.path(), snap_root_tmp.path());
+        assert_eq!(count, Some(2));
     }
 }
