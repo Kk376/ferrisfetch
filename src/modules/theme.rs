@@ -1,0 +1,476 @@
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use crate::context::FetchContext;
+use crate::modules::{Collector, ModuleId, ModuleOutput};
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ThemeInfo {
+    pub theme: Option<String>,
+    pub icon_theme: Option<String>,
+    pub font: Option<String>,
+    pub cursor: Option<String>,
+    pub dark_mode: bool,
+    pub source: Option<ThemeSource>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThemeSource {
+    Gtk,
+    Kde,
+    Xfce,
+    GSettings,
+    Env,
+}
+
+impl ThemeSource {
+    pub fn label_suffix(&self) -> &'static str {
+        match self {
+            ThemeSource::Gtk => "[GTK]",
+            ThemeSource::Kde => "[Qt/KDE]",
+            ThemeSource::Xfce => "[XFCE]",
+            ThemeSource::GSettings => "[GTK/GNOME]",
+            ThemeSource::Env => "[Env]",
+        }
+    }
+}
+
+/// Parses GTK 3.0 or 4.0 `settings.ini` file contents.
+pub fn parse_gtk_settings_ini(content: &str) -> ThemeInfo {
+    let mut info = ThemeInfo {
+        source: Some(ThemeSource::Gtk),
+        ..Default::default()
+    };
+
+    let mut in_settings_section = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            in_settings_section = trimmed.eq_ignore_ascii_case("[Settings]");
+            continue;
+        }
+
+        if !in_settings_section {
+            continue;
+        }
+
+        if let Some((key, val)) = trimmed.split_once('=') {
+            let key = key.trim().to_ascii_lowercase();
+            let val = val.trim().trim_matches('"').trim_matches('\'').to_string();
+
+            if val.is_empty() {
+                continue;
+            }
+
+            match key.as_str() {
+                "gtk-theme-name" => info.theme = Some(val),
+                "gtk-icon-theme-name" => info.icon_theme = Some(val),
+                "gtk-font-name" => info.font = Some(val),
+                "gtk-cursor-theme-name" => info.cursor = Some(val),
+                "gtk-application-prefer-dark-theme" => {
+                    info.dark_mode = val == "1" || val.eq_ignore_ascii_case("true");
+                }
+                _ => {}
+            }
+        }
+    }
+
+    info
+}
+
+/// Parses KDE Plasma `~/.config/kdeglobals` configuration.
+pub fn parse_kde_globals(content: &str) -> ThemeInfo {
+    let mut info = ThemeInfo {
+        source: Some(ThemeSource::Kde),
+        ..Default::default()
+    };
+
+    let mut current_section = String::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            current_section = trimmed[1..trimmed.len() - 1].to_ascii_lowercase();
+            continue;
+        }
+
+        if let Some((key, val)) = trimmed.split_once('=') {
+            let key = key.trim().to_ascii_lowercase();
+            let val = val.trim().trim_matches('"').trim_matches('\'').to_string();
+
+            if val.is_empty() {
+                continue;
+            }
+
+            match (current_section.as_str(), key.as_str()) {
+                ("kde", "lookandfeelpackage") => {
+                    let name = val
+                        .trim_start_matches("org.kde.")
+                        .trim_end_matches(".desktop")
+                        .replace("dark", "-Dark")
+                        .replace("light", "-Light");
+                    info.theme = Some(name);
+                }
+                ("kde", "widgetstyle") if info.theme.is_none() => {
+                    info.theme = Some(val);
+                }
+                ("general", "colorscheme") => {
+                    if val.to_ascii_lowercase().contains("dark") {
+                        info.dark_mode = true;
+                    }
+                    if info.theme.is_none() {
+                        info.theme = Some(val);
+                    }
+                }
+                ("icons", "theme") => {
+                    info.icon_theme = Some(val);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    info
+}
+
+/// Parses XFCE `xsettings.xml` file.
+pub fn parse_xfce_xsettings(content: &str) -> ThemeInfo {
+    let mut info = ThemeInfo {
+        source: Some(ThemeSource::Xfce),
+        ..Default::default()
+    };
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.contains("name=\"ThemeName\"") {
+            if let Some(val) = extract_xml_property_value(trimmed) {
+                info.theme = Some(val);
+            }
+        } else if trimmed.contains("name=\"IconThemeName\"") {
+            if let Some(val) = extract_xml_property_value(trimmed) {
+                info.icon_theme = Some(val);
+            }
+        }
+    }
+
+    info
+}
+
+fn extract_xml_property_value(line: &str) -> Option<String> {
+    if let Some(val_idx) = line.find("value=\"") {
+        let remainder = &line[val_idx + 7..];
+        if let Some(end_quote) = remainder.find('"') {
+            let val = remainder[..end_quote].trim();
+            if !val.is_empty() {
+                return Some(val.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Attempts to query GSettings for GNOME/GTK theme and icon properties.
+fn query_gsettings_theme() -> ThemeInfo {
+    let mut info = ThemeInfo {
+        source: Some(ThemeSource::GSettings),
+        ..Default::default()
+    };
+
+    if let Ok(output) = Command::new("gsettings")
+        .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
+        .output()
+    {
+        if output.status.success() {
+            let val = String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .trim_matches('\'')
+                .trim_matches('"')
+                .to_string();
+            if !val.is_empty() {
+                info.theme = Some(val);
+            }
+        }
+    }
+
+    if let Ok(output) = Command::new("gsettings")
+        .args(["get", "org.gnome.desktop.interface", "icon-theme"])
+        .output()
+    {
+        if output.status.success() {
+            let val = String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .trim_matches('\'')
+                .trim_matches('"')
+                .to_string();
+            if !val.is_empty() {
+                info.icon_theme = Some(val);
+            }
+        }
+    }
+
+    if let Ok(output) = Command::new("gsettings")
+        .args(["get", "org.gnome.desktop.interface", "color-scheme"])
+        .output()
+    {
+        if output.status.success() {
+            let val = String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .to_ascii_lowercase();
+            if val.contains("dark") {
+                info.dark_mode = true;
+            }
+        }
+    }
+
+    info
+}
+
+fn get_config_dir() -> PathBuf {
+    if let Ok(cfg) = std::env::var("XDG_CONFIG_HOME") {
+        if !cfg.is_empty() {
+            return PathBuf::from(cfg);
+        }
+    }
+
+    if let Ok(home) = std::env::var("HOME") {
+        return Path::new(&home).join(".config");
+    }
+
+    PathBuf::from("/root/.config")
+}
+
+/// Detects theme information across GTK 3/4, KDE Plasma, XFCE, and GSettings.
+pub fn detect_theme_info() -> Option<ThemeInfo> {
+    let config_dir = get_config_dir();
+
+    // 1. GTK 3.0 / 4.0 settings.ini
+    for gtk_ver in ["gtk-4.0", "gtk-3.0"] {
+        let gtk_settings = config_dir.join(gtk_ver).join("settings.ini");
+        if gtk_settings.is_file() {
+            if let Ok(content) = std::fs::read_to_string(&gtk_settings) {
+                let info = parse_gtk_settings_ini(&content);
+                if info.theme.is_some() || info.icon_theme.is_some() {
+                    return Some(info);
+                }
+            }
+        }
+    }
+
+    // 2. KDE Plasma kdeglobals
+    let kde_globals = config_dir.join("kdeglobals");
+    if kde_globals.is_file() {
+        if let Ok(content) = std::fs::read_to_string(&kde_globals) {
+            let info = parse_kde_globals(&content);
+            if info.theme.is_some() || info.icon_theme.is_some() {
+                return Some(info);
+            }
+        }
+    }
+
+    // 3. XFCE xsettings.xml
+    let xfce_settings = config_dir.join("xfce4/xfconf/xfce-perchannel-xml/xsettings.xml");
+    if xfce_settings.is_file() {
+        if let Ok(content) = std::fs::read_to_string(&xfce_settings) {
+            let info = parse_xfce_xsettings(&content);
+            if info.theme.is_some() || info.icon_theme.is_some() {
+                return Some(info);
+            }
+        }
+    }
+
+    // 4. GTK 2 ~/.gtkrc-2.0
+    if let Ok(home) = std::env::var("HOME") {
+        let gtk2_rc = Path::new(&home).join(".gtkrc-2.0");
+        if gtk2_rc.is_file() {
+            if let Ok(content) = std::fs::read_to_string(&gtk2_rc) {
+                let info = parse_gtk_settings_ini(&content);
+                if info.theme.is_some() || info.icon_theme.is_some() {
+                    return Some(info);
+                }
+            }
+        }
+    }
+
+    // 5. GSettings fallback for GNOME sessions
+    let gsettings_info = query_gsettings_theme();
+    if gsettings_info.theme.is_some() || gsettings_info.icon_theme.is_some() {
+        return Some(gsettings_info);
+    }
+
+    // 6. Environment variable fallbacks
+    if let Ok(theme) = std::env::var("GTK_THEME") {
+        if !theme.is_empty() {
+            return Some(ThemeInfo {
+                theme: Some(theme),
+                source: Some(ThemeSource::Env),
+                ..Default::default()
+            });
+        }
+    }
+
+    None
+}
+
+/// Formats the theme output string with optional framework tag.
+pub fn format_theme_value(info: &ThemeInfo) -> Option<String> {
+    info.theme.as_ref().map(|theme| {
+        let suffix = match info.source {
+            Some(source) => format!(" {}", source.label_suffix()),
+            None => String::new(),
+        };
+
+        if info.dark_mode && !theme.to_ascii_lowercase().contains("dark") {
+            format!("{} (dark){}", theme, suffix)
+        } else {
+            format!("{}{}", theme, suffix)
+        }
+    })
+}
+
+/// Formats the icon theme output string.
+pub fn format_icons_value(info: &ThemeInfo) -> Option<String> {
+    info.icon_theme.as_ref().map(|icons| match info.source {
+        Some(source) => format!("{} {}", icons, source.label_suffix()),
+        None => icons.clone(),
+    })
+}
+
+pub struct ThemeCollector;
+
+impl Collector for ThemeCollector {
+    fn id(&self) -> ModuleId {
+        ModuleId::Theme
+    }
+
+    fn collect(&self, _ctx: &FetchContext) -> Option<ModuleOutput> {
+        let info = detect_theme_info()?;
+        let value = format_theme_value(&info)?;
+
+        Some(ModuleOutput {
+            id: ModuleId::Theme,
+            label: "Theme".to_string(),
+            value,
+            custom_rendered: None,
+        })
+    }
+}
+
+pub struct IconsCollector;
+
+impl Collector for IconsCollector {
+    fn id(&self) -> ModuleId {
+        ModuleId::Icons
+    }
+
+    fn collect(&self, _ctx: &FetchContext) -> Option<ModuleOutput> {
+        let info = detect_theme_info()?;
+        let value = format_icons_value(&info)?;
+
+        Some(ModuleOutput {
+            id: ModuleId::Icons,
+            label: "Icons".to_string(),
+            value,
+            custom_rendered: None,
+        })
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_gtk_settings_ini_standard() {
+        let content = r#"
+[Settings]
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Papirus-Dark
+gtk-font-name=Cantarell 11
+gtk-cursor-theme-name=Adwaita
+gtk-application-prefer-dark-theme=1
+"#;
+        let info = parse_gtk_settings_ini(content);
+        assert_eq!(info.theme.as_deref(), Some("Adwaita-dark"));
+        assert_eq!(info.icon_theme.as_deref(), Some("Papirus-Dark"));
+        assert_eq!(info.font.as_deref(), Some("Cantarell 11"));
+        assert_eq!(info.cursor.as_deref(), Some("Adwaita"));
+        assert!(info.dark_mode);
+
+        let formatted = format_theme_value(&info);
+        assert_eq!(formatted.as_deref(), Some("Adwaita-dark [GTK]"));
+    }
+
+    #[test]
+    fn test_parse_gtk_settings_ini_quotes_and_spaces() {
+        let content = r#"
+[Settings]
+gtk-theme-name = "Catppuccin-Mocha-Standard-Blue-Dark"
+gtk-icon-theme-name = 'Papirus'
+gtk-application-prefer-dark-theme = true
+"#;
+        let info = parse_gtk_settings_ini(content);
+        assert_eq!(
+            info.theme.as_deref(),
+            Some("Catppuccin-Mocha-Standard-Blue-Dark")
+        );
+        assert_eq!(info.icon_theme.as_deref(), Some("Papirus"));
+        assert!(info.dark_mode);
+    }
+
+    #[test]
+    fn test_parse_kde_globals_standard() {
+        let content = r#"
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+widgetStyle=Breeze
+
+[Icons]
+Theme=breeze-dark
+
+[General]
+ColorScheme=BreezeDark
+"#;
+        let info = parse_kde_globals(content);
+        assert_eq!(info.theme.as_deref(), Some("breeze-Dark"));
+        assert_eq!(info.icon_theme.as_deref(), Some("breeze-dark"));
+        assert!(info.dark_mode);
+        assert_eq!(info.source, Some(ThemeSource::Kde));
+
+        let formatted = format_theme_value(&info);
+        assert_eq!(formatted.as_deref(), Some("breeze-Dark [Qt/KDE]"));
+    }
+
+    #[test]
+    fn test_parse_xfce_xsettings() {
+        let content = r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="Greybird"/>
+    <property name="IconThemeName" type="string" value="elementary-xfce"/>
+  </property>
+</channel>
+"#;
+        let info = parse_xfce_xsettings(content);
+        assert_eq!(info.theme.as_deref(), Some("Greybird"));
+        assert_eq!(info.icon_theme.as_deref(), Some("elementary-xfce"));
+        assert_eq!(info.source, Some(ThemeSource::Xfce));
+
+        let formatted = format_theme_value(&info);
+        assert_eq!(formatted.as_deref(), Some("Greybird [XFCE]"));
+    }
+
+    #[test]
+    fn test_format_theme_dark_mode_annotation() {
+        let info = ThemeInfo {
+            theme: Some("Adwaita".to_string()),
+            dark_mode: true,
+            source: Some(ThemeSource::GSettings),
+            ..Default::default()
+        };
+
+        let formatted = format_theme_value(&info);
+        assert_eq!(formatted.as_deref(), Some("Adwaita (dark) [GTK/GNOME]"));
+    }
+}

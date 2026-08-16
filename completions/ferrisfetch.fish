@@ -23,6 +23,8 @@ set -l modules \
     'memory\tSystem RAM usage statistics' \
     'mem\tSystem RAM usage (alias)' \
     'disk\tTarget filesystem storage usage' \
+    'theme\tGTK, Qt, or Desktop UI Theme' \
+    'icons\tIcon theme name' \
     'colors\tTerminal 16-color ANSI palette' \
     'palette\tTerminal color palette (alias)'
 

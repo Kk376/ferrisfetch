@@ -11,6 +11,7 @@ pub mod os;
 pub mod packages;
 pub mod shell;
 pub mod terminal;
+pub mod theme;
 pub mod title;
 pub mod uptime;
 
@@ -31,6 +32,8 @@ pub enum ModuleId {
     Gpu,
     Memory,
     Disk,
+    Theme,
+    Icons,
     Colors,
 }
 
@@ -50,6 +53,8 @@ impl ModuleId {
             ModuleId::Gpu,
             ModuleId::Memory,
             ModuleId::Disk,
+            ModuleId::Theme,
+            ModuleId::Icons,
             ModuleId::Colors,
         ]
     }
@@ -69,6 +74,8 @@ impl ModuleId {
             ModuleId::Gpu => "gpu",
             ModuleId::Memory => "memory",
             ModuleId::Disk => "disk",
+            ModuleId::Theme => "theme",
+            ModuleId::Icons => "icons",
             ModuleId::Colors => "colors",
         }
     }
@@ -97,6 +104,8 @@ impl FromStr for ModuleId {
             "gpu" => Ok(ModuleId::Gpu),
             "memory" | "mem" => Ok(ModuleId::Memory),
             "disk" => Ok(ModuleId::Disk),
+            "theme" | "gtk" | "gtktheme" => Ok(ModuleId::Theme),
+            "icons" | "icontheme" => Ok(ModuleId::Icons),
             "colors" | "palette" => Ok(ModuleId::Colors),
             _ => Err(()),
         }
@@ -136,6 +145,8 @@ impl ModuleRegistry {
             Box::new(gpu::GpuCollector),
             Box::new(memory::MemoryCollector),
             Box::new(disk::DiskCollector),
+            Box::new(theme::ThemeCollector),
+            Box::new(theme::IconsCollector),
             Box::new(colors::ColorsCollector),
         ];
 
@@ -173,12 +184,14 @@ mod tests {
         assert_eq!(ModuleId::from_str("os"), Some(ModuleId::Os));
         assert_eq!(ModuleId::from_str("mem"), Some(ModuleId::Memory));
         assert_eq!(ModuleId::from_str("pkgs"), Some(ModuleId::Packages));
+        assert_eq!(ModuleId::from_str("theme"), Some(ModuleId::Theme));
+        assert_eq!(ModuleId::from_str("icons"), Some(ModuleId::Icons));
         assert_eq!(ModuleId::from_str("palette"), Some(ModuleId::Colors));
         assert_eq!(ModuleId::from_str("invalid_mod"), None);
     }
 
     #[test]
     fn test_module_id_all_count() {
-        assert_eq!(ModuleId::all().len(), 14);
+        assert_eq!(ModuleId::all().len(), 16);
     }
 }

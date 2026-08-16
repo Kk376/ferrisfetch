@@ -14,7 +14,7 @@ _ferrisfetch() {
     fi
 
     local opts="-m -d -l -h -V --modules --disable --no-color --logo --no-logo --list-modules --disk-path --help --version"
-    local modules="title os host kernel uptime packages pkgs shell desktop de wm terminal term cpu gpu memory mem disk colors palette"
+    local modules="title os host kernel uptime packages pkgs shell desktop de wm terminal term cpu gpu memory mem disk theme icons colors palette"
     local logos="ferris rust debian ubuntu linuxmint mint fedora arch archlinux rhel redhat centos rocky rockylinux almalinux alma endeavouros endeavour manjaro generic tux linux opensuse suse alpine gentoo void pop popos none"
 
     case "${prev}" in

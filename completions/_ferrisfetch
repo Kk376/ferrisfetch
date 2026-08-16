@@ -33,6 +33,8 @@ _ferrisfetch() {
         'memory:System RAM usage statistics'
         'mem:System RAM usage (alias)'
         'disk:Target filesystem storage usage'
+        'theme:GTK, Qt, or Desktop UI Theme'
+        'icons:Icon theme name'
         'colors:Terminal 16-color ANSI palette'
         'palette:Terminal color palette (alias)'
     )

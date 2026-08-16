@@ -30,7 +30,7 @@ fn test_completion_files_exist_and_cover_all_flags() {
 
     let required_modules = [
         "title", "os", "host", "kernel", "uptime", "packages", "shell", "desktop", "terminal",
-        "cpu", "gpu", "memory", "disk", "colors",
+        "cpu", "gpu", "memory", "disk", "theme", "icons", "colors",
     ];
 
     let required_logos = [

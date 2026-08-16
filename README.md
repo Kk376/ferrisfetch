@@ -167,6 +167,8 @@ ferrisfetch --disk-path /home
 | **GPU** | PCI class scan (`0x03xxxx`) in `/sys/bus/pci/devices/` with vendor mapping | `lspci -mm` query |
 | **Memory** | `/proc/meminfo` active memory calculation (`MemTotal - MemAvailable`) | Pre-3.14 buffer/cache calculation |
 | **Disk** | POSIX `libc::statvfs` on target mount path | Omitted if unreadable |
+| **Theme** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings, `$GTK_THEME` | Omitted if not configured |
+| **Icons** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings icon-theme | Omitted if not configured |
 | **Colors** | Terminal 8-color palette block renderer | Disabled if color is off |
 
 ## Shell Completions
