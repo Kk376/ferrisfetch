@@ -1,6 +1,6 @@
 # FerrisFetch
 
-FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux systems. It reads system metrics directly from virtual filesystems (`/proc`, `/sys`) and standard POSIX APIs (`libc`) without spawning shell subprocesses or requiring runtime dependencies.
+FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux systems. It queries system metrics directly from virtual filesystems (`/proc`, `/sys`) and standard POSIX interfaces (`libc`) without spawning shell subprocesses.
 
 ```text
     _~^~^~_       kk376@MSI-Thin-A15
@@ -9,27 +9,45 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
   / '-----' \     Kernel: 6.18.33.2-microsoft-standard-WSL2
                   Uptime: 45 mins
                   Packages: 1018 (dpkg)
-                  Shell: zsh
+                  Shell: zsh 5.9
                   Terminal: Windows Terminal
                   CPU: AMD Ryzen 5 7535HS with Radeon Graphics (12)
-                  GPU: Microsoft Corporation Basic Render Driver
+                  GPU: Microsoft Direct3D
                   Memory: 1.73 GiB / 7.36 GiB (24%)
                   Disk: 16.3 GiB / 1006.9 GiB (2%)
 ```
 
+---
+
 ## Features
 
-- **Direct kernel probing**: Uses `/proc`, `/sys`, and POSIX `libc` calls for instantaneous metrics with zero shell invocations.
+- **Direct kernel probing**: Reads `/proc`, `/sys`, and POSIX `libc` calls directly without spawning shell subprocesses.
 - **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`) without network calls or database locks.
-- **Zero-overhead layout rendering**: Computes column alignment and ANSI visible widths dynamically with automatic vertical fallback on narrow terminals (< 60 columns).
+- **Dynamic layout engine**: Computes column alignment and ANSI visible widths dynamically with automatic vertical fallback on narrow terminals (< 60 columns).
 - **Distro logos & Ferris mascot**: Includes compact ASCII art logos for major Linux distributions (Arch, Debian, Ubuntu, Fedora, Mint, RHEL, Rocky, Alma, EndeavourOS, Manjaro, openSUSE, Alpine, Gentoo, Void, Pop!_OS) and the Ferris mascot.
+- **Resilient fallback design**: Modules degrade gracefully when optional hardware, environment variables, or metadata files are missing.
 
-## Installation
+---
+
+## Supported Distribution Families
+
+FerrisFetch is built and tested across the following Linux distribution families:
+
+- **Debian Family**: Debian, Ubuntu, Linux Mint, Pop!_OS
+- **Red Hat Family**: Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream
+- **Arch Family**: Arch Linux, EndeavourOS, Manjaro
+- **Independent Distributions**: Alpine Linux, Void Linux, Gentoo, openSUSE
+
+---
+
+## Installation & Building
 
 ### Prerequisites
-- Rust 1.75.0 or later
 
-### Building from source
+- Rust 1.75.0 or later (uses standard library `std::io::IsTerminal`)
+- Standard Linux C library headers (`libc`)
+
+### Build from source
 
 ```bash
 git clone https://github.com/kk376/ferrisfetch.git
@@ -37,53 +55,123 @@ cd ferrisfetch
 cargo build --release
 ```
 
-The compiled binary will be located at `target/release/ferrisfetch`.
+The compiled release binary is located at `target/release/ferrisfetch`.
+
+---
 
 ## Usage
 
 Run FerrisFetch directly:
 
 ```bash
+cargo run --release
+# or after copying target/release/ferrisfetch to your PATH:
 ferrisfetch
 ```
 
-### Command-line Options
+### CLI Options
 
-| Flag | Description |
+| Flag / Option | Description |
 | :--- | :--- |
 | `-m, --modules <LIST>` | Select and order specific modules (e.g. `os,kernel,cpu,memory`) |
-| `-d, --disable <LIST>` | Disable specific modules (e.g. `gpu,disk`) |
-| `-l, --logo <NAME>` | Override ASCII logo (e.g. `arch`, `debian`, `ferris`, `ubuntu`, `tux`, `none`) |
+| `-d, --disable <LIST>` | Disable specific modules from output (e.g. `gpu,disk`) |
+| `-l, --logo <NAME>` | Override ASCII logo (e.g. `arch`, `debian`, `ferris`, `ubuntu`, `fedora`, `tux`, `none`) |
 | `--no-logo` | Suppress the ASCII logo and print only system information |
-| `--no-color` | Disable ANSI color escapes (also honors the `NO_COLOR` environment variable) |
+| `--no-color` | Disable ANSI color escapes |
 | `--disk-path <PATH>` | Target filesystem path for disk statistics (default: `/`) |
 | `--list-modules` | Print all available information modules and exit |
+| `-h, --help` | Print help information |
+| `-V, --version` | Print version information |
 
 ### Examples
 
-Display only OS, CPU, and RAM metrics:
+**Select specific modules in custom order:**
 ```bash
-ferrisfetch -m os,cpu,memory
+ferrisfetch -m os,cpu,memory,disk
 ```
 
-Override logo with the Ferris mascot:
+**Disable GPU and packages modules:**
+```bash
+ferrisfetch -d gpu,packages
+```
+
+**Override logo with the Ferris mascot:**
 ```bash
 ferrisfetch --logo ferris
 ```
 
-Disable GPU and Disk probing:
+**Query a specific mount point for disk usage:**
 ```bash
-ferrisfetch -d gpu,disk
+ferrisfetch --disk-path /home
 ```
 
-Output plain text for scripts or piping:
+---
+
+## Color and TTY Behavior
+
+- **Interactive Terminals**: Colors and bold accents are enabled automatically when stdout is a TTY.
+- **Redirected Output**: When stdout is redirected to a file or pipe (e.g. `ferrisfetch > output.txt`), ANSI escape codes are automatically stripped.
+- **Force Color**: Setting `CLICOLOR_FORCE=1` or `FORCE_COLOR=1` preserves ANSI escapes even when piped.
+- **Explicit Disable**: Passing `--no-color` or setting `NO_COLOR=1` or `TERM=dumb` disables all ANSI color escapes.
+
+---
+
+## Information Modules & Detection Strategies
+
+| Module | Detection Strategy | Fallback |
+| :--- | :--- | :--- |
+| **Title** | `$USER` / `$LOGNAME` / `getpwuid` and `uname(2)` / `/proc/sys/kernel/hostname` | `"user@localhost"` |
+| **OS** | `/etc/os-release` and `/usr/lib/os-release` parsing | `/etc/debian_version`, `/etc/redhat-release`, `uname` |
+| **Kernel** | POSIX `libc::uname` release and machine fields | None required |
+| **Host** | `/sys/devices/virtual/dmi/id/product_name` and devicetree model | Board name or omitted |
+| **Uptime** | Floating-point parse of `/proc/uptime` | `libc::sysinfo` uptime |
+| **Packages** | Local DB scans: `/var/lib/dpkg/status`, `/var/lib/pacman/local`, RPM DB, APK DB, flatpak, snap | `dpkg-query`, `rpm -qa`, `xbps-query` |
+| **Shell** | Ancestor process scan via `/proc/<pid>/status` & `comm`, `$SHELL` | Formatted shell name |
+| **Terminal** | `$TERM_PROGRAM`, environment signatures (Alacritty, Kitty, Konsole, etc.), process tree | `$TERM` variable |
+| **Desktop / WM** | `$XDG_CURRENT_DESKTOP`, Wayland sockets (`SWAYSOCK`, `HYPRLAND_INSTANCE_SIGNATURE`), process scan | Omitted if headless |
+| **CPU** | `/proc/cpuinfo` parsing (`model name`, `Hardware`, `Processor`, core count, sockets) | Sanitized model string |
+| **GPU** | PCI class scan (`0x03xxxx`) in `/sys/bus/pci/devices/` with vendor mapping | `lspci -mm` query |
+| **Memory** | `/proc/meminfo` active memory calculation (`MemTotal - MemAvailable`) | Pre-3.14 buffer/cache calculation |
+| **Disk** | POSIX `libc::statvfs` on target mount path | Omitted if unreadable |
+| **Colors** | Terminal 8-color palette block renderer | Disabled if color is off |
+
+---
+
+## Development & Verification
+
+### Run unit and integration tests
+
 ```bash
-ferrisfetch --no-color --no-logo
+cargo test
 ```
 
-## Architecture
+### Check code formatting
 
-See [docs/architecture.md](docs/architecture.md) for full implementation details, module probing mechanisms, and design principles.
+```bash
+cargo fmt --check
+```
+
+### Run linter with zero warnings tolerance
+
+```bash
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+### Build release binary
+
+```bash
+cargo build --release
+```
+
+---
+
+## Limitations
+
+- **Headless Servers**: Graphical desktop and window manager fields are omitted on headless systems or TTY sessions without display servers.
+- **GPU in Sandboxes**: Containers or virtual machines lacking access to `/sys/bus/pci` or `lspci` will report virtual display devices or omit GPU information.
+- **Container Packages**: In minimal containers without package databases or status files, the package count module cleanly produces no output rather than failing.
+
+---
 
 ## License
 

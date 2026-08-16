@@ -111,6 +111,20 @@ pub fn detect_terminal_from_env(
     None
 }
 
+pub fn match_terminal_proc(comm: &str) -> Option<&'static str> {
+    for &(proc_name, display_name) in KNOWN_TERMINALS {
+        let is_match = if proc_name == "st" {
+            comm == "st" || comm == "stterm" || comm.starts_with("st-")
+        } else {
+            comm == proc_name || comm.starts_with(&format!("{}-", proc_name))
+        };
+        if is_match {
+            return Some(display_name);
+        }
+    }
+    None
+}
+
 /// Inspects environment variables and process ancestry to detect terminal emulator.
 pub fn detect_terminal() -> Option<String> {
     let term_prog = std::env::var("TERM_PROGRAM").ok();
@@ -175,10 +189,8 @@ pub fn detect_terminal() -> Option<String> {
                 .trim()
                 .to_lowercase();
 
-            for &(proc_name, display_name) in KNOWN_TERMINALS {
-                if comm == proc_name || comm.contains(proc_name) {
-                    return Some(display_name.to_string());
-                }
+            if let Some(display_name) = match_terminal_proc(&comm) {
+                return Some(display_name.to_string());
             }
 
             current_pid = ppid;
@@ -258,5 +270,25 @@ mod tests {
 
         let res_none = detect_terminal_from_env(None, None, &[], None);
         assert_eq!(res_none, None);
+    }
+
+    #[test]
+    fn test_match_terminal_proc() {
+        assert_eq!(match_terminal_proc("st"), Some("st"));
+        assert_eq!(match_terminal_proc("stterm"), Some("st"));
+        assert_eq!(match_terminal_proc("st-256color"), Some("st"));
+        assert_eq!(match_terminal_proc("alacritty"), Some("Alacritty"));
+        assert_eq!(match_terminal_proc("kitty"), Some("kitty"));
+        assert_eq!(
+            match_terminal_proc("gnome-terminal-server"),
+            Some("GNOME Terminal")
+        );
+
+        // Ensure false-positive substrings do not match
+        assert_eq!(match_terminal_proc("systemd"), None);
+        assert_eq!(match_terminal_proc("starship"), None);
+        assert_eq!(match_terminal_proc("strace"), None);
+        assert_eq!(match_terminal_proc("install"), None);
+        assert_eq!(match_terminal_proc("gst-plugin"), None);
     }
 }

@@ -65,6 +65,9 @@ pub fn should_enable_color(no_color_flag: bool) -> bool {
             return false;
         }
     }
+    if std::env::var_os("CLICOLOR_FORCE").is_some() || std::env::var_os("FORCE_COLOR").is_some() {
+        return true;
+    }
     std::io::stdout().is_terminal()
 }
 
@@ -176,5 +179,10 @@ mod tests {
 
         let active = resolve_active_modules(&cli);
         assert!(active.is_empty());
+    }
+
+    #[test]
+    fn test_should_enable_color_flags() {
+        assert!(!should_enable_color(true));
     }
 }

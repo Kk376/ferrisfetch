@@ -181,3 +181,12 @@ fn test_various_logo_overrides() {
         );
     }
 }
+
+#[test]
+fn test_cli_version() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.arg("--version");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("ferrisfetch 0.1.0"));
+}

@@ -27,9 +27,9 @@ pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
             stat.f_bsize
         };
 
-        let total_bytes = stat.f_blocks * block_size;
-        let free_bytes = stat.f_bavail * block_size;
-        let used_bytes = total_bytes.saturating_sub(stat.f_bfree * block_size);
+        let total_bytes = stat.f_blocks.saturating_mul(block_size);
+        let free_bytes = stat.f_bavail.saturating_mul(block_size);
+        let used_bytes = total_bytes.saturating_sub(stat.f_bfree.saturating_mul(block_size));
 
         if total_bytes == 0 {
             return None;

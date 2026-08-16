@@ -26,29 +26,31 @@ pub fn parse_os_release(content: &str) -> OsInfo {
 
         if let Some((k, v)) = line.split_once('=') {
             let key = k.trim();
-            let mut val = v.trim();
+            let val = v.trim();
 
-            if val.len() >= 2
-                && ((val.starts_with('"') && val.ends_with('"'))
-                    || (val.starts_with('\'') && val.ends_with('\'')))
+            let mut val_str = val;
+            if val_str.len() >= 2
+                && ((val_str.starts_with('"') && val_str.ends_with('"'))
+                    || (val_str.starts_with('\'') && val_str.ends_with('\'')))
             {
-                val = &val[1..val.len() - 1];
+                val_str = &val_str[1..val_str.len() - 1];
             }
-            let val = val.trim();
-            if val.is_empty() {
+            let unescaped = val_str.replace("\\\"", "\"").replace("\\\\", "\\");
+            let clean_val = unescaped.trim();
+            if clean_val.is_empty() {
                 continue;
             }
 
             match key {
-                "PRETTY_NAME" => pretty_name = Some(val.to_string()),
-                "NAME" => name = Some(val.to_string()),
+                "PRETTY_NAME" => pretty_name = Some(clean_val.to_string()),
+                "NAME" => name = Some(clean_val.to_string()),
                 "VERSION" | "VERSION_ID" => {
                     if version.is_none() {
-                        version = Some(val.to_string());
+                        version = Some(clean_val.to_string());
                     }
                 }
-                "ID" => id = Some(val.to_lowercase()),
-                "ID_LIKE" => id_like = Some(val.to_lowercase()),
+                "ID" => id = Some(clean_val.to_lowercase()),
+                "ID_LIKE" => id_like = Some(clean_val.to_lowercase()),
                 _ => {}
             }
         }
@@ -306,5 +308,13 @@ ID=custom
         assert_eq!(info.display_name, "Custom Arch Linux");
         assert_eq!(info.distro_id, "arch");
         assert_eq!(info.distro_like, vec!["arch"]);
+    }
+
+    #[test]
+    fn test_parse_os_release_escaped_quotes() {
+        let text = "PRETTY_NAME=\"Debian GNU/Linux 12 (\\\"Bookworm\\\")\"\nID=debian\n";
+        let info = parse_os_release(text);
+        assert_eq!(info.display_name, "Debian GNU/Linux 12 (\"Bookworm\")");
+        assert_eq!(info.distro_id, "debian");
     }
 }

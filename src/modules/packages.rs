@@ -76,12 +76,17 @@ pub fn count_pacman() -> Option<usize> {
     count_pacman_from_dir(Path::new("/var/lib/pacman/local"))
 }
 
-/// Parses raw newline-delimited command output (such as `rpm -qa` or `xbps-query -l`).
-pub fn parse_rpm_output(output: &[u8]) -> usize {
+/// Counts non-empty newline-delimited entries from a raw byte slice (such as `rpm -qa`, `dpkg-query`, or `xbps-query -l`).
+pub fn count_newline_entries(output: &[u8]) -> usize {
     output
         .split(|&b| b == b'\n')
         .filter(|l| !l.is_empty())
         .count()
+}
+
+/// Alias for backwards compatibility with tests.
+pub fn parse_rpm_output(output: &[u8]) -> usize {
+    count_newline_entries(output)
 }
 
 /// Counts installed packages for Red Hat / Fedora family via rpm.
@@ -98,7 +103,7 @@ pub fn count_rpm() -> Option<usize> {
     if has_rpm_db {
         if let Ok(output) = Command::new("rpm").arg("-qa").output() {
             if output.status.success() {
-                let count = parse_rpm_output(&output.stdout);
+                let count = count_newline_entries(&output.stdout);
                 if count > 0 {
                     return Some(count);
                 }
@@ -141,7 +146,7 @@ pub fn count_xbps() -> Option<usize> {
         if count > 0 {
             if let Ok(output) = Command::new("xbps-query").arg("-l").output() {
                 if output.status.success() {
-                    let c = parse_rpm_output(&output.stdout);
+                    let c = count_newline_entries(&output.stdout);
                     if c > 0 {
                         return Some(c);
                     }
@@ -192,19 +197,21 @@ pub fn count_flatpak() -> Option<usize> {
     count_flatpak_from_dirs(sys_path, &user_path)
 }
 
-/// Counts installed Snap packages from specified directories.
+/// Counts installed Snap packages from specified directories, deduplicating revisions.
 pub fn count_snap_from_dirs(snaps_path: &Path, snap_root: &Path) -> Option<usize> {
     if let Ok(entries) = fs::read_dir(snaps_path) {
-        let count = entries
-            .flatten()
-            .filter(|e| {
-                let name = e.file_name();
-                let s = name.to_string_lossy();
-                s.ends_with(".snap")
-            })
-            .count();
-        if count > 0 {
-            return Some(count);
+        let mut unique_snaps = std::collections::HashSet::new();
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let s = name.to_string_lossy();
+            if s.ends_with(".snap") {
+                // Strip revision suffix, e.g. core22_1.snap -> core22
+                let pkg_name = s.split_once('_').map(|(p, _)| p).unwrap_or(&s);
+                unique_snaps.insert(pkg_name.to_string());
+            }
+        }
+        if !unique_snaps.is_empty() {
+            return Some(unique_snaps.len());
         }
     }
 
@@ -371,10 +378,19 @@ Section: libs
         let snaps_tmp = tempfile::tempdir().unwrap();
         let snap_root_tmp = tempfile::tempdir().unwrap();
 
+        // 2 revisions of core22, 1 revision of firefox -> total 2 distinct packages
         fs::write(snaps_tmp.path().join("core22_1.snap"), b"").unwrap();
+        fs::write(snaps_tmp.path().join("core22_2.snap"), b"").unwrap();
         fs::write(snaps_tmp.path().join("firefox_2.snap"), b"").unwrap();
 
         let count = count_snap_from_dirs(snaps_tmp.path(), snap_root_tmp.path());
         assert_eq!(count, Some(2));
+    }
+
+    #[test]
+    fn test_count_newline_entries() {
+        let output = b"pkg1\npkg2\npkg3\n";
+        assert_eq!(count_newline_entries(output), 3);
+        assert_eq!(count_newline_entries(b""), 0);
     }
 }

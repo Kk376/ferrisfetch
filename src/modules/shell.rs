@@ -103,6 +103,24 @@ fn format_shell_with_version(shell_name: &str) -> String {
     )
 }
 
+/// Checks if a process name matches a known shell or valid versioned shell binary name.
+pub fn is_known_shell(name_clean: &str) -> bool {
+    for &known in KNOWN_SHELLS {
+        if name_clean == known {
+            return true;
+        }
+        if let Some(rest) = name_clean.strip_prefix(known) {
+            if rest.starts_with('-')
+                || rest.starts_with('.')
+                || (!rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Probes process hierarchy or environment to determine active user shell.
 pub fn detect_shell() -> Option<String> {
     let mut current_pid = unsafe { libc::getpid() as u32 };
@@ -115,10 +133,8 @@ pub fn detect_shell() -> Option<String> {
             }
             if let Some(name) = get_proc_name(ppid) {
                 let name_clean = extract_shell_name(&name);
-                for &known in KNOWN_SHELLS {
-                    if name_clean == known || name_clean.starts_with(known) {
-                        return Some(format_shell_with_version(&name_clean));
-                    }
+                if is_known_shell(&name_clean) {
+                    return Some(format_shell_with_version(&name_clean));
                 }
             }
             current_pid = ppid;
@@ -188,5 +204,22 @@ mod tests {
             format_shell_name_version("custom_shell", None, None, None),
             "custom_shell"
         );
+    }
+
+    #[test]
+    fn test_is_known_shell() {
+        assert!(is_known_shell("bash"));
+        assert!(is_known_shell("zsh"));
+        assert!(is_known_shell("fish"));
+        assert!(is_known_shell("nu"));
+        assert!(is_known_shell("sh"));
+        assert!(is_known_shell("bash-5.2"));
+        assert!(is_known_shell("sh4"));
+
+        // Reject non-shell prefixes
+        assert!(!is_known_shell("shadow"));
+        assert!(!is_known_shell("shared-mime"));
+        assert!(!is_known_shell("nuget"));
+        assert!(!is_known_shell("shark"));
     }
 }

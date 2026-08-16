@@ -5,7 +5,6 @@ use std::path::Path;
 use std::process::Command;
 
 /// Maps PCI vendor hex IDs to human-readable manufacturer names.
-/// Maps PCI vendor hex IDs to human-readable manufacturer names.
 pub fn vendor_id_to_name(vendor: &str) -> Option<&'static str> {
     let clean = vendor
         .trim()
@@ -159,11 +158,15 @@ pub fn detect_gpus_lspci() -> Vec<String> {
 pub fn get_gpu_info() -> Option<String> {
     let sysfs_gpus = detect_gpus_sysfs();
     if !sysfs_gpus.is_empty() {
-        // If sysfs found generic/raw hex device IDs or generic names, try lspci to get full device names
-        let has_raw_device_ids = sysfs_gpus
-            .iter()
-            .any(|g| g.contains("0x") || g.contains("PCI Display"));
-        if has_raw_device_ids {
+        // If sysfs found generic/raw hex device IDs or bare vendor names, try lspci to get full device names
+        let is_generic = sysfs_gpus.iter().any(|g| {
+            g.contains("0x")
+                || g.contains("PCI Display")
+                || g == "Intel"
+                || g == "NVIDIA"
+                || g == "AMD"
+        });
+        if is_generic {
             let lspci_gpus = detect_gpus_lspci();
             if !lspci_gpus.is_empty() {
                 return Some(lspci_gpus.join(", "));

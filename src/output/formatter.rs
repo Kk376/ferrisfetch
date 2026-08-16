@@ -2,6 +2,22 @@ use crate::modules::ModuleOutput;
 use crate::output::color::format_label;
 use crate::output::logo::Logo;
 
+/// Returns the column display width of a Unicode character (1 for standard, 2 for wide CJK/emojis).
+pub fn char_width(c: char) -> usize {
+    match c as u32 {
+        0x1100..=0x115F
+        | 0x2E80..=0xA4CF
+        | 0xAC00..=0xD7A3
+        | 0xF900..=0xFAFF
+        | 0xFE10..=0xFE19
+        | 0xFE30..=0xFE6F
+        | 0xFF01..=0xFF60
+        | 0xFFE0..=0xFFE6
+        | 0x1F300..=0x1F9FF => 2,
+        _ => 1,
+    }
+}
+
 /// Calculates the visible printable width of a string, ignoring ANSI escape sequences.
 pub fn visible_width(s: &str) -> usize {
     let mut in_escape = false;
@@ -15,7 +31,7 @@ pub fn visible_width(s: &str) -> usize {
                 in_escape = false;
             }
         } else {
-            len += 1;
+            len += char_width(c);
         }
     }
     len
@@ -187,5 +203,13 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "A     OS: Linux");
         assert_eq!(lines[1], "BBB   Kernel: 6.1");
+    }
+
+    #[test]
+    fn test_visible_width_wide_cjk() {
+        // CJK characters take 2 columns each
+        assert_eq!(visible_width("こんにちは"), 10);
+        assert_eq!(visible_width("你好世界"), 8);
+        assert_eq!(visible_width("\x1b[31m你好\x1b[0m"), 4);
     }
 }

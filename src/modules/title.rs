@@ -1,7 +1,7 @@
 use crate::context::FetchContext;
 use crate::modules::kernel::get_uname_info;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
-use crate::output::color::{bold, RESET};
+use crate::output::color::RESET;
 use crate::output::logo::match_logo;
 use std::ffi::CStr;
 use std::fs;
@@ -69,8 +69,8 @@ pub fn format_title(
 
     if enable_color {
         let primary = primary_color.unwrap_or("\x1b[38;5;208m");
-        let user_styled = format!("{}{}{}", primary, bold(user, true), RESET);
-        let host_styled = format!("{}{}{}", primary, bold(host, true), RESET);
+        let user_styled = format!("{}{}{}{}", crate::output::color::BOLD, primary, user, RESET);
+        let host_styled = format!("{}{}{}{}", crate::output::color::BOLD, primary, host, RESET);
         let line1 = format!("{}@{}", user_styled, host_styled);
         format!("{}\n{}", line1, divider_plain)
     } else {
