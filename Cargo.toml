@@ -15,3 +15,10 @@ libc = "0.2"
 assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.10"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/ferrisfetch", dest = "/usr/bin/ferrisfetch", mode = "755" },
+    { source = "README.md", dest = "/usr/share/doc/ferrisfetch/README.md", mode = "644", doc = true },
+    { source = "LICENSE", dest = "/usr/share/licenses/ferrisfetch/LICENSE", mode = "644" },
+]
