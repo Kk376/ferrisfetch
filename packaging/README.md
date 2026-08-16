@@ -16,7 +16,6 @@ This directory contains package definitions, build scripts, and metadata for Lin
 | **Gentoo Linux** | [`gentoo/ferrisfetch-0.1.0.ebuild`](gentoo/ferrisfetch-0.1.0.ebuild) | `ebuild` / `emerge` | Portage ebuild |
 | **Homebrew** | [`homebrew/ferrisfetch.rb`](homebrew/ferrisfetch.rb) | `brew` | Formula / Bottled bottle |
 | **KISS Linux** | [`kiss/`](kiss/) | `kiss` | KISS package |
-| **Chimera Linux** | [`chimera/template.py`](chimera/template.py) | `cbuild` | APK package |
 
 ---
 
@@ -281,34 +280,7 @@ brew audit --strict packaging/homebrew/ferrisfetch.rb
 
 ---
 
-### 10. Chimera Linux
-
-- **Source files**: [`packaging/chimera/template.py`](chimera/template.py)
-
-#### Local Build with cbuild
-```bash
-# Clone cports
-git clone --depth 1 https://github.com/chimera-linux/cports.git
-cd cports
-# Initialize binary bootstrap container
-./cbuild binary-bootstrap
-# Copy template into user repository
-mkdir -p user/ferrisfetch
-cp /path/to/ferrisfetch/packaging/chimera/template.py user/ferrisfetch/template.py
-# Build package
-./cbuild pkg user/ferrisfetch
-```
-
-#### Chimera cports Submission
-1. Fork and clone `chimera-linux/cports`.
-2. Create branch `ferrisfetch`.
-3. Place `template.py` into `user/ferrisfetch/template.py`.
-4. Commit with message `user/ferrisfetch: new package`.
-5. Open a pull request against `chimera-linux/cports:master`.
-
----
-
-### 11. KISS Linux
+### 10. KISS Linux
 
 - **Source files**: [`packaging/kiss/`](kiss/) (`build`, `version`, `sources`, `checksums`, `depends`)
 - **Install paths**:
