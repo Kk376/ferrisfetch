@@ -48,7 +48,17 @@ sudo rpm -i releases/ferrisfetch-0.1.0-1.x86_64.rpm
 sudo pacman -U releases/ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst
 ```
 
-#### Standalone Binary (Any Linux Distribution)
+#### Android / Termux (ARM64)
+```bash
+# Install the Termux package directly
+dpkg -i releases/ferrisfetch_0.1.0-1_termux_aarch64.deb
+
+# Or download and run the standalone ARM64 binary:
+chmod +x releases/ferrisfetch-termux-arm64
+cp releases/ferrisfetch-termux-arm64 $PREFIX/bin/ferrisfetch
+```
+
+#### Standalone Binary (Any x86_64 Linux Distribution)
 ```bash
 chmod +x releases/ferrisfetch-linux-musl-x86_64
 sudo cp releases/ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
