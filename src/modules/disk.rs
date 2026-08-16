@@ -22,14 +22,15 @@ pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
         let stat = stat.assume_init();
 
         let block_size = if stat.f_frsize > 0 {
-            stat.f_frsize
+            stat.f_frsize as u64
         } else {
-            stat.f_bsize
+            stat.f_bsize as u64
         };
 
-        let total_bytes = stat.f_blocks.saturating_mul(block_size);
-        let free_bytes = stat.f_bavail.saturating_mul(block_size);
-        let used_bytes = total_bytes.saturating_sub(stat.f_bfree.saturating_mul(block_size));
+        let total_bytes = (stat.f_blocks as u64).saturating_mul(block_size);
+        let free_bytes = (stat.f_bavail as u64).saturating_mul(block_size);
+        let used_bytes =
+            total_bytes.saturating_sub((stat.f_bfree as u64).saturating_mul(block_size));
 
         if total_bytes == 0 {
             return None;
