@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-release:
+    name: Build and Publish Release Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools zstd
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,x86_64-unknown-linux-musl
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install packaging tools
+        run: |
+          cargo install cargo-deb --locked
+          cargo install cargo-generate-rpm --locked
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --target x86_64-unknown-linux-gnu
+          cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Package release artifacts
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          mkdir -p dist
+
+          # 1. Standalone GNU tarball
+          tar -czvf "dist/ferrisfetch-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz" \
+            -C target/x86_64-unknown-linux-gnu/release ferrisfetch \
+            -C ../../../ README.md LICENSE
+
+          # 2. Standalone Musl tarball
+          tar -czvf "dist/ferrisfetch-${TAG_NAME}-x86_64-unknown-linux-musl.tar.gz" \
+            -C target/x86_64-unknown-linux-musl/release ferrisfetch \
+            -C ../../../ README.md LICENSE
+
+          # 3. Debian Package (.deb)
+          cargo deb --target x86_64-unknown-linux-gnu --no-build
+          cp target/x86_64-unknown-linux-gnu/debian/*.deb dist/
+
+          # 4. RPM Package (.rpm)
+          cargo generate-rpm --target x86_64-unknown-linux-gnu
+          cp target/generate-rpm/*.rpm dist/ || cp target/x86_64-unknown-linux-gnu/generate-rpm/*.rpm dist/
+
+          # 5. Arch Linux Package (.pkg.tar.zst)
+          PKGDIR="pkg-arch-build"
+          mkdir -p "${PKGDIR}/usr/bin"
+          mkdir -p "${PKGDIR}/usr/share/doc/ferrisfetch"
+          mkdir -p "${PKGDIR}/usr/share/licenses/ferrisfetch"
+
+          cp target/x86_64-unknown-linux-gnu/release/ferrisfetch "${PKGDIR}/usr/bin/ferrisfetch"
+          cp README.md "${PKGDIR}/usr/share/doc/ferrisfetch/README.md"
+          cp LICENSE "${PKGDIR}/usr/share/licenses/ferrisfetch/LICENSE"
+          chmod 755 "${PKGDIR}/usr/bin/ferrisfetch"
+
+          SIZE=$(du -sb "${PKGDIR}" | awk '{print $1}')
+          BUILDDATE=$(date +%s)
+
+          cat <<EOF > "${PKGDIR}/.PKGINFO"
+          pkgname = ferrisfetch
+          pkgbase = ferrisfetch
+          pkgver = ${VERSION}-1
+          pkgdesc = A fast, lightweight Linux system information fetch tool written in Rust
+          url = https://github.com/kk376/ferrisfetch
+          builddate = ${BUILDDATE}
+          packager = GitHub Actions <actions@github.com>
+          size = ${SIZE}
+          arch = x86_64
+          license = MIT
+          depend = glibc
+          EOF
+
+          (cd "${PKGDIR}" && tar --zstd -cf "../dist/ferrisfetch-${VERSION}-1-x86_64.pkg.tar.zst" .PKGINFO usr)
+          rm -rf "${PKGDIR}"
+
+          # 6. Generate SHA256 checksums
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

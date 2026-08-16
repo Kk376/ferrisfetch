@@ -135,6 +135,48 @@ ferrisfetch --disk-path /home
 | **Disk** | POSIX `libc::statvfs` on target mount path | Omitted if unreadable |
 | **Colors** | Terminal 8-color palette block renderer | Disabled if color is off |
 
+## Shell Completions
+
+FerrisFetch provides comprehensive shell completions for Bash, Zsh, and Fish with full support for flags, modules, and logo identifiers.
+
+### Bash
+```bash
+# Load in current session
+source completions/ferrisfetch.bash
+
+# Or install system-wide
+sudo cp completions/ferrisfetch.bash /usr/share/bash-completion/completions/ferrisfetch
+```
+
+### Zsh
+```zsh
+# Add to your fpath in ~/.zshrc before compinit
+fpath=(/path/to/ferrisfetch/completions $fpath)
+autoload -Uz compinit && compinit
+
+# Or install system-wide
+sudo cp completions/_ferrisfetch /usr/share/zsh/site-functions/_ferrisfetch
+```
+
+### Fish
+```fish
+# Install for current user
+cp completions/ferrisfetch.fish ~/.config/fish/completions/
+
+# Or install system-wide
+sudo cp completions/ferrisfetch.fish /usr/share/fish/vendor_completions.d/
+```
+
+---
+
+## Packaging
+
+Distribution packaging templates and recipes are available in the `packaging/` directory:
+
+- **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (Debian source package with `control`, `rules`, `changelog`, `compat`, `copyright`)
+- **Fedora / RHEL / CentOS**: [`packaging/rpm/ferrisfetch.spec`](packaging/rpm/ferrisfetch.spec) (RPM spec file with cargo release build and completion manifests)
+- **Arch Linux / AUR**: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) and [`packaging/arch/.SRCINFO`](packaging/arch/.SRCINFO)
+
 ---
 
 ## Development & Verification

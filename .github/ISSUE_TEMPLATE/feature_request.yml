@@ -1,0 +1,62 @@
+name: Feature Request
+description: Propose an idea, new module, or distribution logo for FerrisFetch
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement. Please describe your feature request below.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - New Information Module
+        - New Distribution Logo / ASCII Art
+        - CLI Flags / Output Customization
+        - Packaging & Platform Portability
+        - Other Improvement
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Problem or Use Case
+      description: What problem are you trying to solve, or what missing data would you like to see?
+      placeholder: A clear description of the use case or motivation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work in FerrisFetch? Mention relevant Linux `/proc` or `/sys` files if known.
+      placeholder: Describe how the module or feature should detect and format the information.
+    validations:
+      required: true
+  - type: textarea
+    id: example_output
+    attributes:
+      label: Example Output / Mockup (Optional)
+      description: Provide an example of how the output should appear in the terminal.
+      placeholder: |
+        OS: Alpine Linux v3.19
+        Battery: 85% (Discharging)
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered (Optional)
+      description: Any alternative implementations or approaches you considered.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched open and closed issues and confirmed this feature has not been requested before.
+          required: true

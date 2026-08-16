@@ -1,4 +1,4 @@
-# Maintainer: Arch Linux Packaging Specialist <kk376@archlinux.local>
+# Maintainer: FerrisFetch Packaging Team <packaging@ferrisfetch.rs>
 pkgname=ferrisfetch
 pkgver=0.1.0
 pkgrel=1

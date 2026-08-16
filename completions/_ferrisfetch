@@ -1,0 +1,98 @@
+#compdef ferrisfetch
+
+autoload -U is-at-least
+
+_ferrisfetch() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local -a modules
+    modules=(
+        'title:Username and hostname header'
+        'os:Operating system and distribution name'
+        'host:Hardware product and model name'
+        'kernel:Linux kernel release version'
+        'uptime:System running time since boot'
+        'packages:Installed package counts'
+        'pkgs:Installed package counts (alias)'
+        'shell:Current shell name and version'
+        'desktop:Desktop Environment or Window Manager'
+        'de:Desktop Environment (alias)'
+        'wm:Window Manager (alias)'
+        'terminal:Active terminal emulator'
+        'term:Terminal emulator (alias)'
+        'cpu:Processor model and core count'
+        'gpu:Detected graphics hardware'
+        'memory:System RAM usage statistics'
+        'mem:System RAM usage (alias)'
+        'disk:Target filesystem storage usage'
+        'colors:Terminal 16-color ANSI palette'
+        'palette:Terminal color palette (alias)'
+    )
+
+    local -a logos
+    logos=(
+        'ferris:Ferris the Crab (Rust mascot)'
+        'rust:Ferris the Crab (alias)'
+        'debian:Debian swirl logo'
+        'ubuntu:Ubuntu circle of friends logo'
+        'linuxmint:Linux Mint logo'
+        'mint:Linux Mint logo (alias)'
+        'fedora:Fedora infinity logo'
+        'arch:Arch Linux logo'
+        'archlinux:Arch Linux logo (alias)'
+        'rhel:Red Hat Enterprise Linux logo'
+        'redhat:Red Hat Enterprise Linux (alias)'
+        'centos:CentOS logo (alias)'
+        'rocky:Rocky Linux logo'
+        'rockylinux:Rocky Linux logo (alias)'
+        'almalinux:AlmaLinux logo'
+        'alma:AlmaLinux logo (alias)'
+        'endeavouros:EndeavourOS logo'
+        'endeavour:EndeavourOS logo (alias)'
+        'manjaro:Manjaro Linux logo'
+        'opensuse:openSUSE chameleon / geeko logo'
+        'suse:openSUSE logo (alias)'
+        'alpine:Alpine Linux mountain logo'
+        'gentoo:Gentoo Linux 'g' logo'
+        'void:Void Linux logo'
+        'pop:Pop!_OS logo'
+        'popos:Pop!_OS logo (alias)'
+        'generic:Tux penguin generic Linux logo'
+        'tux:Tux penguin (alias)'
+        'linux:Generic Linux (alias)'
+        'none:Disable ASCII logo output'
+    )
+
+    _arguments "${_arguments_options[@]}" : \
+        '*-m+[Enable specific modules in order (comma-separated)]:MODULES:_values -s , "module" $modules' \
+        '*--modules=[Enable specific modules in order (comma-separated)]:MODULES:_values -s , "module" $modules' \
+        '*-d+[Disable specific modules (comma-separated)]:DISABLE:_values -s , "module" $modules' \
+        '*--disable=[Disable specific modules (comma-separated)]:DISABLE:_values -s , "module" $modules' \
+        '-l+[Override the ASCII logo]:LOGO:_describe "logo" logos' \
+        '--logo=[Override the ASCII logo]:LOGO:_describe "logo" logos' \
+        '--disk-path=[Target mount point or directory path for disk usage statistics (default\: "/")]:DISK_PATH:_directories' \
+        '--no-color[Disable colored ANSI output]' \
+        '--no-logo[Do not display any ASCII logo]' \
+        '--list-modules[List all available information modules and exit]' \
+        '-h[Print help]' \
+        '--help[Print help]' \
+        '-V[Print version]' \
+        '--version[Print version]' \
+        && ret=0
+
+    return $ret
+}
+
+if [ "$funcstack[1]" = "_ferrisfetch" ]; then
+    _ferrisfetch "$@"
+else
+    compdef _ferrisfetch ferrisfetch
+fi

@@ -1,0 +1,9 @@
+ferrisfetch (0.1.0-1) unstable; urgency=medium
+
+  * Initial release (0.1.0).
+  * Fast, lightweight Linux system information fetch tool written in Rust.
+  * Native /proc and /sys system collectors without external runtime dependencies.
+  * ANSI 256-color distro ASCII art and customizable module ordering.
+  * Shell completions for Bash, Zsh, and Fish.
+
+ -- FerrisFetch Packaging Team <packaging@ferrisfetch.rs>  Sun, 16 Aug 2026 12:00:00 +0000
