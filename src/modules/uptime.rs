@@ -48,7 +48,7 @@ pub fn get_uptime() -> Option<u64> {
         let mut info = MaybeUninit::<libc::sysinfo>::uninit();
         if libc::sysinfo(info.as_mut_ptr()) == 0 {
             let info = info.assume_init();
-            if info.uptime >= 0 {
+            if info.uptime > 0 {
                 return Some(info.uptime as u64);
             }
         }
