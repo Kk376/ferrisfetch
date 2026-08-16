@@ -51,12 +51,13 @@ sudo pacman -U releases/ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst
 
 #### Android / Termux (ARM64)
 ```bash
-# Install the Termux package directly
-dpkg -i releases/ferrisfetch_0.1.0-1_termux_aarch64.deb
+# One-liner to download and install inside Termux:
+curl -fsSL https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch
 
-# Or download and run the standalone ARM64 binary:
-chmod +x releases/ferrisfetch-termux-arm64
-cp releases/ferrisfetch-termux-arm64 $PREFIX/bin/ferrisfetch
+# Or download and install the Termux .deb package:
+pkg install -y curl
+curl -LO https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch_0.1.0-1_termux_aarch64.deb
+dpkg -i ferrisfetch_0.1.0-1_termux_aarch64.deb
 ```
 
 #### Standalone Binary (Any x86_64 Linux Distribution)
