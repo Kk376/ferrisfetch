@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>kk376@users.noreply.github.com</email>
+		<name>Kushagra Kumar</name>
+	</maintainer>
+	<upstream>
+		<bugs-to>https://github.com/Kk376/ferrisfetch/issues</bugs-to>
+		<remote-id type="github">Kk376/ferrisfetch</remote-id>
+	</upstream>
+</pkgmetadata>

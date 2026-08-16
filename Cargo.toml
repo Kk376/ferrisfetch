@@ -6,6 +6,21 @@ rust-version = "1.75.0"
 description = "A fast, lightweight Linux system information fetch tool written in Rust"
 readme = "README.md"
 license = "MIT"
+repository = "https://github.com/kk376/ferrisfetch"
+homepage = "https://github.com/kk376/ferrisfetch"
+documentation = "https://docs.rs/ferrisfetch"
+keywords = ["fetch", "system-info", "linux", "neofetch", "cli"]
+categories = ["command-line-utilities"]
+include = [
+    "src/**/*",
+    "completions/**/*",
+    "tests/**/*",
+    "Cargo.toml",
+    "Cargo.lock",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -42,4 +57,22 @@ assets = [
     ["README.md", "usr/share/doc/ferrisfetch/README.md", "644"],
     ["LICENSE", "usr/share/licenses/ferrisfetch/LICENSE", "644"],
 ]
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }"
+bin-dir = "{ name }"
+pkg-fmt = "bin"
+
+[package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-linux-musl-x86_64"
+
+[package.metadata.binstall.overrides.x86_64-unknown-linux-musl]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-linux-musl-x86_64"
+
+[package.metadata.binstall.overrides.aarch64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-linux-musl-aarch64"
+
+[package.metadata.binstall.overrides.aarch64-unknown-linux-musl]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-linux-musl-aarch64"
+
 

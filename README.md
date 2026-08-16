@@ -26,70 +26,79 @@ FerrisFetch is built and tested across the following Linux distribution families
 
 ---
 
-## Installation & Building
+## Installation
 
-### Pre-built Packages & Executables
+### Package Managers
 
-Pre-built binaries and native distribution packages are available in the [`releases/`](releases/) directory:
-
-#### Debian / Ubuntu / Linux Mint / Pop!_OS
+#### Fedora / RHEL (Copr)
 ```bash
-sudo dpkg -i releases/ferrisfetch_0.1.0-1_amd64.deb
+sudo dnf copr enable kk376/ferrisfetch && sudo dnf install ferrisfetch
 ```
 
-#### Fedora / RHEL / Rocky Linux / AlmaLinux
+#### Arch Linux (AUR)
 ```bash
-sudo dnf install ./releases/ferrisfetch-0.1.0-1.x86_64.rpm
-# or with rpm:
-sudo rpm -i releases/ferrisfetch-0.1.0-1.x86_64.rpm
+yay -S ferrisfetch
 ```
 
-#### Arch Linux / Manjaro / EndeavourOS
+#### Homebrew (macOS & Linux)
 ```bash
-sudo pacman -U releases/ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst
+brew install kk376/tap/ferrisfetch
 ```
 
-#### Android / Termux (ARM64)
+#### Android (Termux)
 ```bash
-# 1. Update Termux packages and install curl
-pkg update && pkg upgrade -y
-pkg install -y curl
-
-# 2. Download the package from GitHub Releases
-curl -LO https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch_0.1.0-1_termux_aarch64.deb
-
-# 3. Install it with Termux's dpkg
-dpkg -i ferrisfetch_0.1.0-1_termux_aarch64.deb
-
-# 4. Run FerrisFetch
-ferrisfetch
+pkg install tur-repo && pkg install ferrisfetch
+```
+Or via direct one-liner:
+```bash
+pkg update && pkg upgrade -y && pkg install -y curl && curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch && ferrisfetch
 ```
 
-Or run the one-liner directly:
+#### Cargo / Binstall
 ```bash
-pkg update && pkg upgrade -y && pkg install -y curl && curl -fsSL https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch && ferrisfetch
+# Fast install with pre-compiled binary
+cargo binstall ferrisfetch
+
+# Or build from source
+cargo install ferrisfetch
 ```
 
-#### Standalone Binary (Any x86_64 Linux Distribution)
-```bash
-chmod +x releases/ferrisfetch-linux-musl-x86_64
-sudo cp releases/ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
-```
+### Pre-built Packages & Binaries
 
-### Prerequisites for Building
+Direct package files are available in [`releases/`](releases/):
 
-- Rust 1.75.0 or later (uses standard library `std::io::IsTerminal`)
-- Standard Linux C library headers (`libc`)
+- **Debian / Ubuntu / Mint / Pop!_OS** (`.deb`):
+  ```bash
+  sudo dpkg -i releases/ferrisfetch_0.1.0-1_amd64.deb
+  ```
+- **Fedora / RHEL / CentOS** (`.rpm`):
+  ```bash
+  sudo dnf install releases/ferrisfetch-0.1.0-1.x86_64.rpm
+  ```
+- **Arch Linux** (`.pkg.tar.zst`):
+  ```bash
+  sudo pacman -U releases/ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst
+  ```
+- **Termux ARM64** (`.deb`):
+  ```bash
+  dpkg -i releases/ferrisfetch_0.1.0-1_termux_aarch64.deb
+  ```
+- **Standalone Static Binary** (Any x86_64 Linux):
+  ```bash
+  chmod +x releases/ferrisfetch-linux-musl-x86_64
+  sudo cp releases/ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
+  ```
 
-### Build from source
+### Build from Source
+
+Requires Rust 1.75.0+ and `libc` headers.
 
 ```bash
 git clone https://github.com/kk376/ferrisfetch.git
 cd ferrisfetch
 cargo build --release
 ```
-
-The compiled release binary is located at `target/release/ferrisfetch`.
+The compiled binary is at `target/release/ferrisfetch`.
 
 ---
 
@@ -207,11 +216,17 @@ sudo cp completions/ferrisfetch.fish /usr/share/fish/vendor_completions.d/
 
 ## Packaging
 
-Distribution packaging templates and recipes are available in the `packaging/` directory:
+Distribution packaging manifests and build instructions are documented in [`packaging/README.md`](packaging/README.md):
 
-- **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (Debian source package with `control`, `rules`, `changelog`, `compat`, `copyright`)
-- **Fedora / RHEL / CentOS**: [`packaging/rpm/ferrisfetch.spec`](packaging/rpm/ferrisfetch.spec) (RPM spec file with cargo release build and completion manifests)
-- **Arch Linux / AUR**: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) and [`packaging/arch/.SRCINFO`](packaging/arch/.SRCINFO)
+- **Arch Linux (AUR)**: [`packaging/arch/`](packaging/arch/) (`PKGBUILD`, `.SRCINFO`)
+- **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (`control`, `rules`, `changelog`)
+- **Fedora / RHEL (Copr)**: [`packaging/rpm/`](packaging/rpm/) (`ferrisfetch.spec`)
+- **Android (Termux)**: [`packaging/termux/`](packaging/termux/) (`build.sh`)
+- **Nix / NixOS**: [`packaging/nix/`](packaging/nix/) (`default.nix`, `flake.nix`)
+- **Void Linux**: [`packaging/void/`](packaging/void/) (`template`)
+- **Alpine Linux**: [`packaging/alpine/`](packaging/alpine/) (`APKBUILD`)
+- **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.1.0.ebuild`)
+- **Homebrew**: [`packaging/homebrew/`](packaging/homebrew/) (`ferrisfetch.rb`)
 
 ---
 

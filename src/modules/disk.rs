@@ -12,6 +12,7 @@ pub struct DiskUsage {
 }
 
 /// Queries filesystem storage capacity and usage via POSIX statvfs.
+#[allow(clippy::unnecessary_cast)]
 pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
     let c_path = CString::new(path).ok()?;
     unsafe {
