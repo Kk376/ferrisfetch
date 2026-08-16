@@ -17,6 +17,9 @@ Official pre-built release binaries, native OS distribution packages, source arc
 
 | Binary | Target / Architecture | Linking | Description |
 | :--- | :--- | :--- | :--- |
+| `ferrisfetch-termux-arm64` | Android / Termux (`aarch64`) | Static (musl) | 100% statically linked standalone binary for ARM64 Android phones |
+| `ferrisfetch-android-aarch64` | Android / Termux (`aarch64`) | Symlink | Symlink to `ferrisfetch-termux-arm64` |
+| `ferrisfetch-linux-musl-aarch64` | Universal Linux (`aarch64`) | Symlink | Symlink to `ferrisfetch-termux-arm64` |
 | `ferrisfetch-linux-musl-x86_64` | Universal Linux (`x86_64`) | Static (musl) | 100% statically linked standalone binary (zero libc/glibc dependencies) |
 | `ferrisfetch-debian-x86_64` | Debian / Ubuntu (`x86_64`) | Dynamic (glibc) | Dynamic ELF executable targeting Debian/Ubuntu family systems |
 | `ferrisfetch-debian` | Debian / Ubuntu (`x86_64`) | Symlink | Symlink to `ferrisfetch-debian-x86_64` |
@@ -32,6 +35,7 @@ Official pre-built release binaries, native OS distribution packages, source arc
 | Package / Recipe | Target Distribution | Description |
 | :--- | :--- | :--- |
 | `ferrisfetch_0.1.0-1_amd64.deb` | Debian / Ubuntu / Mint / Pop!_OS | Native `.deb` package installable via `dpkg -i` or `apt install` |
+| `ferrisfetch_0.1.0-1_termux_aarch64.deb` | Android / Termux (`aarch64`) | Native Termux `.deb` package installable via `dpkg -i` in Termux |
 | `ferrisfetch-0.1.0-1.x86_64.rpm` | Fedora / RHEL / CentOS / Rocky / Alma | Native `.rpm` package installable via `rpm -i` or `dnf install` |
 | `ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Zstandard compressed) installable via `pacman -U` |
 | `ferrisfetch-0.1.0-1-x86_64.pkg.tar.gz` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Gzip compressed fallback) |
@@ -56,6 +60,17 @@ sha256sum -c SHA256SUMS.txt
 ### Debian / Ubuntu / Linux Mint / Pop!_OS
 ```bash
 sudo dpkg -i ferrisfetch_0.1.0-1_amd64.deb
+ferrisfetch
+```
+
+### Android / Termux (ARM64)
+```bash
+# Option A: Install via Termux package
+dpkg -i ferrisfetch_0.1.0-1_termux_aarch64.deb
+
+# Option B: Run standalone ARM64 executable
+chmod +x ferrisfetch-termux-arm64
+cp ferrisfetch-termux-arm64 $PREFIX/bin/ferrisfetch
 ferrisfetch
 ```
 

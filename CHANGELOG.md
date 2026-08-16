@@ -47,5 +47,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CLI flag combination tests using `assert_cmd`.
 - Packaging and CI infrastructure:
   - GitHub Actions CI workflow for formatting, clippy, unit/integration testing, and release builds.
-  - Release workflow building standalone GNU and Musl binaries, Debian (`.deb`), Red Hat (`.rpm`), and Arch Linux (`.pkg.tar.zst`) packages with SHA256 checksums.
-  - Arch Linux `PKGBUILD` specification.
+  - Release workflow building standalone GNU and Musl binaries, Debian (`.deb`), Red Hat (`.rpm`), Arch Linux (`.pkg.tar.zst`), and Android / Termux (`.deb` & ARM64 binary) packages with SHA256 checksums.
+  - Arch Linux `PKGBUILD` and Debian packaging specifications.

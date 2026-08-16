@@ -21,6 +21,7 @@ FerrisFetch is built and tested across the following Linux distribution families
 - **Debian Family**: Debian, Ubuntu, Linux Mint, Pop!_OS
 - **Red Hat Family**: Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream
 - **Arch Family**: Arch Linux, EndeavourOS, Manjaro
+- **Android**: Termux (ARM64 & x86_64)
 - **Independent Distributions**: Alpine Linux, Void Linux, Gentoo, openSUSE
 
 ---
