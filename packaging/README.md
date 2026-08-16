@@ -15,6 +15,8 @@ This directory contains package definitions, build scripts, and metadata for Lin
 | **Alpine Linux** | [`alpine/APKBUILD`](alpine/APKBUILD) | `abuild` | `.apk` |
 | **Gentoo Linux** | [`gentoo/ferrisfetch-0.1.0.ebuild`](gentoo/ferrisfetch-0.1.0.ebuild) | `ebuild` / `emerge` | Portage ebuild |
 | **Homebrew** | [`homebrew/ferrisfetch.rb`](homebrew/ferrisfetch.rb) | `brew` | Formula / Bottled bottle |
+| **KISS Linux** | [`kiss/`](kiss/) | `kiss` | KISS package |
+| **Chimera Linux** | [`chimera/template.py`](chimera/template.py) | `cbuild` | APK package |
 
 ---
 
@@ -279,6 +281,57 @@ brew audit --strict packaging/homebrew/ferrisfetch.rb
 
 ---
 
+### 10. Chimera Linux
+
+- **Source files**: [`packaging/chimera/template.py`](chimera/template.py)
+
+#### Local Build with cbuild
+```bash
+# Clone cports
+git clone --depth 1 https://github.com/chimera-linux/cports.git
+cd cports
+# Initialize binary bootstrap container
+./cbuild binary-bootstrap
+# Copy template into user repository
+mkdir -p user/ferrisfetch
+cp /path/to/ferrisfetch/packaging/chimera/template.py user/ferrisfetch/template.py
+# Build package
+./cbuild pkg user/ferrisfetch
+```
+
+#### Chimera cports Submission
+1. Fork and clone `chimera-linux/cports`.
+2. Create branch `ferrisfetch`.
+3. Place `template.py` into `user/ferrisfetch/template.py`.
+4. Commit with message `user/ferrisfetch: new package`.
+5. Open a pull request against `chimera-linux/cports:master`.
+
+---
+
+### 11. KISS Linux
+
+- **Source files**: [`packaging/kiss/`](kiss/) (`build`, `version`, `sources`, `checksums`, `depends`)
+- **Install paths**:
+  - Binary: `/usr/bin/ferrisfetch`
+  - Shell completions: `/usr/share/bash-completion/completions/ferrisfetch`, `/usr/share/zsh/site-functions/_ferrisfetch`, `/usr/share/fish/vendor_completions.d/ferrisfetch.fish`
+  - Docs & license: `/usr/share/doc/ferrisfetch/README.md`, `/usr/share/licenses/ferrisfetch/LICENSE`
+
+#### Local Build with KISS
+```bash
+export KISS_PATH="/path/to/ferrisfetch/packaging/kiss:$KISS_PATH"
+kiss build ferrisfetch
+kiss install ferrisfetch
+```
+
+#### KISS Community Repository Submission
+1. Fork and clone `kiss-community/community`.
+2. Create branch `ferrisfetch`.
+3. Place package files in `community/ferrisfetch/` (`build`, `version`, `sources`, `checksums`, `depends`).
+4. Commit with message `ferrisfetch: new package at 0.1.0`.
+5. Open a pull request against `kiss-community/community:main`.
+
+---
+
 ## Release Checklist for Package Maintainers
 
 1. Tag the release: `git tag -a v0.1.0 -m "Release v0.1.0"` and push tags to GitHub.
@@ -286,5 +339,6 @@ brew audit --strict packaging/homebrew/ferrisfetch.rb
    ```bash
    curl -sL https://github.com/kk376/ferrisfetch/archive/refs/tags/v0.1.0.tar.gz | sha256sum
    ```
-3. Update version strings and `sha256` checksums across `PKGBUILD`, `.SRCINFO`, `ferrisfetch.spec`, `build.sh`, `default.nix`, `template`, `APKBUILD`, `ebuild`, and `ferrisfetch.rb`.
+3. Update version strings and `sha256` checksums across `PKGBUILD`, `.SRCINFO`, `ferrisfetch.spec`, `build.sh`, `default.nix`, `template`, `APKBUILD`, `ebuild`, `ferrisfetch.rb`, and `template.py`.
 4. Trigger GitHub release artifacts and update distribution package feeds.
+
