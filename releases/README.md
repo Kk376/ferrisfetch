@@ -65,15 +65,15 @@ ferrisfetch
 
 ### Android / Termux (ARM64)
 ```bash
-# Option A: One-liner to download and install inside Termux
-curl -fsSL https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch
-ferrisfetch
-
-# Option B: Download and install via Termux package
+# Option A: Install via Termux package
+pkg update && pkg upgrade -y
 pkg install -y curl
 curl -LO https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch_0.1.0-1_termux_aarch64.deb
 dpkg -i ferrisfetch_0.1.0-1_termux_aarch64.deb
 ferrisfetch
+
+# Option B: One-liner to download standalone ARM64 executable
+pkg update && pkg upgrade -y && pkg install -y curl && curl -fsSL https://github.com/Kk376/ferrisfetch/releases/download/v0.1.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch && ferrisfetch
 ```
 
 ### Fedora / RHEL / Rocky Linux / AlmaLinux
