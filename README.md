@@ -2,21 +2,6 @@
 
 FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux systems. It queries system metrics directly from virtual filesystems (`/proc`, `/sys`) and standard POSIX interfaces (`libc`) without spawning shell subprocesses.
 
-```text
-    _~^~^~_       kk376@MSI-Thin-A15
-\) /  o o  \ (/   ------------------
-  '_   -   _'     OS: Ubuntu 24.04.4 LTS
-  / '-----' \     Kernel: 6.18.33.2-microsoft-standard-WSL2
-                  Uptime: 45 mins
-                  Packages: 1018 (dpkg)
-                  Shell: zsh 5.9
-                  Terminal: Windows Terminal
-                  CPU: AMD Ryzen 5 7535HS with Radeon Graphics (12)
-                  GPU: Microsoft Direct3D
-                  Memory: 1.73 GiB / 7.36 GiB (24%)
-                  Disk: 16.3 GiB / 1006.9 GiB (2%)
-```
-
 ---
 
 ## Features
@@ -42,7 +27,34 @@ FerrisFetch is built and tested across the following Linux distribution families
 
 ## Installation & Building
 
-### Prerequisites
+### Pre-built Packages & Executables
+
+Pre-built binaries and native distribution packages are available in the [`releases/`](releases/) directory:
+
+#### Debian / Ubuntu / Linux Mint / Pop!_OS
+```bash
+sudo dpkg -i releases/ferrisfetch_0.1.0-1_amd64.deb
+```
+
+#### Fedora / RHEL / Rocky Linux / AlmaLinux
+```bash
+sudo dnf install ./releases/ferrisfetch-0.1.0-1.x86_64.rpm
+# or with rpm:
+sudo rpm -i releases/ferrisfetch-0.1.0-1.x86_64.rpm
+```
+
+#### Arch Linux / Manjaro / EndeavourOS
+```bash
+sudo pacman -U releases/ferrisfetch-0.1.0-1-x86_64.pkg.tar.zst
+```
+
+#### Standalone Binary (Any Linux Distribution)
+```bash
+chmod +x releases/ferrisfetch-linux-musl-x86_64
+sudo cp releases/ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
+```
+
+### Prerequisites for Building
 
 - Rust 1.75.0 or later (uses standard library `std::io::IsTerminal`)
 - Standard Linux C library headers (`libc`)
