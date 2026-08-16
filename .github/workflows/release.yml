@@ -50,15 +50,9 @@ jobs:
           VERSION="${TAG_NAME#v}"
           mkdir -p dist
 
-          # 1. Standalone GNU tarball
-          tar -czvf "dist/ferrisfetch-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz" \
-            -C target/x86_64-unknown-linux-gnu/release ferrisfetch \
-            -C ../../../ README.md LICENSE
-
-          # 2. Standalone Musl tarballs (x86_64 and ARM64 / Termux)
-          tar -czvf "dist/ferrisfetch-${TAG_NAME}-x86_64-unknown-linux-musl.tar.gz" \
-            -C target/x86_64-unknown-linux-musl/release ferrisfetch \
-            -C ../../../ README.md LICENSE
+          # 1. Standalone Universal Static Binaries
+          cp target/x86_64-unknown-linux-musl/release/ferrisfetch dist/ferrisfetch-linux-musl-x86_64
+          chmod 755 dist/ferrisfetch-linux-musl-x86_64
 
           cp target/aarch64-unknown-linux-musl/release/ferrisfetch dist/ferrisfetch-termux-arm64
           chmod 755 dist/ferrisfetch-termux-arm64
