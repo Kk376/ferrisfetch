@@ -1,15 +1,15 @@
-# Contributor: Kk376 <kk376@users.noreply.github.com>
-# Maintainer: Kk376 <kk376@users.noreply.github.com>
+# Contributor: kk376 <kk376@users.noreply.github.com>
+# Maintainer: kk376 <kk376@users.noreply.github.com>
 pkgname=ferrisfetch
 pkgver=0.1.0
 pkgrel=0
 pkgdesc="Fast, lightweight Linux and Android system information fetch CLI written in Rust"
-url="https://github.com/Kk376/ferrisfetch"
+url="https://github.com/kk376/ferrisfetch"
 arch="all"
 license="MIT"
 makedepends="cargo cargo-auditable"
 subpackages="$pkgname-doc $pkgname-bash-completion $pkgname-zsh-completion $pkgname-fish-completion:fishcomp:noarch"
-source="$pkgname-$pkgver.tar.gz::https://github.com/Kk376/ferrisfetch/archive/refs/tags/v$pkgver.tar.gz"
+source="$pkgname-$pkgver.tar.gz::https://github.com/kk376/ferrisfetch/archive/refs/tags/v$pkgver.tar.gz"
 options="net"
 
 prepare() {

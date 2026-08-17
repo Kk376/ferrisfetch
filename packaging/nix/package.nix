@@ -10,7 +10,7 @@ rustPlatform.buildRustPackage rec {
   version = "0.1.0";
 
   src = if src != null then src else fetchFromGitHub {
-    owner = "Kk376";
+    owner = "kk376";
     repo = "ferrisfetch";
     rev = "v${version}";
     hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -31,7 +31,7 @@ rustPlatform.buildRustPackage rec {
 
   meta = with lib; {
     description = "Fast, lightweight Linux system information fetch tool written in Rust";
-    homepage = "https://github.com/Kk376/ferrisfetch";
+    homepage = "https://github.com/kk376/ferrisfetch";
     license = licenses.mit;
     maintainers = [ ];
     mainProgram = "ferrisfetch";
