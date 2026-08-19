@@ -84,10 +84,8 @@ fn test_no_logo_flag() {
     cmd.args(["--no-color", "--no-logo", "-m", "os"]);
     let assert = cmd.assert().success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert_eq!(
-        stdout.trim(),
-        format!("OS: {}", ferrisfetch::modules::os::detect_os().display_name)
-    );
+    let expected_os = ferrisfetch::modules::os::detect_os().display_name;
+    assert!(stdout.contains(&format!("OS: {}", expected_os)));
 }
 
 #[test]
@@ -96,7 +94,7 @@ fn test_disk_path_flag() {
     cmd.args(["--no-color", "--no-logo", "-m", "disk", "--disk-path", "/"]);
     let assert = cmd.assert().success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert!(stdout.contains("Disk:"));
+    assert!(stdout.contains("Disk0:"));
     assert!(stdout.contains('%'));
 }
 
@@ -188,7 +186,7 @@ fn test_cli_version() {
     cmd.arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("ferrisfetch 0.3.0"));
+        .stdout(predicate::str::contains("ferrisfetch 0.4.0"));
 }
 
 #[test]

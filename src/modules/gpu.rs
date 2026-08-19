@@ -239,11 +239,42 @@ pub fn detect_gpus_lspci() -> Vec<String> {
     gpus
 }
 
+/// Formats a GPU model name with optional VRAM and clock speed.
+pub fn format_gpu_with_specs(name: &str, vram_mb: Option<u64>, clock_mhz: Option<u64>) -> String {
+    let mut parts = Vec::new();
+    if let Some(mb) = vram_mb {
+        if mb >= 1024 {
+            let gib = mb as f64 / 1024.0;
+            if (gib.round() - gib).abs() < 0.05 {
+                parts.push(format!("({:.0} GiB)", gib));
+            } else {
+                parts.push(format!("({:.1} GiB)", gib));
+            }
+        } else if mb > 0 {
+            parts.push(format!("({} MiB)", mb));
+        }
+    }
+
+    if let Some(mhz) = clock_mhz {
+        if mhz >= 1000 {
+            parts.push(format!("@ {:.3}GHz", mhz as f64 / 1000.0));
+        } else if mhz > 0 {
+            parts.push(format!("@ {}MHz", mhz));
+        }
+    }
+
+    if parts.is_empty() {
+        name.to_string()
+    } else {
+        format!("{} {}", name, parts.join(" "))
+    }
+}
+
 /// Detects GPUs when running inside Windows Subsystem for Linux (WSL2).
 pub fn detect_wsl_gpus() -> Vec<String> {
     let mut gpus = Vec::new();
 
-    // 1. Probe integrated GPU (iGPU) from CPU model
+    // 1. Probe integrated GPU (iGPU) from CPU model with typical clock and shared VRAM
     if let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") {
         let cpu_lower = cpuinfo.to_lowercase();
         if cpu_lower.contains("amd") {
@@ -251,25 +282,45 @@ pub fn detect_wsl_gpus() -> Vec<String> {
                 || cpu_lower.contains("6600h")
                 || cpu_lower.contains("6600u")
             {
-                gpus.push("AMD Radeon 660M".to_string());
+                gpus.push(format_gpu_with_specs(
+                    "AMD Radeon 660M",
+                    Some(512),
+                    Some(1900),
+                ));
             } else if cpu_lower.contains("7735hs")
                 || cpu_lower.contains("6800h")
                 || cpu_lower.contains("6800u")
             {
-                gpus.push("AMD Radeon 680M".to_string());
+                gpus.push(format_gpu_with_specs(
+                    "AMD Radeon 680M",
+                    Some(512),
+                    Some(2200),
+                ));
             } else if cpu_lower.contains("7840hs")
                 || cpu_lower.contains("8845hs")
                 || cpu_lower.contains("7940hs")
             {
-                gpus.push("AMD Radeon 780M".to_string());
+                gpus.push(format_gpu_with_specs(
+                    "AMD Radeon 780M",
+                    Some(512),
+                    Some(2700),
+                ));
             } else if cpu_lower.contains("radeon") {
                 gpus.push("AMD Radeon Graphics".to_string());
             }
         } else if cpu_lower.contains("intel") {
             if cpu_lower.contains("iris") || cpu_lower.contains("xe") {
-                gpus.push("Intel Iris Xe Graphics".to_string());
+                gpus.push(format_gpu_with_specs(
+                    "Intel Iris Xe Graphics",
+                    None,
+                    Some(1400),
+                ));
             } else if cpu_lower.contains("uhd") {
-                gpus.push("Intel UHD Graphics".to_string());
+                gpus.push(format_gpu_with_specs(
+                    "Intel UHD Graphics",
+                    None,
+                    Some(1150),
+                ));
             } else if cpu_lower.contains("hd graphics") {
                 gpus.push("Intel HD Graphics".to_string());
             }
@@ -282,7 +333,7 @@ pub fn detect_wsl_gpus() -> Vec<String> {
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
         .map(|p| p.join("ferrisfetch"));
 
-    let cache_file = cache_dir.as_ref().map(|d| d.join("wsl_dgpu.cache"));
+    let cache_file = cache_dir.as_ref().map(|d| d.join("wsl_dgpu_v2.cache"));
 
     if let Some(ref path) = cache_file {
         if let Ok(cached) = fs::read_to_string(path) {
@@ -294,31 +345,49 @@ pub fn detect_wsl_gpus() -> Vec<String> {
         }
     }
 
-    // 3. Fallback: Query nvidia-smi and cache the result for sub-millisecond future runs
+    // 3. Fallback: Query nvidia-smi with name, VRAM and clock speed
     for smi_path in &["/usr/lib/wsl/lib/nvidia-smi", "nvidia-smi"] {
         if let Ok(output) = Command::new(smi_path)
-            .args(["--query-gpu=name", "--format=csv,noheader"])
+            .args([
+                "--query-gpu=name,memory.total,clocks.max.graphics",
+                "--format=csv,noheader",
+            ])
             .output()
         {
             if output.status.success() {
                 let text = String::from_utf8_lossy(&output.stdout);
                 for line in text.lines() {
-                    let trimmed = line.trim();
-                    if !trimmed.is_empty() && !gpus.contains(&trimmed.to_string()) {
-                        gpus.push(trimmed.to_string());
+                    let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
+                    if let Some(raw_name) = parts.first() {
+                        if !raw_name.is_empty() {
+                            let vram_mb = parts.get(1).and_then(|v| {
+                                v.split_whitespace()
+                                    .next()
+                                    .and_then(|n| n.parse::<u64>().ok())
+                            });
+                            let clock_mhz = parts.get(2).and_then(|c| {
+                                c.split_whitespace()
+                                    .next()
+                                    .and_then(|n| n.parse::<u64>().ok())
+                            });
 
-                        // Write to persistent cache
-                        if let Some(ref dir) = cache_dir {
-                            let _ = fs::create_dir_all(dir);
-                        }
-                        if let Some(ref path) = cache_file {
-                            let _ = fs::write(path, trimmed);
+                            let formatted = format_gpu_with_specs(raw_name, vram_mb, clock_mhz);
+                            if !gpus.contains(&formatted) {
+                                gpus.push(formatted.clone());
+
+                                // Write to persistent cache
+                                if let Some(ref dir) = cache_dir {
+                                    let _ = fs::create_dir_all(dir);
+                                }
+                                if let Some(ref path) = cache_file {
+                                    let _ = fs::write(path, &formatted);
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        // If we found any NVIDIA GPU via nvidia-smi, stop checking alternative binary paths
         if gpus.iter().any(|g| {
             g.contains("NVIDIA") || g.contains("GeForce") || g.contains("RTX") || g.contains("GTX")
         }) {

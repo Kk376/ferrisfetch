@@ -83,6 +83,139 @@ pub fn format_disk_usage(info: &DiskUsage) -> String {
     }
 }
 
+const IGNORED_FS_TYPES: &[&str] = &[
+    "tmpfs",
+    "devtmpfs",
+    "proc",
+    "sysfs",
+    "cgroup",
+    "cgroup2",
+    "overlay",
+    "squashfs",
+    "tracefs",
+    "debugfs",
+    "pstore",
+    "bpf",
+    "fusectl",
+    "configfs",
+    "binfmt_misc",
+    "securityfs",
+    "mqueue",
+    "hugetlbfs",
+    "autofs",
+    "ramfs",
+    "devpts",
+    "nsfs",
+    "efivarfs",
+    "selinuxfs",
+    "fuse.gvfsd-fuse",
+    "fuse.portal",
+];
+
+const IGNORED_MOUNT_PREFIXES: &[&str] = &[
+    "/mnt/wsl",
+    "/mnt/wslg",
+    "/usr/lib/wsl/drivers",
+    "/init",
+    "/dev",
+    "/run",
+    "/sys",
+    "/proc",
+    "/var/lib/docker",
+    "/var/lib/containers",
+];
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartitionEntry {
+    pub mount_point: String,
+    pub display_name: String,
+    pub usage: DiskUsage,
+}
+
+/// Enumerates all real physical/virtual mount partitions.
+pub fn get_all_disks() -> Vec<PartitionEntry> {
+    let mut entries = Vec::new();
+    let Ok(content) = std::fs::read_to_string("/proc/mounts") else {
+        if let Some(usage) = get_disk_usage("/") {
+            entries.push(PartitionEntry {
+                mount_point: "/".to_string(),
+                display_name: "/".to_string(),
+                usage,
+            });
+        }
+        return entries;
+    };
+
+    let mut seen_mounts = std::collections::HashSet::new();
+
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 3 {
+            continue;
+        }
+
+        let mount_point = parts[1];
+        let fs_type = parts[2];
+
+        if IGNORED_FS_TYPES.contains(&fs_type) {
+            continue;
+        }
+
+        if IGNORED_MOUNT_PREFIXES
+            .iter()
+            .any(|prefix| mount_point.starts_with(prefix))
+        {
+            continue;
+        }
+
+        if !seen_mounts.insert(mount_point.to_string()) {
+            continue;
+        }
+
+        if let Some(usage) = get_disk_usage(mount_point) {
+            // In WSL, convert /mnt/c to C, /mnt/d to D
+            let display_name = if let Some(wsl_drive) = mount_point.strip_prefix("/mnt/") {
+                if wsl_drive.len() == 1 && wsl_drive.chars().next().unwrap().is_ascii_alphabetic() {
+                    wsl_drive.to_uppercase()
+                } else {
+                    mount_point.to_string()
+                }
+            } else {
+                mount_point.to_string()
+            };
+
+            entries.push(PartitionEntry {
+                mount_point: mount_point.to_string(),
+                display_name,
+                usage,
+            });
+        }
+    }
+
+    if entries.is_empty() {
+        if let Some(usage) = get_disk_usage("/") {
+            entries.push(PartitionEntry {
+                mount_point: "/".to_string(),
+                display_name: "/".to_string(),
+                usage,
+            });
+        }
+    }
+
+    // Always sort so root / comes first (Disk0), followed by other partitions
+    entries.sort_by(|a, b| {
+        if a.mount_point == "/" {
+            std::cmp::Ordering::Less
+        } else if b.mount_point == "/" {
+            std::cmp::Ordering::Greater
+        } else {
+            a.display_name.cmp(&b.display_name)
+        }
+    });
+
+    entries
+}
+
 pub struct DiskCollector;
 
 impl Collector for DiskCollector {
@@ -94,10 +227,45 @@ impl Collector for DiskCollector {
         let usage = get_disk_usage(&ctx.disk_target_path)?;
         Some(ModuleOutput {
             id: ModuleId::Disk,
-            label: "Disk".to_string(),
-            value: format_disk_usage(&usage),
+            label: "Disk0".to_string(),
+            value: format!("(/) {}", format_disk_usage(&usage)),
             custom_rendered: None,
         })
+    }
+
+    fn collect_multiple(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
+        if ctx.disk_target_path != "/" {
+            if let Some(usage) = get_disk_usage(&ctx.disk_target_path) {
+                return vec![ModuleOutput {
+                    id: ModuleId::Disk,
+                    label: "Disk0".to_string(),
+                    value: format!("({}) {}", ctx.disk_target_path, format_disk_usage(&usage)),
+                    custom_rendered: None,
+                }];
+            } else {
+                return Vec::new();
+            }
+        }
+
+        let disks = get_all_disks();
+        let mut outputs = Vec::new();
+
+        for (idx, entry) in disks.iter().enumerate() {
+            let label = format!("Disk{}", idx);
+            let value = format!(
+                "({}) {}",
+                entry.display_name,
+                format_disk_usage(&entry.usage)
+            );
+            outputs.push(ModuleOutput {
+                id: ModuleId::Disk,
+                label,
+                value,
+                custom_rendered: None,
+            });
+        }
+
+        outputs
     }
 }
 

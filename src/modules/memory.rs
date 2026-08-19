@@ -116,6 +116,94 @@ impl Collector for MemoryCollector {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SwapInfo {
+    pub total_kb: u64,
+    pub used_kb: u64,
+    pub percent: u64,
+}
+
+pub fn parse_swapinfo(content: &str) -> Option<SwapInfo> {
+    let mut swap_total: Option<u64> = None;
+    let mut swap_free: Option<u64> = None;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if let Some((k, v)) = trimmed.split_once(':') {
+            let key = k.trim();
+            let val_str = v.split_whitespace().next().unwrap_or("");
+            let val: u64 = val_str.parse().unwrap_or(0);
+
+            match key {
+                "SwapTotal" => swap_total = Some(val),
+                "SwapFree" => swap_free = Some(val),
+                _ => {}
+            }
+        }
+    }
+
+    let total = swap_total?;
+    if total == 0 {
+        return None;
+    }
+
+    let free = swap_free.unwrap_or(total);
+    let used = total.saturating_sub(free);
+    let percent = ((used as f64 / total as f64) * 100.0).round().min(100.0) as u64;
+
+    Some(SwapInfo {
+        total_kb: total,
+        used_kb: used,
+        percent,
+    })
+}
+
+pub fn get_swap_info() -> Option<SwapInfo> {
+    if let Ok(content) = fs::read_to_string("/proc/meminfo") {
+        return parse_swapinfo(&content);
+    }
+    None
+}
+
+pub struct SwapCollector;
+
+impl Collector for SwapCollector {
+    fn id(&self) -> ModuleId {
+        ModuleId::Swap
+    }
+
+    fn collect(&self, _ctx: &FetchContext) -> Option<ModuleOutput> {
+        let swap = get_swap_info()?;
+        let one_gib_kb = 1024.0 * 1024.0;
+        let value = if swap.total_kb as f64 >= one_gib_kb {
+            let used_gib = swap.used_kb as f64 / one_gib_kb;
+            let total_gib = swap.total_kb as f64 / one_gib_kb;
+            format!(
+                "{:.2} GiB / {:.2} GiB ({}%)",
+                used_gib, total_gib, swap.percent
+            )
+        } else {
+            let used_mib = swap.used_kb as f64 / 1024.0;
+            let total_mib = swap.total_kb as f64 / 1024.0;
+            format!(
+                "{:.0} MiB / {:.0} MiB ({}%)",
+                used_mib, total_mib, swap.percent
+            )
+        };
+
+        Some(ModuleOutput {
+            id: ModuleId::Swap,
+            label: "Swap".to_string(),
+            value,
+            custom_rendered: None,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

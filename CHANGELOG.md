@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-19
+
+### Added
+- **OS Architecture**: Displays system architecture alongside distribution name (e.g. `OS: Ubuntu 24.04.4 LTS x86_64`).
+- **Shell Version**: Resolves active shell version (e.g. `Shell: zsh 5.9`, `Shell: bash 5.2.21`).
+- **Display Resolution & Refresh Rate**: Probes connected displays and refresh rates (e.g. `Display: 1920x1080 @ 60Hz`).
+- **Window Manager Module (`WM`)**: Resolves active window managers including Mutter, KWin, Xfwm4, Sway, Hyprland, and `WSLg (Weston)`.
+- **GPU VRAM & Clock Frequency**: Displays GPU memory capacity and max graphics clock (e.g. `GPU0: AMD Radeon 660M (512 MiB) @ 1.900GHz`, `GPU1: NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz`).
+- **Swap Memory Module**: Displays total and active used swap partition/file memory.
+- **Partition Disk Enumeration**: Discovers all active physical and virtual partitions labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives directly (e.g. `(C)`, `(D)`).
+- **Physical Battery Detection**: Probes battery percentage and status from sysfs while automatically filtering out Microsoft Hyper-V virtual batteries in WSL.
+- **Local IP Module**: Probes primary local IPv4 address via standard POSIX interface enumeration without subprocesses.
+
 ## [0.3.0] - 2026-08-19
 
 ### Added

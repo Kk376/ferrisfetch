@@ -1,11 +1,14 @@
 use std::str::FromStr;
 
+pub mod battery;
 pub mod colors;
 pub mod cpu;
 pub mod desktop;
 pub mod disk;
+pub mod display;
 pub mod gpu;
 pub mod kernel;
+pub mod localip;
 pub mod memory;
 pub mod os;
 pub mod packages;
@@ -14,6 +17,7 @@ pub mod terminal;
 pub mod theme;
 pub mod title;
 pub mod uptime;
+pub mod wm;
 
 use crate::context::FetchContext;
 
@@ -26,12 +30,17 @@ pub enum ModuleId {
     Uptime,
     Packages,
     Shell,
+    Display,
     Desktop,
+    Wm,
     Terminal,
     Cpu,
     Gpu,
     Memory,
+    Swap,
     Disk,
+    Battery,
+    LocalIp,
     Theme,
     Icons,
     Colors,
@@ -47,12 +56,17 @@ impl ModuleId {
             ModuleId::Uptime,
             ModuleId::Packages,
             ModuleId::Shell,
+            ModuleId::Display,
             ModuleId::Desktop,
+            ModuleId::Wm,
             ModuleId::Terminal,
             ModuleId::Cpu,
             ModuleId::Gpu,
             ModuleId::Memory,
+            ModuleId::Swap,
             ModuleId::Disk,
+            ModuleId::Battery,
+            ModuleId::LocalIp,
             ModuleId::Theme,
             ModuleId::Icons,
             ModuleId::Colors,
@@ -68,12 +82,17 @@ impl ModuleId {
             ModuleId::Uptime => "uptime",
             ModuleId::Packages => "packages",
             ModuleId::Shell => "shell",
+            ModuleId::Display => "display",
             ModuleId::Desktop => "desktop",
+            ModuleId::Wm => "wm",
             ModuleId::Terminal => "terminal",
             ModuleId::Cpu => "cpu",
             ModuleId::Gpu => "gpu",
             ModuleId::Memory => "memory",
+            ModuleId::Swap => "swap",
             ModuleId::Disk => "disk",
+            ModuleId::Battery => "battery",
+            ModuleId::LocalIp => "localip",
             ModuleId::Theme => "theme",
             ModuleId::Icons => "icons",
             ModuleId::Colors => "colors",
@@ -98,12 +117,17 @@ impl FromStr for ModuleId {
             "uptime" => Ok(ModuleId::Uptime),
             "packages" | "pkgs" => Ok(ModuleId::Packages),
             "shell" => Ok(ModuleId::Shell),
-            "desktop" | "de" | "wm" => Ok(ModuleId::Desktop),
+            "display" | "resolution" | "screen" => Ok(ModuleId::Display),
+            "desktop" | "de" => Ok(ModuleId::Desktop),
+            "wm" | "windowmanager" => Ok(ModuleId::Wm),
             "terminal" | "term" => Ok(ModuleId::Terminal),
             "cpu" => Ok(ModuleId::Cpu),
             "gpu" => Ok(ModuleId::Gpu),
             "memory" | "mem" => Ok(ModuleId::Memory),
+            "swap" => Ok(ModuleId::Swap),
             "disk" => Ok(ModuleId::Disk),
+            "battery" | "bat" => Ok(ModuleId::Battery),
+            "localip" | "local_ip" | "ip" => Ok(ModuleId::LocalIp),
             "theme" | "gtk" | "gtktheme" => Ok(ModuleId::Theme),
             "icons" | "icontheme" => Ok(ModuleId::Icons),
             "colors" | "palette" => Ok(ModuleId::Colors),
@@ -144,12 +168,17 @@ impl ModuleRegistry {
             Box::new(uptime::UptimeCollector),
             Box::new(packages::PackagesCollector),
             Box::new(shell::ShellCollector),
+            Box::new(display::DisplayCollector),
             Box::new(desktop::DesktopCollector),
+            Box::new(wm::WmCollector),
             Box::new(terminal::TerminalCollector),
             Box::new(cpu::CpuCollector),
             Box::new(gpu::GpuCollector),
             Box::new(memory::MemoryCollector),
+            Box::new(memory::SwapCollector),
             Box::new(disk::DiskCollector),
+            Box::new(battery::BatteryCollector),
+            Box::new(localip::LocalIpCollector),
             Box::new(theme::ThemeCollector),
             Box::new(theme::IconsCollector),
             Box::new(colors::ColorsCollector),
@@ -195,6 +224,6 @@ mod tests {
 
     #[test]
     fn test_module_id_all_count() {
-        assert_eq!(ModuleId::all().len(), 16);
+        assert_eq!(ModuleId::all().len(), 21);
     }
 }

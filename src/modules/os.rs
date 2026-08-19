@@ -157,10 +157,15 @@ impl Collector for OsCollector {
     }
 
     fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput> {
+        let arch = crate::modules::kernel::get_uname_info()
+            .map(|k| k.architecture)
+            .unwrap_or_else(|| "x86_64".to_string());
+        let value = format!("{} {}", ctx.os_info.display_name, arch);
+
         Some(ModuleOutput {
             id: ModuleId::Os,
             label: "OS".to_string(),
-            value: ctx.os_info.display_name.clone(),
+            value,
             custom_rendered: None,
         })
     }

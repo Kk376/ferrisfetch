@@ -90,17 +90,59 @@ pub fn format_shell_name_version(
     clean_name.to_string()
 }
 
-fn format_shell_with_version(shell_name: &str) -> String {
-    let bash_ver = std::env::var("BASH_VERSION").ok();
-    let zsh_ver = std::env::var("ZSH_VERSION").ok();
-    let fish_ver = std::env::var("FISH_VERSION").ok();
+fn get_shell_cli_version(shell_name: &str) -> Option<String> {
+    let output = std::process::Command::new(shell_name)
+        .arg("--version")
+        .output()
+        .ok()?;
+    if output.status.success() {
+        let text = String::from_utf8_lossy(&output.stdout);
+        for word in text.split_whitespace() {
+            let clean = word.trim_matches(',').trim_matches('(').trim_matches(')');
+            if clean
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
+                && clean.contains('.')
+            {
+                let ver = clean.split('(').next().unwrap_or(clean);
+                return Some(ver.to_string());
+            }
+        }
+    }
+    None
+}
 
-    format_shell_name_version(
+fn format_shell_with_version(shell_name: &str) -> String {
+    let mut bash_ver = std::env::var("BASH_VERSION").ok();
+    let mut zsh_ver = std::env::var("ZSH_VERSION").ok();
+    let mut fish_ver = std::env::var("FISH_VERSION").ok();
+
+    if bash_ver.is_none() && shell_name.contains("bash") {
+        bash_ver = get_shell_cli_version("bash");
+    }
+    if zsh_ver.is_none() && shell_name.contains("zsh") {
+        zsh_ver = get_shell_cli_version("zsh");
+    }
+    if fish_ver.is_none() && shell_name.contains("fish") {
+        fish_ver = get_shell_cli_version("fish");
+    }
+
+    let res = format_shell_name_version(
         shell_name,
         bash_ver.as_deref(),
         zsh_ver.as_deref(),
         fish_ver.as_deref(),
-    )
+    );
+
+    if res == shell_name {
+        if let Some(cli_ver) = get_shell_cli_version(shell_name) {
+            return format!("{} {}", shell_name, cli_ver);
+        }
+    }
+
+    res
 }
 
 /// Checks if a process name matches a known shell or valid versioned shell binary name.

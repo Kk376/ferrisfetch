@@ -4,14 +4,17 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.3.0)
+## Latest Changes (v0.4.0)
 
-- **Multi-Socket CPU Scaling**: Formats multi-socket CPU systems as `<n>x <CPU Name> (<Total Threads>)` (e.g., `3x AMD EPYC 9654 (384)`).
-- **CPU Clock Speed**: Added frequency resolution (`@ nGHz`) from `/proc/cpuinfo` and `cpufreq` sysfs.
-- **Dynamic Sequential GPU Indexing**: Assigns sequential indices (`GPU0`, `GPU1`, `GPU2`, ...) without skipping numbers.
-- **iGPU `GPU0` Priority**: Integrated graphics always occupy `GPU0` and scale across multi-socket systems (`GPU0: <n>x <iGPU Name>`).
-- **dGPU Automatic Grouping**: Automatically groups identical discrete GPUs into a single line (`GPU<index>: <n>x <dGPU Name>`).
-- **Sub-30ms WSL GPU Caching**: Persistent caching for discrete GPU queries in WSL2, reducing execution time to under 30ms.
+- **OS Architecture**: Displays system architecture alongside distribution name (`x86_64`, `aarch64`, `riscv64`).
+- **Shell Version**: Automatically resolves and displays active shell version (`zsh 5.9`, `bash 5.2.21`, `fish 3.7.0`).
+- **Display Resolution & Refresh Rate**: Direct display detection reporting active mode and refresh rate (`1920x1080 @ 60Hz`).
+- **Window Manager Module (`WM`)**: Native detection for Mutter, KWin, Xfwm4, Sway, Hyprland, and `WSLg (Weston)`.
+- **GPU VRAM & Clock Frequency**: Full graphics memory and clock reporting across integrated and discrete GPUs (`AMD Radeon 660M (512 MiB) @ 1.900GHz`, `NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz`).
+- **Swap Memory**: Direct `/proc/meminfo` swap tracking reporting used, total, and utilization percentage.
+- **Partition Disk Enumeration**: Dynamically detects all physical and virtual mounts labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives cleanly (`(C)`, `(D)`).
+- **Physical Battery Detection**: Reads battery metrics directly from sysfs while automatically excluding Microsoft Hyper-V virtual batteries in WSL.
+- **Local IP Module**: Direct POSIX interface enumeration querying the active local IPv4 address without spawning external utilities.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
