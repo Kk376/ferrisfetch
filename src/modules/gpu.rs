@@ -239,15 +239,80 @@ pub fn detect_gpus_lspci() -> Vec<String> {
     gpus
 }
 
+/// Detects GPUs when running inside Windows Subsystem for Linux (WSL2).
+pub fn detect_wsl_gpus() -> Vec<String> {
+    let mut gpus = Vec::new();
+
+    // 1. Probe integrated GPU (iGPU) from CPU model
+    if let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") {
+        let cpu_lower = cpuinfo.to_lowercase();
+        if cpu_lower.contains("amd") {
+            if cpu_lower.contains("7535hs")
+                || cpu_lower.contains("6600h")
+                || cpu_lower.contains("6600u")
+            {
+                gpus.push("AMD Radeon 660M".to_string());
+            } else if cpu_lower.contains("7735hs")
+                || cpu_lower.contains("6800h")
+                || cpu_lower.contains("6800u")
+            {
+                gpus.push("AMD Radeon 680M".to_string());
+            } else if cpu_lower.contains("7840hs")
+                || cpu_lower.contains("8845hs")
+                || cpu_lower.contains("7940hs")
+            {
+                gpus.push("AMD Radeon 780M".to_string());
+            } else if cpu_lower.contains("radeon") {
+                gpus.push("AMD Radeon Graphics".to_string());
+            }
+        } else if cpu_lower.contains("intel") {
+            if cpu_lower.contains("iris") || cpu_lower.contains("xe") {
+                gpus.push("Intel Iris Xe Graphics".to_string());
+            } else if cpu_lower.contains("uhd") {
+                gpus.push("Intel UHD Graphics".to_string());
+            } else if cpu_lower.contains("hd graphics") {
+                gpus.push("Intel HD Graphics".to_string());
+            }
+        }
+    }
+
+    // 2. Probe discrete NVIDIA GPU via nvidia-smi (shipped by Windows host at /usr/lib/wsl/lib/nvidia-smi)
+    for smi_path in &["/usr/lib/wsl/lib/nvidia-smi", "nvidia-smi"] {
+        if let Ok(output) = Command::new(smi_path)
+            .args(["--query-gpu=name", "--format=csv,noheader"])
+            .output()
+        {
+            if output.status.success() {
+                let text = String::from_utf8_lossy(&output.stdout);
+                for line in text.lines() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() && !gpus.contains(&trimmed.to_string()) {
+                        gpus.push(trimmed.to_string());
+                    }
+                }
+            }
+        }
+        // If we found any NVIDIA GPU via nvidia-smi, stop checking alternative binary paths
+        if gpus.iter().any(|g| {
+            g.contains("NVIDIA") || g.contains("GeForce") || g.contains("RTX") || g.contains("GTX")
+        }) {
+            break;
+        }
+    }
+
+    gpus
+}
+
 pub fn get_gpu_info() -> Option<String> {
     let sysfs_gpus = detect_gpus_sysfs();
 
-    // Check if sysfs produced only generic/unresolved IDs (e.g. "Intel (0x5917)" or "Intel")
+    // Check if sysfs produced only generic/unresolved IDs (e.g. "Intel (0x5917)" or "Microsoft Direct3D")
     let is_incomplete = sysfs_gpus.is_empty()
         || sysfs_gpus.iter().any(|g| {
             g.contains("0x")
                 || g.contains("PCI Display")
                 || g.contains("Display Controller")
+                || g.contains("Microsoft Direct3D")
                 || g == "Intel"
                 || g == "NVIDIA"
                 || g == "AMD"
@@ -255,6 +320,12 @@ pub fn get_gpu_info() -> Option<String> {
         });
 
     if is_incomplete {
+        // If in WSL or Direct3D detected, probe WSL GPU bridge (iGPU + dGPU)
+        let wsl_gpus = detect_wsl_gpus();
+        if !wsl_gpus.is_empty() {
+            return Some(wsl_gpus.join(", "));
+        }
+
         let lspci_gpus = detect_gpus_lspci();
         if !lspci_gpus.is_empty() {
             return Some(lspci_gpus.join(", "));
@@ -390,5 +461,15 @@ mod tests {
 
         let gpus = detect_gpus_from_sysfs_dir(pci_dir);
         assert_eq!(gpus, vec!["VirtIO GPU".to_string()]);
+    }
+
+    #[test]
+    fn test_wsl_gpu_detection_live() {
+        // In WSL2 environment, detect_wsl_gpus should succeed without panic
+        let wsl_gpus = detect_wsl_gpus();
+        // If run on this machine or in CI, check that returned strings are non-empty
+        for gpu in wsl_gpus {
+            assert!(!gpu.trim().is_empty());
+        }
     }
 }
