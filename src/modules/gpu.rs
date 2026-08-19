@@ -37,14 +37,97 @@ pub fn clean_gpu_name(name: &str) -> String {
     let cleaned = name
         .replace("Corporation", "")
         .replace("Technologies Inc", "")
+        .replace("Advanced Micro Devices, Inc.", "AMD")
+        .replace("Advanced Micro Devices", "AMD")
+        .replace("[AMD/ATI]", "")
         .replace("Inc.", "")
         .replace("Inc", "")
-        .replace("[AMD/ATI]", "")
         .replace("(rev a1)", "")
-        .replace("(rev 02)", "");
+        .replace("(rev 02)", "")
+        .replace("(rev 07)", "")
+        .replace("(rev 08)", "");
 
     let tokens: Vec<&str> = cleaned.split_whitespace().collect();
     tokens.join(" ")
+}
+
+/// Parses standard pci.ids file format to resolve vendor and device hex IDs to human-readable names.
+pub fn parse_pci_ids_file(
+    content: &str,
+    target_vendor: &str,
+    target_device: &str,
+) -> Option<String> {
+    let mut in_target_vendor = false;
+    let mut vendor_name = None;
+
+    for line in content.lines() {
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+
+        if !line.starts_with('\t') {
+            let mut parts = line.split_whitespace();
+            if let Some(v_id) = parts.next() {
+                if v_id.eq_ignore_ascii_case(target_vendor) {
+                    in_target_vendor = true;
+                    vendor_name = Some(parts.collect::<Vec<&str>>().join(" "));
+                } else {
+                    in_target_vendor = false;
+                }
+            }
+        } else if in_target_vendor && line.starts_with('\t') && !line.starts_with("\t\t") {
+            let trimmed = &line[1..];
+            let mut parts = trimmed.split_whitespace();
+            if let Some(d_id) = parts.next() {
+                if d_id.eq_ignore_ascii_case(target_device) {
+                    let dev_name = parts.collect::<Vec<&str>>().join(" ");
+                    let raw = if let Some(ref v_name) = vendor_name {
+                        format!("{} {}", v_name, dev_name)
+                    } else {
+                        dev_name
+                    };
+                    return Some(clean_gpu_name(&raw));
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Resolves PCI vendor and device hex IDs against local system pci.ids databases.
+pub fn lookup_pci_ids(vendor_hex: &str, device_hex: &str) -> Option<String> {
+    let vendor = vendor_hex
+        .trim()
+        .trim_start_matches("0x")
+        .trim_start_matches("0X")
+        .to_lowercase();
+    let device = device_hex
+        .trim()
+        .trim_start_matches("0x")
+        .trim_start_matches("0X")
+        .to_lowercase();
+
+    if vendor.is_empty() || device.is_empty() {
+        return None;
+    }
+
+    let pci_id_paths = [
+        "/usr/share/hwdata/pci.ids",
+        "/usr/share/misc/pci.ids",
+        "/usr/share/pci.ids",
+        "/var/lib/pci.ids",
+    ];
+
+    for path in &pci_id_paths {
+        if let Ok(content) = fs::read_to_string(path) {
+            if let Some(name) = parse_pci_ids_file(&content, &vendor, &device) {
+                return Some(name);
+            }
+        }
+    }
+
+    None
 }
 
 /// Probes a given PCI sysfs directory for display controllers (PCI class 0x03xxxx).
@@ -68,23 +151,24 @@ pub fn detect_gpus_from_sysfs_dir(pci_dir: &Path) -> Vec<String> {
                         .trim()
                         .to_string();
 
-                    let label = fs::read_to_string(path.join("label"))
-                        .ok()
-                        .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty());
+                    // 1. Try local pci.ids database lookup
+                    if let Some(pci_name) = lookup_pci_ids(&vendor_str, &device_str) {
+                        if !gpus.contains(&pci_name) {
+                            gpus.push(pci_name);
+                            continue;
+                        }
+                    }
 
+                    // 2. Vendor mapping fallback
                     let vendor_name = vendor_id_to_name(&vendor_str);
-
-                    let gpu_name = if let Some(lbl) = label {
-                        lbl
-                    } else if let Some(v_name) = vendor_name {
-                        if !device_str.is_empty() && !device_str.starts_with("0x") {
+                    let gpu_name = if let Some(v_name) = vendor_name {
+                        if !device_str.is_empty() {
                             format!("{} ({})", v_name, device_str)
                         } else {
                             v_name.to_string()
                         }
                     } else if !vendor_str.is_empty() {
-                        format!("PCI Display Controller ({}:{})", vendor_str, device_str)
+                        format!("PCI Display ({}:{})", vendor_str, device_str)
                     } else {
                         "Display Controller".to_string()
                     };
@@ -157,27 +241,28 @@ pub fn detect_gpus_lspci() -> Vec<String> {
 
 pub fn get_gpu_info() -> Option<String> {
     let sysfs_gpus = detect_gpus_sysfs();
-    if !sysfs_gpus.is_empty() {
-        // If sysfs found generic/raw hex device IDs or bare vendor names, try lspci to get full device names
-        let is_generic = sysfs_gpus.iter().any(|g| {
+
+    // Check if sysfs produced only generic/unresolved IDs (e.g. "Intel (0x5917)" or "Intel")
+    let is_incomplete = sysfs_gpus.is_empty()
+        || sysfs_gpus.iter().any(|g| {
             g.contains("0x")
                 || g.contains("PCI Display")
+                || g.contains("Display Controller")
                 || g == "Intel"
                 || g == "NVIDIA"
                 || g == "AMD"
+                || g.starts_with("Onboard")
         });
-        if is_generic {
-            let lspci_gpus = detect_gpus_lspci();
-            if !lspci_gpus.is_empty() {
-                return Some(lspci_gpus.join(", "));
-            }
+
+    if is_incomplete {
+        let lspci_gpus = detect_gpus_lspci();
+        if !lspci_gpus.is_empty() {
+            return Some(lspci_gpus.join(", "));
         }
-        return Some(sysfs_gpus.join(", "));
     }
 
-    let lspci_gpus = detect_gpus_lspci();
-    if !lspci_gpus.is_empty() {
-        return Some(lspci_gpus.join(", "));
+    if !sysfs_gpus.is_empty() {
+        return Some(sysfs_gpus.join(", "));
     }
 
     None
@@ -230,6 +315,47 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_pci_ids_file() {
+        let sample = r#"
+# PCI IDs Sample
+8086  Intel Corporation
+	5917  UHD Graphics 620
+	3e92  CoffeeLake-S GT2 [UHD Graphics 630]
+10de  NVIDIA Corporation
+	1f95  TU117M [GeForce GTX 1650 Ti Mobile]
+"#;
+        assert_eq!(
+            parse_pci_ids_file(sample, "8086", "5917"),
+            Some("Intel UHD Graphics 620".to_string())
+        );
+        assert_eq!(
+            parse_pci_ids_file(sample, "8086", "3e92"),
+            Some("Intel CoffeeLake-S GT2 [UHD Graphics 630]".to_string())
+        );
+        assert_eq!(
+            parse_pci_ids_file(sample, "10de", "1f95"),
+            Some("NVIDIA TU117M [GeForce GTX 1650 Ti Mobile]".to_string())
+        );
+        assert_eq!(parse_pci_ids_file(sample, "8086", "9999"), None);
+    }
+
+    #[test]
+    fn test_clean_gpu_name() {
+        assert_eq!(
+            clean_gpu_name("Intel Corporation UHD Graphics 620 (rev 07)"),
+            "Intel UHD Graphics 620"
+        );
+        assert_eq!(
+            clean_gpu_name("NVIDIA Corporation GA106 [GeForce RTX 3060]"),
+            "NVIDIA GA106 [GeForce RTX 3060]"
+        );
+        assert_eq!(
+            clean_gpu_name("Advanced Micro Devices, Inc. [AMD/ATI] Navi 22 [Radeon RX 6700 XT]"),
+            "AMD Navi 22 [Radeon RX 6700 XT]"
+        );
+    }
+
+    #[test]
     fn test_detect_gpus_from_sysfs_dir_mock() {
         let temp_dir = tempfile::tempdir().unwrap();
         let pci_dir = temp_dir.path();
@@ -241,14 +367,6 @@ mod tests {
         fs::write(gpu1.join("vendor"), "0x8086\n").unwrap();
         fs::write(gpu1.join("device"), "0x9bc4\n").unwrap();
 
-        // GPU 2: NVIDIA with label
-        let gpu2 = pci_dir.join("0000:01:00.0");
-        fs::create_dir_all(&gpu2).unwrap();
-        fs::write(gpu2.join("class"), "0x030200\n").unwrap();
-        fs::write(gpu2.join("vendor"), "0x10de\n").unwrap();
-        fs::write(gpu2.join("device"), "0x1f95\n").unwrap();
-        fs::write(gpu2.join("label"), "NVIDIA GeForce GTX 1650 Ti\n").unwrap();
-
         // Non-display device (Network)
         let net = pci_dir.join("0000:02:00.0");
         fs::create_dir_all(&net).unwrap();
@@ -256,9 +374,8 @@ mod tests {
         fs::write(net.join("vendor"), "0x8086\n").unwrap();
 
         let gpus = detect_gpus_from_sysfs_dir(pci_dir);
-        assert_eq!(gpus.len(), 2);
-        assert!(gpus.contains(&"Intel".to_string()));
-        assert!(gpus.contains(&"NVIDIA GeForce GTX 1650 Ti".to_string()));
+        assert_eq!(gpus.len(), 1);
+        assert!(gpus[0].contains("Intel"));
     }
 
     #[test]
