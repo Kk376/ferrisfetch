@@ -247,11 +247,18 @@ cargo build --release
 
 ---
 
-## Limitations
+---
 
-- **Headless Servers**: Graphical desktop and window manager fields are omitted on headless systems or TTY sessions without display servers.
-- **GPU in Sandboxes**: Containers or virtual machines lacking access to `/sys/bus/pci` or `lspci` will report virtual display devices or omit GPU information.
-- **Container Packages**: In minimal containers without package databases or status files, the package count module cleanly produces no output rather than failing.
+## Latest Changes (v0.2.0)
+
+- **Structured JSON Output**: Added `--json` CLI flag across all collectors without external dependencies.
+- **Accurate GPU Resolution**: Native `pci.ids` database parser resolving vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
+- **WSL2 & Host Detection**: Automatic hypervisor detection for WSL2 and ARM device-tree boards.
+- **New Package Managers**: Added package counting for **Homebrew** and **Gentoo** (`emerge`).
+- **Foreground Palette Blocks**: Solid foreground block rendering (`███`) in `ColorsCollector` for universal dark/light theme visibility.
+- **New Distro Logos**: Added ASCII art for **NixOS**, **Kali Linux**, **FreeBSD**, **Slackware**, **Artix Linux**, and **Zorin OS**.
+
+*For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
 ---
 
