@@ -1,6 +1,6 @@
 [package]
 name = "ferrisfetch"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 rust-version = "1.75.0"
 description = "A fast, lightweight Linux system information fetch tool written in Rust"

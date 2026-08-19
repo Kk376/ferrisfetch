@@ -4,8 +4,9 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.4.0)
+## Latest Changes (v0.4.1)
 
+- **Clean Battery Formatting**: Streamlined battery metrics across WSL and Linux environments, formatting capacity and AC connection states cleanly (`Battery: 97% [AC Connected]`) without redundant hypervisor model strings.
 - **OS Architecture**: Displays system architecture alongside distribution name (`x86_64`, `aarch64`, `riscv64`).
 - **Shell Version**: Automatically resolves and displays active shell version (`zsh 5.9`, `bash 5.2.21`, `fish 3.7.0`).
 - **Display Resolution & Refresh Rate**: Direct display detection reporting active mode and refresh rate (`1920x1080 @ 60Hz`).
@@ -13,7 +14,6 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 - **GPU VRAM & Clock Frequency**: Full graphics memory and clock reporting across integrated and discrete GPUs (`Intel Iris Xe Graphics (1 GiB) @ 1.400GHz`, `NVIDIA GeForce RTX 4090 (24 GiB) @ 2.520GHz`).
 - **Swap Memory**: Direct `/proc/meminfo` swap tracking reporting used, total, and utilization percentage.
 - **Partition Disk Enumeration**: Dynamically detects all physical and virtual mounts labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives cleanly (`(C)`, `(D)`).
-- **Physical Battery Detection**: Reads battery metrics directly from sysfs while automatically excluding Microsoft Hyper-V virtual batteries in WSL.
 - **Local IP Module**: Direct POSIX interface enumeration querying the active local IPv4 address without spawning external utilities.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
@@ -60,28 +60,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch_0.3.0-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.3.0-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.1/ferrisfetch_0.4.1-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.4.1-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.3.0-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.4.1-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.1/ferrisfetch-0.4.1-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.4.1-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.4.1-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch_0.3.0-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.3.0-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.1/ferrisfetch_0.4.1-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.4.1-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.4.1/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.1/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```

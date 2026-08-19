@@ -8,7 +8,24 @@ pub struct BatteryInfo {
     pub status: String,
 }
 
-/// Probes physical battery capacity and charging status from sysfs, ignoring WSL/Hyper-V virtual batteries.
+fn is_ac_online() -> bool {
+    let power_supply_dir = "/sys/class/power_supply";
+    if let Ok(entries) = fs::read_dir(power_supply_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_lowercase();
+            if name.starts_with("ac") || name.starts_with("mains") || name.starts_with("acad") {
+                if let Ok(online) = fs::read_to_string(entry.path().join("online")) {
+                    if online.trim() == "1" {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Probes battery capacity and state, formatting cleanly without redundant virtual model names.
 pub fn detect_battery() -> Option<BatteryInfo> {
     let power_supply_dir = "/sys/class/power_supply";
     let entries = fs::read_dir(power_supply_dir).ok()?;
@@ -21,30 +38,36 @@ pub fn detect_battery() -> Option<BatteryInfo> {
             continue;
         }
 
-        // Check model_name and manufacturer to filter out Hyper-V virtual battery in WSL
-        let model = fs::read_to_string(path.join("model_name"))
-            .unwrap_or_default()
-            .to_lowercase();
-        let manufacturer = fs::read_to_string(path.join("manufacturer"))
-            .unwrap_or_default()
-            .to_lowercase();
-
-        if model.contains("hyper-v")
-            || model.contains("virtual battery")
-            || model.contains("virtual")
-            || (manufacturer.contains("microsoft") && model.is_empty())
-        {
-            continue;
-        }
-
         // Read capacity
         let capacity_str = fs::read_to_string(path.join("capacity")).ok()?;
         let capacity = capacity_str.trim().parse::<u8>().ok()?;
 
         // Read status (Charging, Discharging, Full, Not charging)
-        let status = fs::read_to_string(path.join("status"))
+        let raw_status = fs::read_to_string(path.join("status"))
             .map(|s| s.trim().to_string())
             .unwrap_or_else(|_| "Unknown".to_string());
+
+        let ac_online = is_ac_online();
+
+        let status = if raw_status.eq_ignore_ascii_case("not charging") {
+            if ac_online {
+                "AC Connected".to_string()
+            } else {
+                "Not charging".to_string()
+            }
+        } else if raw_status.eq_ignore_ascii_case("charging") {
+            "Charging".to_string()
+        } else if raw_status.eq_ignore_ascii_case("discharging") {
+            "Discharging".to_string()
+        } else if raw_status.eq_ignore_ascii_case("full") {
+            if ac_online {
+                "Full [AC]".to_string()
+            } else {
+                "Full".to_string()
+            }
+        } else {
+            raw_status
+        };
 
         return Some(BatteryInfo { capacity, status });
     }
@@ -76,7 +99,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_battery_exclusion_hyperv() {
+    fn test_battery_parsing() {
         let temp_dir = tempfile::tempdir().unwrap();
         let bat_dir = temp_dir.path().join("BAT1");
         fs::create_dir_all(&bat_dir).unwrap();
@@ -88,9 +111,11 @@ mod tests {
         fs::write(bat_dir.join("capacity"), "97\n").unwrap();
         fs::write(bat_dir.join("status"), "Not charging\n").unwrap();
 
-        let model = fs::read_to_string(bat_dir.join("model_name"))
+        let cap = fs::read_to_string(bat_dir.join("capacity"))
             .unwrap()
-            .to_lowercase();
-        assert!(model.contains("hyper-v") || model.contains("virtual"));
+            .trim()
+            .parse::<u8>()
+            .unwrap();
+        assert_eq!(cap, 97);
     }
 }
