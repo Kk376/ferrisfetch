@@ -4,6 +4,19 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
+## Latest Changes (v0.2.0)
+
+- **Structured JSON Output**: Added `--json` CLI flag across all collectors without external dependencies.
+- **Accurate GPU Resolution**: Native `pci.ids` database parser resolving vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
+- **WSL2 & Host Detection**: Automatic hypervisor detection for WSL2 and ARM device-tree boards.
+- **New Package Managers**: Added package counting for **Homebrew** and **Gentoo** (`emerge`).
+- **Foreground Palette Blocks**: Solid foreground block rendering (`███`) in `ColorsCollector` for universal dark/light theme visibility.
+- **New Distro Logos**: Added ASCII art for **NixOS**, **Kali Linux**, **FreeBSD**, **Slackware**, **Artix Linux**, and **Zorin OS**.
+
+*For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
+
+---
+
 ## Features
 
 - **Direct kernel probing**: Reads `/proc`, `/sys`, and POSIX `libc` calls directly without spawning shell subprocesses.
@@ -244,21 +257,6 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```bash
 cargo build --release
 ```
-
----
-
----
-
-## Latest Changes (v0.2.0)
-
-- **Structured JSON Output**: Added `--json` CLI flag across all collectors without external dependencies.
-- **Accurate GPU Resolution**: Native `pci.ids` database parser resolving vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
-- **WSL2 & Host Detection**: Automatic hypervisor detection for WSL2 and ARM device-tree boards.
-- **New Package Managers**: Added package counting for **Homebrew** and **Gentoo** (`emerge`).
-- **Foreground Palette Blocks**: Solid foreground block rendering (`███`) in `ColorsCollector` for universal dark/light theme visibility.
-- **New Distro Logos**: Added ASCII art for **NixOS**, **Kali Linux**, **FreeBSD**, **Slackware**, **Artix Linux**, and **Zorin OS**.
-
-*For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
 ---
 
