@@ -1,8 +1,8 @@
-ferrisfetch (0.3.0-1) unstable; urgency=medium
+ferrisfetch (0.4.0-1) unstable; urgency=medium
 
-  * Release version 0.3.0.
+  * Release version 0.4.0.
 
- -- FerrisFetch Packaging Team <packaging@ferrisfetch.rs>  Wed, 19 Aug 2026 08:45:00 +0530
+ -- FerrisFetch Packaging Team <packaging@ferrisfetch.rs>  Wed, 19 Aug 2026 09:50:00 +0530
 
 ferrisfetch (0.2.0-1) unstable; urgency=medium
 
