@@ -110,6 +110,9 @@ const IGNORED_FS_TYPES: &[&str] = &[
     "selinuxfs",
     "fuse.gvfsd-fuse",
     "fuse.portal",
+    "erofs",
+    "rootfs",
+    "sdcardfs",
 ];
 
 const IGNORED_MOUNT_PREFIXES: &[&str] = &[
@@ -123,6 +126,32 @@ const IGNORED_MOUNT_PREFIXES: &[&str] = &[
     "/proc",
     "/var/lib/docker",
     "/var/lib/containers",
+    "/var/lib/flatpak",
+    "/snap",
+    "/apex",
+    "/bootstrap-apex",
+    "/data/app",
+    "/data/user",
+    "/data/data",
+    "/data/media",
+    "/data_mirror",
+    "/storage/emulated",
+    "/mnt/runtime",
+    "/mnt/user",
+    "/mnt/installer",
+    "/mnt/androidwritable",
+    "/mnt/pass_through",
+    "/mnt/media_rw",
+    "/system",
+    "/system_ext",
+    "/vendor",
+    "/product",
+    "/odm",
+    "/oem",
+    "/metadata",
+    "/acct",
+    "/config",
+    "/linkerconfig",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -321,5 +350,46 @@ mod tests {
     fn test_get_disk_usage_invalid_paths() {
         assert_eq!(get_disk_usage("/nonexistent_path_xyz_987654"), None);
         assert_eq!(get_disk_usage("invalid\0nullbyte"), None);
+    }
+
+    #[test]
+    fn test_android_mounts_filter() {
+        let sample_mounts = r#"
+/dev/root / ext4 ro,relatime 0 0
+/dev/block/dm-0 /apex/com.android.runtime erofs ro,relatime 0 0
+/dev/block/dm-1 /apex/com.android.art@361099999 erofs ro,relatime 0 0
+/dev/block/dm-2 /bootstrap-apex/com.android.runtime erofs ro,relatime 0 0
+/dev/block/bootdevice/by-name/userdata /data f2fs rw,nosuid,nodev,noatime 0 0
+/dev/block/dm-3 /data/app/~~XYZ==/com.google.android.youtube==/base.apk erofs ro,nodev 0 0
+/data/media /storage/emulated sdcardfs rw,nosuid,nodev 0 0
+/dev/block/vold/public:179,1 /storage/FF70-CD48 vfat rw,dirsync,nosuid,nodev 0 0
+/dev/block/bootdevice/by-name/product /product erofs ro,relatime 0 0
+/dev/block/bootdevice/by-name/vendor /vendor erofs ro,relatime 0 0
+/dev/block/bootdevice/by-name/metadata /metadata f2fs rw,sync 0 0
+"#;
+
+        let filtered: Vec<&str> = sample_mounts
+            .lines()
+            .filter_map(|l| {
+                let parts: Vec<&str> = l.split_whitespace().collect();
+                if parts.len() < 3 {
+                    return None;
+                }
+                let mp = parts[1];
+                let fs = parts[2];
+                if IGNORED_FS_TYPES.contains(&fs) {
+                    return None;
+                }
+                if IGNORED_MOUNT_PREFIXES
+                    .iter()
+                    .any(|prefix| mp.starts_with(prefix))
+                {
+                    return None;
+                }
+                Some(mp)
+            })
+            .collect();
+
+        assert_eq!(filtered, vec!["/", "/data", "/storage/FF70-CD48"]);
     }
 }
