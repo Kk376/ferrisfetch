@@ -201,10 +201,7 @@ impl Collector for CpuCollector {
         };
 
         let value = if cpu.sockets > 1 {
-            format!(
-                "{} ({} sockets, {} cores){}",
-                cleaned, cpu.sockets, cpu.cores, freq_str
-            )
+            format!("{}x {} ({}){}", cpu.sockets, cleaned, cpu.cores, freq_str)
         } else if cpu.cores > 0 {
             format!("{} ({}){}", cleaned, cpu.cores, freq_str)
         } else {

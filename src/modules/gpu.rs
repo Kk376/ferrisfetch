@@ -329,37 +329,95 @@ pub fn detect_wsl_gpus() -> Vec<String> {
     gpus
 }
 
-/// Formats detected GPUs with [GPU0]/[GPU1] indices and type tags when multiple GPUs exist.
-pub fn format_gpu_list(gpus: &[String]) -> String {
-    if gpus.is_empty() {
-        return String::new();
+/// Classifies whether a GPU model name is an integrated graphics processor.
+pub fn is_integrated_gpu(gpu_name: &str) -> bool {
+    let lower = gpu_name.to_lowercase();
+    lower.contains("radeon 6")
+        || lower.contains("radeon 7")
+        || lower.contains("radeon(tm) 6")
+        || lower.contains("radeon(tm) 7")
+        || lower.contains("radeon graphics")
+        || lower.contains("radeon vega")
+        || lower.contains("iris")
+        || lower.contains("uhd graphics")
+        || lower.contains("hd graphics")
+        || (lower.contains("intel") && !lower.contains("arc"))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GpuGroup {
+    pub name: String,
+    pub count: usize,
+    pub is_integrated: bool,
+}
+
+/// Groups identical dGPUs and assigns sequential dynamic indices starting at GPU0.
+pub fn group_and_index_gpus(raw_gpus: &[String], cpu_sockets: usize) -> Vec<ModuleOutput> {
+    if raw_gpus.is_empty() {
+        return Vec::new();
     }
-    if gpus.len() == 1 {
-        return gpus[0].clone();
-    }
 
-    let mut formatted = Vec::new();
+    let mut igpus: Vec<String> = Vec::new();
+    let mut dgpus: Vec<String> = Vec::new();
 
-    for (idx, gpu) in gpus.iter().enumerate() {
-        let is_integrated = gpu.contains("Radeon 6")
-            || gpu.contains("Radeon 7")
-            || gpu.contains("Radeon Graphics")
-            || gpu.contains("Radeon Vega")
-            || gpu.contains("Iris")
-            || gpu.contains("UHD Graphics")
-            || gpu.contains("HD Graphics")
-            || (gpu.contains("Intel") && !gpu.contains("Arc"));
-
-        let tag = if is_integrated {
-            "[Integrated]"
+    for gpu in raw_gpus {
+        let cleaned = clean_gpu_name(gpu);
+        if is_integrated_gpu(&cleaned) {
+            igpus.push(cleaned);
         } else {
-            "[Discrete]"
+            dgpus.push(cleaned);
+        }
+    }
+
+    let mut groups: Vec<GpuGroup> = Vec::new();
+
+    // 1. iGPU Handling: Takes GPU0 if present
+    if !igpus.is_empty() {
+        let first_igpu = igpus[0].clone();
+        let socket_multiplier = if cpu_sockets > 1 { cpu_sockets } else { 1 };
+        let count = igpus.len().max(socket_multiplier);
+        groups.push(GpuGroup {
+            name: first_igpu,
+            count,
+            is_integrated: true,
+        });
+    }
+
+    // 2. dGPU Grouping & Ordering: Process in detection order and group identical dGPUs
+    for dgpu in dgpus {
+        if let Some(existing) = groups
+            .iter_mut()
+            .find(|g| !g.is_integrated && g.name == dgpu)
+        {
+            existing.count += 1;
+        } else {
+            groups.push(GpuGroup {
+                name: dgpu,
+                count: 1,
+                is_integrated: false,
+            });
+        }
+    }
+
+    // 3. Format into ModuleOutput with sequential indices (GPU0, GPU1, ...)
+    let mut outputs = Vec::new();
+    for (idx, group) in groups.iter().enumerate() {
+        let label = format!("GPU{}", idx);
+        let value = if group.count > 1 {
+            format!("{}x {}", group.count, group.name)
+        } else {
+            group.name.clone()
         };
 
-        formatted.push(format!("[GPU{}] {} {}", idx, gpu, tag));
+        outputs.push(ModuleOutput {
+            id: ModuleId::Gpu,
+            label,
+            value,
+            custom_rendered: None,
+        });
     }
 
-    formatted.join(", ")
+    outputs
 }
 
 pub fn get_gpu_list() -> Vec<String> {
@@ -396,10 +454,20 @@ pub fn get_gpu_list() -> Vec<String> {
 
 pub fn get_gpu_info() -> Option<String> {
     let list = get_gpu_list();
-    if list.is_empty() {
+    let cpu_sockets = crate::modules::cpu::get_cpu_info()
+        .map(|c| c.sockets)
+        .unwrap_or(1);
+    let outputs = group_and_index_gpus(&list, cpu_sockets);
+    if outputs.is_empty() {
         None
     } else {
-        Some(format_gpu_list(&list))
+        Some(
+            outputs
+                .into_iter()
+                .map(|o| format!("{}: {}", o.label, o.value))
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
     }
 }
 
@@ -422,45 +490,10 @@ impl Collector for GpuCollector {
 
     fn collect_multiple(&self, _ctx: &FetchContext) -> Vec<ModuleOutput> {
         let gpus = get_gpu_list();
-        if gpus.is_empty() {
-            return Vec::new();
-        }
-
-        if gpus.len() == 1 {
-            return vec![ModuleOutput {
-                id: ModuleId::Gpu,
-                label: "GPU".to_string(),
-                value: gpus[0].clone(),
-                custom_rendered: None,
-            }];
-        }
-
-        let mut outputs = Vec::new();
-        for (idx, gpu) in gpus.iter().enumerate() {
-            let is_integrated = gpu.contains("Radeon 6")
-                || gpu.contains("Radeon 7")
-                || gpu.contains("Radeon Graphics")
-                || gpu.contains("Radeon Vega")
-                || gpu.contains("Iris")
-                || gpu.contains("UHD Graphics")
-                || gpu.contains("HD Graphics")
-                || (gpu.contains("Intel") && !gpu.contains("Arc"));
-
-            let tag = if is_integrated {
-                "[Integrated]"
-            } else {
-                "[Discrete]"
-            };
-
-            outputs.push(ModuleOutput {
-                id: ModuleId::Gpu,
-                label: format!("GPU{}", idx),
-                value: format!("{} {}", gpu, tag),
-                custom_rendered: None,
-            });
-        }
-
-        outputs
+        let cpu_sockets = crate::modules::cpu::get_cpu_info()
+            .map(|c| c.sockets)
+            .unwrap_or(1);
+        group_and_index_gpus(&gpus, cpu_sockets)
     }
 }
 
@@ -581,17 +614,59 @@ mod tests {
     }
 
     #[test]
-    fn test_format_gpu_list() {
-        let single = vec!["NVIDIA GeForce RTX 3060".to_string()];
-        assert_eq!(format_gpu_list(&single), "NVIDIA GeForce RTX 3060");
+    fn test_group_and_index_gpus_senior_dev_spec() {
+        // 3 identical CPUs with iGPUs, 2 identical dGPUs, and 2 distinct dGPUs
+        let gpus = vec![
+            "AMD Radeon Graphics".to_string(),
+            "NVIDIA GeForce RTX 4090".to_string(),
+            "NVIDIA GeForce RTX 4090".to_string(),
+            "NVIDIA GeForce RTX 3090".to_string(),
+            "Intel Arc A770".to_string(),
+        ];
+        let outputs = group_and_index_gpus(&gpus, 3);
+        assert_eq!(outputs.len(), 4);
+        assert_eq!(outputs[0].label, "GPU0");
+        assert_eq!(outputs[0].value, "3x AMD Radeon Graphics");
+        assert_eq!(outputs[1].label, "GPU1");
+        assert_eq!(outputs[1].value, "2x NVIDIA GeForce RTX 4090");
+        assert_eq!(outputs[2].label, "GPU2");
+        assert_eq!(outputs[2].value, "NVIDIA GeForce RTX 3090");
+        assert_eq!(outputs[3].label, "GPU3");
+        assert_eq!(outputs[3].value, "Intel Arc A770");
+    }
 
-        let dual = vec![
+    #[test]
+    fn test_group_and_index_gpus_no_igpu() {
+        let gpus = vec![
+            "NVIDIA GeForce RTX 3080".to_string(),
+            "NVIDIA GeForce RTX 3080".to_string(),
+        ];
+        let outputs = group_and_index_gpus(&gpus, 1);
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(outputs[0].label, "GPU0");
+        assert_eq!(outputs[0].value, "2x NVIDIA GeForce RTX 3080");
+    }
+
+    #[test]
+    fn test_group_and_index_gpus_single_gpu() {
+        let gpus = vec!["NVIDIA GeForce RTX 3060".to_string()];
+        let outputs = group_and_index_gpus(&gpus, 1);
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(outputs[0].label, "GPU0");
+        assert_eq!(outputs[0].value, "NVIDIA GeForce RTX 3060");
+    }
+
+    #[test]
+    fn test_group_and_index_gpus_hybrid_laptop() {
+        let gpus = vec![
             "AMD Radeon 660M".to_string(),
             "NVIDIA GeForce RTX 2050".to_string(),
         ];
-        assert_eq!(
-            format_gpu_list(&dual),
-            "[GPU0] AMD Radeon 660M [Integrated], [GPU1] NVIDIA GeForce RTX 2050 [Discrete]"
-        );
+        let outputs = group_and_index_gpus(&gpus, 1);
+        assert_eq!(outputs.len(), 2);
+        assert_eq!(outputs[0].label, "GPU0");
+        assert_eq!(outputs[0].value, "AMD Radeon 660M");
+        assert_eq!(outputs[1].label, "GPU1");
+        assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 2050");
     }
 }
