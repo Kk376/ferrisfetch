@@ -166,8 +166,8 @@ pub fn get_uname_info() -> Option<UnameInfo> {
 #### Title Line Rendering
 Format as `<user>@<hostname>` with an underline divider matching the text length:
 ```text
-kk376@MSI-Thin-A15
-------------------
+user@archlinux
+--------------
 ```
 
 ---
@@ -230,7 +230,7 @@ pub fn clean_cpu_model(raw: &str) -> String {
 }
 ```
 
-Example output: `AMD Ryzen 5 7535HS with Radeon Graphics (12)`
+Example output: `AMD Ryzen 7 7700X with Radeon Graphics (16)`
 
 ---
 
@@ -751,7 +751,7 @@ Unit tests parse static string fixtures representing outputs from diverse enviro
 - `tests/fixtures/os_release/fedora_40.txt`
 - `tests/fixtures/os_release/rocky_9.txt`
 - `tests/fixtures/cpuinfo/intel_i7_10750h.txt`
-- `tests/fixtures/cpuinfo/amd_ryzen_7535hs.txt`
+- `tests/fixtures/cpuinfo/amd_ryzen_7700x.txt`
 - `tests/fixtures/cpuinfo/arm64_raspberry_pi.txt`
 - `tests/fixtures/meminfo/standard_16gb.txt`
 - `tests/fixtures/uptime/standard.txt`

@@ -229,8 +229,8 @@ mod tests {
 
     #[test]
     fn test_clean_cpu_model_amd() {
-        let raw = "AMD Ryzen 5 7535HS with Radeon Graphics";
-        assert_eq!(clean_cpu_model(raw), "AMD Ryzen 5 7535HS");
+        let raw = "AMD Ryzen 7 7700X with Radeon Graphics";
+        assert_eq!(clean_cpu_model(raw), "AMD Ryzen 7 7700X");
     }
 
     #[test]

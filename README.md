@@ -10,7 +10,7 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 - **Shell Version**: Automatically resolves and displays active shell version (`zsh 5.9`, `bash 5.2.21`, `fish 3.7.0`).
 - **Display Resolution & Refresh Rate**: Direct display detection reporting active mode and refresh rate (`1920x1080 @ 60Hz`).
 - **Window Manager Module (`WM`)**: Native detection for Mutter, KWin, Xfwm4, Sway, Hyprland, and `WSLg (Weston)`.
-- **GPU VRAM & Clock Frequency**: Full graphics memory and clock reporting across integrated and discrete GPUs (`AMD Radeon 660M (512 MiB) @ 1.900GHz`, `NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz`).
+- **GPU VRAM & Clock Frequency**: Full graphics memory and clock reporting across integrated and discrete GPUs (`Intel Iris Xe Graphics (1 GiB) @ 1.400GHz`, `NVIDIA GeForce RTX 4090 (24 GiB) @ 2.520GHz`).
 - **Swap Memory**: Direct `/proc/meminfo` swap tracking reporting used, total, and utilization percentage.
 - **Partition Disk Enumeration**: Dynamically detects all physical and virtual mounts labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives cleanly (`(C)`, `(D)`).
 - **Physical Battery Detection**: Reads battery metrics directly from sysfs while automatically excluding Microsoft Hyper-V virtual batteries in WSL.

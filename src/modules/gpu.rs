@@ -728,14 +728,14 @@ mod tests {
     #[test]
     fn test_group_and_index_gpus_hybrid_laptop() {
         let gpus = vec![
-            "AMD Radeon 660M".to_string(),
-            "NVIDIA GeForce RTX 2050".to_string(),
+            "Intel Iris Xe Graphics".to_string(),
+            "NVIDIA GeForce RTX 4070".to_string(),
         ];
         let outputs = group_and_index_gpus(&gpus, 1);
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].label, "GPU0");
-        assert_eq!(outputs[0].value, "AMD Radeon 660M");
+        assert_eq!(outputs[0].value, "Intel Iris Xe Graphics");
         assert_eq!(outputs[1].label, "GPU1");
-        assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 2050");
+        assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 4070");
     }
 }

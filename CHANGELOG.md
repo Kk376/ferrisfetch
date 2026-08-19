@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Shell Version**: Resolves active shell version (e.g. `Shell: zsh 5.9`, `Shell: bash 5.2.21`).
 - **Display Resolution & Refresh Rate**: Probes connected displays and refresh rates (e.g. `Display: 1920x1080 @ 60Hz`).
 - **Window Manager Module (`WM`)**: Resolves active window managers including Mutter, KWin, Xfwm4, Sway, Hyprland, and `WSLg (Weston)`.
-- **GPU VRAM & Clock Frequency**: Displays GPU memory capacity and max graphics clock (e.g. `GPU0: AMD Radeon 660M (512 MiB) @ 1.900GHz`, `GPU1: NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz`).
+- **GPU VRAM & Clock Frequency**: Displays GPU memory capacity and max graphics clock (e.g. `GPU0: Intel Iris Xe Graphics (1 GiB) @ 1.400GHz`, `GPU1: NVIDIA GeForce RTX 4090 (24 GiB) @ 2.520GHz`).
 - **Swap Memory Module**: Displays total and active used swap partition/file memory.
 - **Partition Disk Enumeration**: Discovers all active physical and virtual partitions labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives directly (e.g. `(C)`, `(D)`).
 - **Physical Battery Detection**: Probes battery percentage and status from sysfs while automatically filtering out Microsoft Hyper-V virtual batteries in WSL.
@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.5] - 2026-08-19
 
 ### Added
-- Native WSL2 hybrid GPU detection (`GpuCollector`) resolving both integrated graphics (e.g. `AMD Radeon 660M`/`680M`/`780M`, `Intel Iris Xe`/`UHD`) and discrete NVIDIA graphics (e.g. `NVIDIA GeForce RTX 2050`/`3050`/`4050`) via the native Windows driver bridge without extra Linux drivers.
+- Native WSL2 hybrid GPU detection (`GpuCollector`) resolving both integrated graphics (e.g. `Intel Iris Xe` / `AMD Radeon Graphics`) and discrete NVIDIA graphics (e.g. `NVIDIA GeForce RTX 4080` / `RTX 4090`) via the native Windows driver bridge without extra Linux drivers.
 
 ## [0.2.0] - 2026-08-19
 
