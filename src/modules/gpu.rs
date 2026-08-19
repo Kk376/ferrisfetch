@@ -276,7 +276,25 @@ pub fn detect_wsl_gpus() -> Vec<String> {
         }
     }
 
-    // 2. Probe discrete NVIDIA GPU via nvidia-smi (shipped by Windows host at /usr/lib/wsl/lib/nvidia-smi)
+    // 2. Fast-path: Check persistent user/system cache for discrete GPU (<0.2ms)
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir.as_ref().map(|d| d.join("wsl_dgpu.cache"));
+
+    if let Some(ref path) = cache_file {
+        if let Ok(cached) = fs::read_to_string(path) {
+            let trimmed = cached.trim();
+            if !trimmed.is_empty() && !gpus.contains(&trimmed.to_string()) {
+                gpus.push(trimmed.to_string());
+                return gpus;
+            }
+        }
+    }
+
+    // 3. Fallback: Query nvidia-smi and cache the result for sub-millisecond future runs
     for smi_path in &["/usr/lib/wsl/lib/nvidia-smi", "nvidia-smi"] {
         if let Ok(output) = Command::new(smi_path)
             .args(["--query-gpu=name", "--format=csv,noheader"])
@@ -288,6 +306,14 @@ pub fn detect_wsl_gpus() -> Vec<String> {
                     let trimmed = line.trim();
                     if !trimmed.is_empty() && !gpus.contains(&trimmed.to_string()) {
                         gpus.push(trimmed.to_string());
+
+                        // Write to persistent cache
+                        if let Some(ref dir) = cache_dir {
+                            let _ = fs::create_dir_all(dir);
+                        }
+                        if let Some(ref path) = cache_file {
+                            let _ = fs::write(path, trimmed);
+                        }
                     }
                 }
             }
