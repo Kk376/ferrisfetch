@@ -6,10 +6,10 @@ export DH_VERBOSE = 1
 	dh $@
 
 override_dh_auto_build:
-	cargo build --release --locked
+	cargo build --release --offline
 
 override_dh_auto_test:
-	cargo test --release --locked
+	cargo test --release --offline
 
 override_dh_auto_install:
 	# Install binary

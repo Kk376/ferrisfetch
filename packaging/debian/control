@@ -1,11 +1,11 @@
 Source: ferrisfetch
 Section: utils
 Priority: optional
-Maintainer: FerrisFetch Packaging Team <packaging@ferrisfetch.rs>
+Maintainer: Kushagra Kumar <kkushagra86@gmail.com>
 Build-Depends:
  debhelper-compat (= 13),
- cargo (>= 1.75.0),
- rustc (>= 1.75.0),
+ cargo,
+ rustc,
  libc6-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/kk376/ferrisfetch

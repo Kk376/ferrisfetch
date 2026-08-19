@@ -41,6 +41,16 @@ FerrisFetch is built and tested across the following Linux distribution families
 
 ## Installation
 
+### Ubuntu / Linux Mint / Pop!_OS (PPA)
+
+Enable the official Launchpad PPA and install:
+
+```bash
+sudo add-apt-repository -y ppa:kushagra376/ferrisfetch && sudo apt update && sudo apt install -y ferrisfetch
+```
+
+---
+
 ### Fedora / RHEL / CentOS (Copr)
 
 Enable the official Copr repository and install:
