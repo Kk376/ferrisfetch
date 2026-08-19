@@ -22,10 +22,10 @@ them cleanly alongside colorful ANSI distribution ASCII logos.
 %autosetup -n %{name}-%{version}
 
 %build
-cargo build --release --locked
+cargo build --release
 
 %check
-cargo test --release --locked
+cargo test --release
 
 %install
 # Install executable binary
