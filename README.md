@@ -51,7 +51,7 @@ sudo add-apt-repository -y ppa:kushagra376/ferrisfetch && sudo apt update && sud
 
 ---
 
-### Fedora / RHEL / CentOS (Copr)
+### Fedora (Copr)
 
 Enable the official Copr repository and install:
 
