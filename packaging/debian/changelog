@@ -1,3 +1,13 @@
+ferrisfetch (0.2.0-1) unstable; urgency=medium
+
+  * Add structured JSON output flag (--json).
+  * Fix GPU detection: parse system pci.ids and prevent ACPI motherboard label override.
+  * Add context-aware host and WSL2 environment detection.
+  * Add Homebrew and Gentoo Emerge package managers.
+  * Add ASCII art logos for NixOS, Kali, FreeBSD, Slackware, Artix, and Zorin OS.
+
+ -- FerrisFetch Packaging Team <packaging@ferrisfetch.rs>  Wed, 19 Aug 2026 07:00:00 +0000
+
 ferrisfetch (0.1.0-1) unstable; urgency=medium
 
   * Initial release (0.1.0).

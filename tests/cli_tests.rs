@@ -188,7 +188,7 @@ fn test_cli_version() {
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("ferrisfetch 0.1.0"));
+        .stdout(predicate::str::contains("ferrisfetch 0.2.0"));
 }
 
 #[test]

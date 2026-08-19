@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-19
+
+### Added
+- `--json` CLI flag for structured JSON output across all enabled modules without external dependencies.
+- Native `pci.ids` database parser resolving PCI vendor/device hex pairs to human-readable graphics cards without spawning subprocesses.
+- WSL2 hypervisor and host motherboard model identification in `HostCollector`.
+- Package manager counting support for **Homebrew** (`Cellar`) and **Gentoo** (`/var/db/pkg`).
+- Foreground solid color block glyphs (`███`) in `ColorsCollector` for consistent light/dark terminal rendering.
+- Built-in ASCII logos for **NixOS**, **Kali Linux**, **FreeBSD**, **Slackware**, **Artix Linux**, and **Zorin OS**.
+
+### Fixed
+- Fixed GPU detection prioritizing motherboard ACPI DMI slot labels (e.g. `Onboard - Video` on ASUS/Dell laptops) over actual graphics processor model names.
+
 ## [0.1.0] - 2026-08-16
 
 ### Added
