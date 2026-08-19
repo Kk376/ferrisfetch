@@ -362,7 +362,7 @@ pub fn format_gpu_list(gpus: &[String]) -> String {
     formatted.join(", ")
 }
 
-pub fn get_gpu_info() -> Option<String> {
+pub fn get_gpu_list() -> Vec<String> {
     let sysfs_gpus = detect_gpus_sysfs();
 
     // Check if sysfs produced only generic/unresolved IDs (e.g. "Intel (0x5917)" or "Microsoft Direct3D")
@@ -382,20 +382,25 @@ pub fn get_gpu_info() -> Option<String> {
         // If in WSL or Direct3D detected, probe WSL GPU bridge (iGPU + dGPU)
         let wsl_gpus = detect_wsl_gpus();
         if !wsl_gpus.is_empty() {
-            return Some(format_gpu_list(&wsl_gpus));
+            return wsl_gpus;
         }
 
         let lspci_gpus = detect_gpus_lspci();
         if !lspci_gpus.is_empty() {
-            return Some(format_gpu_list(&lspci_gpus));
+            return lspci_gpus;
         }
     }
 
-    if !sysfs_gpus.is_empty() {
-        return Some(format_gpu_list(&sysfs_gpus));
-    }
+    sysfs_gpus
+}
 
-    None
+pub fn get_gpu_info() -> Option<String> {
+    let list = get_gpu_list();
+    if list.is_empty() {
+        None
+    } else {
+        Some(format_gpu_list(&list))
+    }
 }
 
 pub struct GpuCollector;
@@ -413,6 +418,49 @@ impl Collector for GpuCollector {
             value,
             custom_rendered: None,
         })
+    }
+
+    fn collect_multiple(&self, _ctx: &FetchContext) -> Vec<ModuleOutput> {
+        let gpus = get_gpu_list();
+        if gpus.is_empty() {
+            return Vec::new();
+        }
+
+        if gpus.len() == 1 {
+            return vec![ModuleOutput {
+                id: ModuleId::Gpu,
+                label: "GPU".to_string(),
+                value: gpus[0].clone(),
+                custom_rendered: None,
+            }];
+        }
+
+        let mut outputs = Vec::new();
+        for (idx, gpu) in gpus.iter().enumerate() {
+            let is_integrated = gpu.contains("Radeon 6")
+                || gpu.contains("Radeon 7")
+                || gpu.contains("Radeon Graphics")
+                || gpu.contains("Radeon Vega")
+                || gpu.contains("Iris")
+                || gpu.contains("UHD Graphics")
+                || gpu.contains("HD Graphics")
+                || (gpu.contains("Intel") && !gpu.contains("Arc"));
+
+            let tag = if is_integrated {
+                "[Integrated]"
+            } else {
+                "[Discrete]"
+            };
+
+            outputs.push(ModuleOutput {
+                id: ModuleId::Gpu,
+                label: format!("GPU{}", idx),
+                value: format!("{} {}", gpu, tag),
+                custom_rendered: None,
+            });
+        }
+
+        outputs
     }
 }
 

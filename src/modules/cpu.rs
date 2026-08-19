@@ -3,11 +3,12 @@ use crate::modules::{Collector, ModuleId, ModuleOutput};
 use std::collections::HashSet;
 use std::fs;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CpuInfo {
     pub model: String,
     pub cores: usize,
     pub sockets: usize,
+    pub freq_ghz: Option<f64>,
 }
 
 /// Cleans redundant marketing and frequency tokens from raw CPU model strings.
@@ -43,7 +44,7 @@ pub fn clean_cpu_model(raw: &str) -> String {
     tokens.join(" ").trim_end_matches(',').trim().to_string()
 }
 
-/// Parses `/proc/cpuinfo` into model, logical core count, and physical socket count.
+/// Parses `/proc/cpuinfo` into model, logical core count, physical socket count, and frequency.
 pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     if content.trim().is_empty() {
         return None;
@@ -52,6 +53,7 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     let mut model_name: Option<String> = None;
     let mut processor_count = 0;
     let mut physical_ids = HashSet::new();
+    let mut freq_ghz: Option<f64> = None;
 
     for line in content.lines() {
         let trimmed = line.trim();
@@ -67,6 +69,27 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
                 "model name" | "model_name" | "hardware" | "cpu model" => {
                     if model_name.is_none() && !val.is_empty() {
                         model_name = Some(val.to_string());
+                        if freq_ghz.is_none() {
+                            if let Some(at_idx) = val.find('@') {
+                                let after_at = val[at_idx + 1..].trim();
+                                if let Some(ghz_idx) = after_at.to_lowercase().find("ghz") {
+                                    if let Ok(ghz_val) = after_at[..ghz_idx].trim().parse::<f64>() {
+                                        if ghz_val > 0.0 {
+                                            freq_ghz = Some(ghz_val);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                "cpu mhz" | "cpu_mhz" | "clock" => {
+                    if freq_ghz.is_none() {
+                        if let Ok(mhz) = val.parse::<f64>() {
+                            if mhz > 0.0 {
+                                freq_ghz = Some(mhz / 1000.0);
+                            }
+                        }
                     }
                 }
                 "cpu" => {
@@ -132,7 +155,26 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
         model,
         cores,
         sockets,
+        freq_ghz,
     })
+}
+
+/// Fallback cpufreq sysfs reader.
+pub fn get_cpu_freq_ghz() -> Option<f64> {
+    for path in &[
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
+    ] {
+        if let Ok(content) = fs::read_to_string(path) {
+            if let Ok(khz) = content.trim().parse::<f64>() {
+                if khz > 0.0 {
+                    return Some(khz / 1_000_000.0);
+                }
+            }
+        }
+    }
+    None
 }
 
 pub fn get_cpu_info() -> Option<CpuInfo> {
@@ -152,13 +194,21 @@ impl Collector for CpuCollector {
     fn collect(&self, _ctx: &FetchContext) -> Option<ModuleOutput> {
         let cpu = get_cpu_info()?;
         let cleaned = clean_cpu_model(&cpu.model);
+        let freq = cpu.freq_ghz.or_else(get_cpu_freq_ghz);
+        let freq_str = match freq {
+            Some(f) => format!(" @ {:.3}GHz", f),
+            None => String::new(),
+        };
 
         let value = if cpu.sockets > 1 {
-            format!("{} ({} sockets, {} cores)", cleaned, cpu.sockets, cpu.cores)
+            format!(
+                "{} ({} sockets, {} cores){}",
+                cleaned, cpu.sockets, cpu.cores, freq_str
+            )
         } else if cpu.cores > 0 {
-            format!("{} ({})", cleaned, cpu.cores)
+            format!("{} ({}){}", cleaned, cpu.cores, freq_str)
         } else {
-            cleaned
+            format!("{}{}", cleaned, freq_str)
         };
 
         Some(ModuleOutput {

@@ -122,7 +122,12 @@ pub struct ModuleOutput {
 
 pub trait Collector: Send + Sync {
     fn id(&self) -> ModuleId;
-    fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput>;
+    fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput> {
+        self.collect_multiple(ctx).into_iter().next()
+    }
+    fn collect_multiple(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
+        self.collect(ctx).into_iter().collect()
+    }
 }
 
 pub struct ModuleRegistry {
@@ -159,9 +164,7 @@ impl ModuleRegistry {
 
         for module_id in &ctx.active_modules {
             if let Some(collector) = self.collectors.iter().find(|c| c.id() == *module_id) {
-                if let Some(output) = collector.collect(ctx) {
-                    results.push(output);
-                }
+                results.extend(collector.collect_multiple(ctx));
             }
         }
 

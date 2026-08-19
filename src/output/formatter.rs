@@ -148,7 +148,11 @@ pub fn render_json(outputs: &[ModuleOutput]) -> String {
             continue;
         }
         if !out.value.is_empty() {
-            let key = out.id.as_str();
+            let key = if out.label.is_empty() {
+                out.id.as_str().to_string()
+            } else {
+                out.label.to_lowercase().replace(' ', "_")
+            };
             let escaped = escape_json_string(&out.value);
             fields.push(format!("  \"{}\": \"{}\"", key, escaped));
         }
