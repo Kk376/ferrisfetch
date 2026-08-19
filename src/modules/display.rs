@@ -38,32 +38,35 @@ pub fn parse_xrandr_output(output: &str) -> Option<DisplayInfo> {
     None
 }
 
-/// Probes display resolution and refresh rate from sysfs DRM or display servers.
-pub fn detect_display() -> Option<DisplayInfo> {
-    // 1. Sysfs DRM modes
-    let drm_dir = "/sys/class/drm";
-    if let Ok(entries) = fs::read_dir(drm_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if let Ok(status) = fs::read_to_string(path.join("status")) {
-                if status.trim() == "connected" {
-                    if let Ok(modes) = fs::read_to_string(path.join("modes")) {
-                        if let Some(first_mode) = modes.lines().next() {
-                            let clean = first_mode.trim();
-                            if clean.contains('x') {
-                                return Some(DisplayInfo {
-                                    resolution: clean.to_string(),
-                                    refresh_rate: None,
-                                });
-                            }
-                        }
-                    }
+/// Parses wlr-randr output for current resolution and refresh rate.
+pub fn parse_wlr_randr_output(output: &str) -> Option<DisplayInfo> {
+    for line in output.lines() {
+        if line.contains("current") || line.contains("Hz") {
+            // e.g. "  1366x768 px, 60.000000 Hz (current)"
+            let trimmed = line.trim();
+            if let Some(px_idx) = trimmed.find("px") {
+                let res = trimmed[..px_idx].trim().to_string();
+                let hz_part = trimmed[px_idx + 2..].trim();
+                let hz = hz_part
+                    .split_whitespace()
+                    .next()
+                    .and_then(|h| h.trim_end_matches(',').parse::<f64>().ok())
+                    .map(|f| f.round() as u32);
+                if res.contains('x') {
+                    return Some(DisplayInfo {
+                        resolution: res,
+                        refresh_rate: hz,
+                    });
                 }
             }
         }
     }
+    None
+}
 
-    // 2. Fast cache for X11/Wayland/WSLg query
+/// Probes display resolution and refresh rate from sysfs DRM or display servers.
+pub fn detect_display() -> Option<DisplayInfo> {
+    // 1. Fast cache for X11/Wayland/WSLg query (<0.1ms)
     let cache_dir = std::env::var_os("XDG_CACHE_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
@@ -87,7 +90,7 @@ pub fn detect_display() -> Option<DisplayInfo> {
         }
     }
 
-    // 3. Fallback: Query xrandr if graphical display session is active
+    // 2. Query xrandr or wlr-randr if graphical display session is active
     if std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some() {
         if let Ok(output) = Command::new("xrandr").output() {
             if output.status.success() {
@@ -104,6 +107,48 @@ pub fn detect_display() -> Option<DisplayInfo> {
                         let _ = fs::write(path, format!("{}{}", info.resolution, rate_str));
                     }
                     return Some(info);
+                }
+            }
+        }
+
+        if let Ok(output) = Command::new("wlr-randr").output() {
+            if output.status.success() {
+                let text = String::from_utf8_lossy(&output.stdout);
+                if let Some(info) = parse_wlr_randr_output(&text) {
+                    if let Some(ref dir) = cache_dir {
+                        let _ = fs::create_dir_all(dir);
+                    }
+                    if let Some(ref path) = cache_file {
+                        let rate_str = info
+                            .refresh_rate
+                            .map(|r| format!(" @ {}Hz", r))
+                            .unwrap_or_default();
+                        let _ = fs::write(path, format!("{}{}", info.resolution, rate_str));
+                    }
+                    return Some(info);
+                }
+            }
+        }
+    }
+
+    // 3. Sysfs DRM modes fallback
+    let drm_dir = "/sys/class/drm";
+    if let Ok(entries) = fs::read_dir(drm_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Ok(status) = fs::read_to_string(path.join("status")) {
+                if status.trim() == "connected" {
+                    if let Ok(modes) = fs::read_to_string(path.join("modes")) {
+                        if let Some(first_mode) = modes.lines().next() {
+                            let clean = first_mode.trim();
+                            if clean.contains('x') {
+                                return Some(DisplayInfo {
+                                    resolution: clean.to_string(),
+                                    refresh_rate: None,
+                                });
+                            }
+                        }
+                    }
                 }
             }
         }

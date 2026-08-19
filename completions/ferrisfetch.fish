@@ -9,10 +9,12 @@ set -l modules \
     'os\tOperating system and distribution name' \
     'host\tHardware product and model name' \
     'kernel\tLinux kernel release version' \
+    'installed\tOS installation date and relative system age' \
     'uptime\tSystem running time since boot' \
     'packages\tInstalled package counts' \
     'pkgs\tInstalled package counts (alias)' \
     'shell\tCurrent shell name and version' \
+    'display\tDisplay resolution and refresh rate' \
     'desktop\tDesktop Environment or Window Manager' \
     'de\tDesktop Environment (alias)' \
     'wm\tWindow Manager (alias)' \
@@ -22,7 +24,10 @@ set -l modules \
     'gpu\tDetected graphics hardware' \
     'memory\tSystem RAM usage statistics' \
     'mem\tSystem RAM usage (alias)' \
+    'swap\tSwap space memory usage' \
     'disk\tTarget filesystem storage usage' \
+    'battery\tBattery capacity and power status' \
+    'localip\tLocal network IP address' \
     'theme\tGTK, Qt, or Desktop UI Theme' \
     'icons\tIcon theme name' \
     'colors\tTerminal 16-color ANSI palette' \

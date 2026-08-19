@@ -489,6 +489,35 @@ pub fn group_and_index_gpus(raw_gpus: &[String], cpu_sockets: usize) -> Vec<Modu
     outputs
 }
 
+/// Probes maximum graphics clock frequency (in MHz) from sysfs DRM and hwmon entries.
+pub fn detect_gpu_clock_mhz(card_idx: usize) -> Option<u64> {
+    let card_dir = format!("/sys/class/drm/card{}", card_idx);
+    // 1. Intel DRM gt frequencies (gt_max_freq_mhz, gt_boost_freq_mhz, gt_RP0_freq_mhz)
+    for file in &["gt_max_freq_mhz", "gt_boost_freq_mhz", "gt_RP0_freq_mhz"] {
+        if let Ok(val) = fs::read_to_string(format!("{}/{}", card_dir, file)) {
+            if let Ok(mhz) = val.trim().parse::<u64>() {
+                if mhz > 0 {
+                    return Some(mhz);
+                }
+            }
+        }
+    }
+    // 2. AMD / Generic hwmon freq1_max
+    if let Ok(entries) = fs::read_dir(format!("{}/device/hwmon", card_dir)) {
+        for entry in entries.flatten() {
+            if let Ok(val) = fs::read_to_string(entry.path().join("freq1_max")) {
+                if let Ok(hz) = val.trim().parse::<u64>() {
+                    let mhz = if hz > 1_000_000 { hz / 1_000_000 } else { hz };
+                    if mhz > 0 {
+                        return Some(mhz);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 pub fn get_gpu_list() -> Vec<String> {
     let sysfs_gpus = detect_gpus_sysfs();
 
@@ -505,20 +534,35 @@ pub fn get_gpu_list() -> Vec<String> {
                 || g.starts_with("Onboard")
         });
 
-    if is_incomplete {
+    let raw_list = if is_incomplete {
         // If in WSL or Direct3D detected, probe WSL GPU bridge (iGPU + dGPU)
         let wsl_gpus = detect_wsl_gpus();
         if !wsl_gpus.is_empty() {
-            return wsl_gpus;
+            wsl_gpus
+        } else {
+            let lspci_gpus = detect_gpus_lspci();
+            if !lspci_gpus.is_empty() {
+                lspci_gpus
+            } else {
+                sysfs_gpus
+            }
         }
+    } else {
+        sysfs_gpus
+    };
 
-        let lspci_gpus = detect_gpus_lspci();
-        if !lspci_gpus.is_empty() {
-            return lspci_gpus;
-        }
-    }
-
-    sysfs_gpus
+    raw_list
+        .into_iter()
+        .enumerate()
+        .map(|(idx, gpu)| {
+            if !gpu.contains('@') {
+                if let Some(mhz) = detect_gpu_clock_mhz(idx) {
+                    return format_gpu_with_specs(&gpu, None, Some(mhz));
+                }
+            }
+            gpu
+        })
+        .collect()
 }
 
 pub fn get_gpu_info() -> Option<String> {

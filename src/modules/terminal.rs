@@ -3,24 +3,44 @@ use crate::modules::{Collector, ModuleId, ModuleOutput};
 use std::fs;
 
 const KNOWN_TERMINALS: &[(&str, &str)] = &[
+    ("ptyxis-agent", "Ptyxis"),
+    ("ptyxis", "Ptyxis"),
     ("gnome-terminal-server", "GNOME Terminal"),
     ("gnome-terminal", "GNOME Terminal"),
+    ("gnome-console", "GNOME Console"),
+    ("kgx", "GNOME Console"),
     ("konsole", "Konsole"),
     ("alacritty", "Alacritty"),
     ("kitty", "kitty"),
+    ("ghostty", "Ghostty"),
     ("wezterm-gui", "WezTerm"),
     ("wezterm", "WezTerm"),
     ("foot", "foot"),
+    ("rio", "Rio"),
+    ("contour", "Contour"),
+    ("blackbox", "BlackBox"),
     ("xterm", "xterm"),
     ("urxvt", "urxvt"),
     ("rxvt", "rxvt"),
     ("st", "st"),
     ("terminator", "Terminator"),
     ("xfce4-terminal", "XFCE Terminal"),
+    ("mate-terminal", "MATE Terminal"),
+    ("lxterminal", "LXTerminal"),
+    ("qterminal", "QTerminal"),
     ("tilix", "Tilix"),
-    ("ghostty", "Ghostty"),
+    ("guake", "Guake"),
+    ("yakuake", "Yakuake"),
+    ("tilda", "Tilda"),
+    ("sakura", "Sakura"),
+    ("termite", "Termite"),
     ("tabby", "Tabby"),
     ("hyper", "Hyper"),
+    ("warp", "Warp"),
+    ("deepin-terminal", "Deepin Terminal"),
+    ("pantheon-terminal", "Pantheon Terminal"),
+    ("io.elementary.terminal", "Pantheon Terminal"),
+    ("zellij", "Zellij"),
     ("tmux", "tmux"),
 ];
 
@@ -54,6 +74,30 @@ pub fn detect_terminal_from_env(
             .map(|&(_, v)| v.trim())
     };
 
+    if let Some(ver) = get_env_val("PTYXIS_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("Ptyxis {}", ver));
+        }
+        return Some("Ptyxis".to_string());
+    }
+
+    if let Some(ver) = get_env_val("GHOSTTY_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("Ghostty {}", ver));
+        }
+        return Some("Ghostty".to_string());
+    }
+    if has_env("GHOSTTY_RESOURCES_DIR") {
+        return Some("Ghostty".to_string());
+    }
+
+    if let Some(ver) = get_env_val("KGX_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("GNOME Console {}", ver));
+        }
+        return Some("GNOME Console".to_string());
+    }
+
     if has_env("ALACRITTY_LOG") || has_env("ALACRITTY_WINDOW_ID") || has_env("ALACRITTY_SOCKET") {
         return Some("Alacritty".to_string());
     }
@@ -77,6 +121,27 @@ pub fn detect_terminal_from_env(
         return Some("foot".to_string());
     }
 
+    if let Some(ver) = get_env_val("CONTOUR_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("Contour {}", ver));
+        }
+        return Some("Contour".to_string());
+    }
+
+    if let Some(ver) = get_env_val("RIO_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("Rio {}", ver));
+        }
+        return Some("Rio".to_string());
+    }
+
+    if let Some(ver) = get_env_val("BLACKBOX_VERSION") {
+        if !ver.is_empty() {
+            return Some(format!("BlackBox {}", ver));
+        }
+        return Some("BlackBox".to_string());
+    }
+
     if has_env("TERMINOLOGY") {
         return Some("Terminology".to_string());
     }
@@ -92,12 +157,24 @@ pub fn detect_terminal_from_env(
         return Some("GNOME Terminal".to_string());
     }
 
+    if has_env("MATE_TERMINAL_SCREEN") {
+        return Some("MATE Terminal".to_string());
+    }
+
     if has_env("TILIX_ID") {
         return Some("Tilix".to_string());
     }
 
     if has_env("WEZTERM_PANE") {
         return Some("WezTerm".to_string());
+    }
+
+    if has_env("WARP_IS_LOCAL_SHELL_SESSION") {
+        return Some("Warp".to_string());
+    }
+
+    if has_env("ZELLIJ") || has_env("ZELLIJ_SESSION_NAME") {
+        return Some("Zellij".to_string());
     }
 
     // 3. Fallback to $TERM

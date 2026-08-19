@@ -68,6 +68,96 @@ pub fn format_desktop_info(
     }
 }
 
+/// Probes desktop environment version from metadata files or fast version queries.
+pub fn detect_de_version(de_name: &str) -> Option<String> {
+    let lower = de_name.to_lowercase();
+    if lower.contains("gnome") {
+        // Fast path 1: /usr/share/gnome/gnome-version.xml (<0.1ms)
+        if let Ok(xml) = fs::read_to_string("/usr/share/gnome/gnome-version.xml") {
+            if let (Some(p_start), Some(m_start)) = (xml.find("<platform>"), xml.find("<minor>")) {
+                let platform = xml[p_start + 10..].split("</platform>").next()?.trim();
+                let minor = xml[m_start + 7..].split("</minor>").next()?.trim();
+                let micro = xml
+                    .find("<micro>")
+                    .and_then(|idx| xml[idx + 7..].split("</micro>").next())
+                    .map(|s| s.trim())
+                    .unwrap_or("");
+                if !micro.is_empty() && micro != "0" {
+                    return Some(format!("{}.{}.{}", platform, minor, micro));
+                } else {
+                    return Some(format!("{}.{}", platform, minor));
+                }
+            }
+        }
+        // Fast path 2: gnome-shell --version
+        if let Ok(out) = std::process::Command::new("gnome-shell")
+            .arg("--version")
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = text.split_whitespace().last() {
+                    return Some(ver.to_string());
+                }
+            }
+        }
+    } else if lower.contains("kde") || lower.contains("plasma") {
+        if let Ok(out) = std::process::Command::new("plasmashell")
+            .arg("--version")
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = text.split_whitespace().last() {
+                    return Some(ver.to_string());
+                }
+            }
+        }
+        if let Ok(ver) = std::env::var("KDE_SESSION_VERSION") {
+            return Some(ver);
+        }
+    } else if lower.contains("xfce") {
+        if let Ok(out) = std::process::Command::new("xfce4-session")
+            .arg("--version")
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(line) = text.lines().next() {
+                    if let Some(ver) = line.split_whitespace().last() {
+                        return Some(ver.to_string());
+                    }
+                }
+            }
+        }
+    } else if lower.contains("mate") {
+        if let Ok(out) = std::process::Command::new("mate-session")
+            .arg("--version")
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = text.split_whitespace().last() {
+                    return Some(ver.to_string());
+                }
+            }
+        }
+    } else if lower.contains("cinnamon") {
+        if let Ok(out) = std::process::Command::new("cinnamon")
+            .arg("--version")
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = text.split_whitespace().last() {
+                    return Some(ver.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Probes the system for active Desktop Environment (DE), Window Manager (WM), and session type.
 pub fn detect_desktop() -> Option<String> {
     let mut de = None;
@@ -79,12 +169,20 @@ pub fn detect_desktop() -> Option<String> {
         if !clean.is_empty() {
             // Handle colon-separated lists like "ubuntu:GNOME" or "pop:GNOME"
             let primary = clean.split(':').next_back().unwrap_or(clean);
-            de = Some(primary.to_string());
+            if let Some(ver) = detect_de_version(primary) {
+                de = Some(format!("{} {}", primary, ver));
+            } else {
+                de = Some(primary.to_string());
+            }
         }
     } else if let Ok(sess) = std::env::var("DESKTOP_SESSION") {
         let clean = sess.trim();
         if !clean.is_empty() && clean != "default" {
-            de = Some(clean.to_string());
+            if let Some(ver) = detect_de_version(clean) {
+                de = Some(format!("{} {}", clean, ver));
+            } else {
+                de = Some(clean.to_string());
+            }
         }
     }
 

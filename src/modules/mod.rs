@@ -7,6 +7,7 @@ pub mod desktop;
 pub mod disk;
 pub mod display;
 pub mod gpu;
+pub mod installed;
 pub mod kernel;
 pub mod localip;
 pub mod memory;
@@ -27,6 +28,7 @@ pub enum ModuleId {
     Os,
     Host,
     Kernel,
+    Installed,
     Uptime,
     Packages,
     Shell,
@@ -53,6 +55,7 @@ impl ModuleId {
             ModuleId::Os,
             ModuleId::Host,
             ModuleId::Kernel,
+            ModuleId::Installed,
             ModuleId::Uptime,
             ModuleId::Packages,
             ModuleId::Shell,
@@ -79,6 +82,7 @@ impl ModuleId {
             ModuleId::Os => "os",
             ModuleId::Host => "host",
             ModuleId::Kernel => "kernel",
+            ModuleId::Installed => "installed",
             ModuleId::Uptime => "uptime",
             ModuleId::Packages => "packages",
             ModuleId::Shell => "shell",
@@ -114,6 +118,7 @@ impl FromStr for ModuleId {
             "os" => Ok(ModuleId::Os),
             "host" => Ok(ModuleId::Host),
             "kernel" => Ok(ModuleId::Kernel),
+            "installed" | "install" | "installdate" | "osinstall" => Ok(ModuleId::Installed),
             "uptime" => Ok(ModuleId::Uptime),
             "packages" | "pkgs" => Ok(ModuleId::Packages),
             "shell" => Ok(ModuleId::Shell),
@@ -165,6 +170,7 @@ impl ModuleRegistry {
             Box::new(os::OsCollector),
             Box::new(os::HostCollector),
             Box::new(kernel::KernelCollector),
+            Box::new(installed::InstalledCollector),
             Box::new(uptime::UptimeCollector),
             Box::new(packages::PackagesCollector),
             Box::new(shell::ShellCollector),
@@ -214,6 +220,7 @@ mod tests {
     #[test]
     fn test_module_id_from_str() {
         assert_eq!(ModuleId::from_str("os"), Some(ModuleId::Os));
+        assert_eq!(ModuleId::from_str("installed"), Some(ModuleId::Installed));
         assert_eq!(ModuleId::from_str("mem"), Some(ModuleId::Memory));
         assert_eq!(ModuleId::from_str("pkgs"), Some(ModuleId::Packages));
         assert_eq!(ModuleId::from_str("theme"), Some(ModuleId::Theme));
@@ -224,6 +231,6 @@ mod tests {
 
     #[test]
     fn test_module_id_all_count() {
-        assert_eq!(ModuleId::all().len(), 21);
+        assert_eq!(ModuleId::all().len(), 22);
     }
 }

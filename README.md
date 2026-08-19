@@ -4,18 +4,14 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.4.2)
+## Latest Changes (v0.5.0)
 
-- **Android / Termux Disk Filtering**: Filtered out Android internal loop mounts and read-only system subsystems (`/apex`, `/bootstrap-apex`, `/data/app`, `/data/user`, `/metadata`, `/product`, `/vendor`, `/system`), preventing 90+ internal APEX/app partition spam in Termux.
-- **Clean Battery Formatting**: Streamlined battery metrics across WSL and Linux environments, formatting capacity and AC connection states cleanly (`Battery: 97% [AC Connected]`) without redundant hypervisor model strings.
-- **OS Architecture**: Displays system architecture alongside distribution name (`x86_64`, `aarch64`, `riscv64`).
-- **Shell Version**: Automatically resolves and displays active shell version (`zsh 5.9`, `bash 5.2.21`, `fish 3.7.0`).
-- **Display Resolution & Refresh Rate**: Direct display detection reporting active mode and refresh rate (`1920x1080 @ 60Hz`).
-- **Window Manager Module (`WM`)**: Native detection for Mutter, KWin, Xfwm4, Sway, Hyprland, and `WSLg (Weston)`.
-- **GPU VRAM & Clock Frequency**: Full graphics memory and clock reporting across integrated and discrete GPUs (`Intel Iris Xe Graphics (1 GiB) @ 1.400GHz`, `NVIDIA GeForce RTX 4090 (24 GiB) @ 2.520GHz`).
-- **Swap Memory**: Direct `/proc/meminfo` swap tracking reporting used, total, and utilization percentage.
-- **Partition Disk Enumeration**: Dynamically detects all physical and virtual mounts labeled sequentially (`Disk0`, `Disk1`, `Disk2`), formatting WSL Windows drives cleanly (`(C)`, `(D)`).
-- **Local IP Module**: Direct POSIX interface enumeration querying the active local IPv4 address without spawning external utilities.
+- **System Installation Date Module (`Installed`)**: Probes root filesystem creation timestamp (`stx_btime`) and distribution installer records, formatting as intuitive `DD Mon YYYY, hh:mm AM/PM (X days ago)` (e.g. `Installed: 16 Aug 2026, 02:32 PM (3 days ago)`). Suggested by [@Laynsb](https://github.com/Laynsb).
+- **Universal Terminal Detection Expansion**: Added native detection signatures and version resolution for **Ptyxis** (`$PTYXIS_VERSION`), **Ghostty** (`$GHOSTTY_VERSION`), **GNOME Console** (`kgx`), **BlackBox**, **Contour**, **Rio**, **Yakuake**, **Guake**, **LXTerminal**, **MATE Terminal**, **QTerminal**, **Deepin Terminal**, **Pantheon Terminal**, **Warp**, and **Zellij**.
+- **Desktop Environment Version Resolution**: Appends detected DE versions from metadata files and version queries (e.g. `GNOME 50.1`, `KDE Plasma 6.1`, `XFCE 4.18`, `MATE 1.28`, `Cinnamon 6.0`).
+- **Intel iGPU & Linux GPU Clock Speed**: Probes maximum graphics clock frequency from `/sys/class/drm/card*/gt_max_freq_mhz` and hwmon sysfs (e.g. `GPU0: Intel HD Graphics 620 @ 1.000GHz`).
+- **Wayland Display Refresh Rate**: Added native refresh rate resolution for Wayland compositors via `wlr-randr` and DRM sysfs.
+- **Android / Termux Disk Filtering**: Filtered out Android internal loop mounts and read-only system subsystems (`/apex`, `/bootstrap-apex`, `/data/app`, `/data/user`, `/metadata`, `/product`, `/vendor`, `/system`), preventing internal APEX/app partition spam in Termux.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -61,28 +57,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.2/ferrisfetch_0.4.2-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.4.2-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch_0.5.0-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.5.0-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.4.2-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.5.0-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.2/ferrisfetch-0.4.2-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.4.2-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.4.2-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.2/ferrisfetch_0.4.2-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.4.2-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch_0.5.0-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.5.0-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.4.2/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.4.2/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```
@@ -170,18 +166,24 @@ ferrisfetch --disk-path /home
 | Module | Detection Strategy | Fallback |
 | :--- | :--- | :--- |
 | **Title** | `$USER` / `$LOGNAME` / `getpwuid` and `uname(2)` / `/proc/sys/kernel/hostname` | `"user@localhost"` |
-| **OS** | `/etc/os-release` and `/usr/lib/os-release` parsing | `/etc/debian_version`, `/etc/redhat-release`, `uname` |
-| **Kernel** | POSIX `libc::uname` release and machine fields | None required |
+| **OS** | `/etc/os-release` and `/usr/lib/os-release` parsing with architecture | `/etc/debian_version`, `/etc/redhat-release`, `uname` |
 | **Host** | `/sys/devices/virtual/dmi/id/product_name` and devicetree model | Board name or omitted |
+| **Kernel** | POSIX `libc::uname` release and machine fields | None required |
+| **Installed** | Root filesystem creation timestamp via `statx(2)` (`stx_btime`) and installer logs | Distribution log birth time |
 | **Uptime** | Floating-point parse of `/proc/uptime` | `libc::sysinfo` uptime |
 | **Packages** | Local DB scans: `/var/lib/dpkg/status`, `/var/lib/pacman/local`, RPM DB, APK DB, flatpak, snap | `dpkg-query`, `rpm -qa`, `xbps-query` |
-| **Shell** | Ancestor process scan via `/proc/<pid>/status` & `comm`, `$SHELL` | Formatted shell name |
-| **Terminal** | `$TERM_PROGRAM`, environment signatures (Alacritty, Kitty, Konsole, etc.), process tree | `$TERM` variable |
-| **Desktop / WM** | `$XDG_CURRENT_DESKTOP`, Wayland sockets (`SWAYSOCK`, `HYPRLAND_INSTANCE_SIGNATURE`), process scan | Omitted if headless |
-| **CPU** | `/proc/cpuinfo` parsing (`model name`, `Hardware`, `Processor`, core count, sockets) | Sanitized model string |
-| **GPU** | PCI class scan (`0x03xxxx`) in `/sys/bus/pci/devices/` with vendor mapping | `lspci -mm` query |
+| **Shell** | Ancestor process scan via `/proc/<pid>/status` & `comm`, `$SHELL` | Formatted shell name & version |
+| **Display** | DRM sysfs modes, `xrandr`, and `wlr-randr` refresh rate probing | Omitted if headless |
+| **Desktop** | `$XDG_CURRENT_DESKTOP`, metadata version files, and session type | Omitted if headless |
+| **WM** | Active window manager detection (Mutter, KWin, Sway, Hyprland, WSLg) | Process scan |
+| **Terminal** | Dedicated environment signatures, `/proc` process ancestry, `$TERM` | `$TERM` variable |
+| **CPU** | `/proc/cpuinfo` parsing (model, clean brand, sockets, core count, clock freq) | Sanitized model string |
+| **GPU** | Sysfs PCI scan (`0x03xxxx`), local `pci.ids` lookup, VRAM and clock speeds | `lspci -mm` query |
 | **Memory** | `/proc/meminfo` active memory calculation (`MemTotal - MemAvailable`) | Pre-3.14 buffer/cache calculation |
-| **Disk** | POSIX `libc::statvfs` on target mount path | Omitted if unreadable |
+| **Swap** | `/proc/meminfo` swap statistics (`SwapTotal - SwapFree`) | Omitted if swap is 0 |
+| **Disk** | Sequential physical and virtual partition discovery via `statvfs` | Target mount path |
+| **Battery** | Direct `/sys/class/power_supply` capacity and charging status | Omitted if no battery |
+| **Local IP** | POSIX `getifaddrs` active interface address enumeration | Omitted if offline |
 | **Theme** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings, `$GTK_THEME` | Omitted if not configured |
 | **Icons** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings icon-theme | Omitted if not configured |
 | **Colors** | Terminal 8-color palette block renderer | Disabled if color is off |

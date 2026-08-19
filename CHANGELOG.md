@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-19
+
+### Added
+- **System Installation Date Module (`Installed`)**: Probes root filesystem creation timestamp (`stx_btime`) and distribution installer records, formatting as intuitive `DD Mon YYYY, hh:mm AM/PM (X days ago)` (e.g. `Installed: 16 Aug 2026, 02:32 PM (3 days ago)`). Suggested by [@Laynsb](https://github.com/Laynsb).
+- **Universal Terminal Detection Expansion**: Added native detection signatures and version resolution for **Ptyxis** (`$PTYXIS_VERSION`), **Ghostty** (`$GHOSTTY_VERSION`), **GNOME Console** (`kgx`), **BlackBox**, **Contour**, **Rio**, **Yakuake**, **Guake**, **LXTerminal**, **MATE Terminal**, **QTerminal**, **Deepin Terminal**, **Pantheon Terminal**, **Warp**, and **Zellij**.
+- **Desktop Environment Version Resolution**: Appends detected DE versions from metadata files and version queries (e.g. `GNOME 50.1`, `KDE Plasma 6.1`, `XFCE 4.18`, `MATE 1.28`, `Cinnamon 6.0`).
+- **Intel iGPU & Linux GPU Clock Speed**: Probes maximum graphics clock frequency from `/sys/class/drm/card*/gt_max_freq_mhz` and hwmon sysfs (e.g. `GPU0: Intel HD Graphics 620 @ 1.000GHz`).
+- **Wayland Display Refresh Rate**: Added native refresh rate resolution for Wayland compositors via `wlr-randr` and DRM sysfs.
+
 ## [0.4.2] - 2026-08-19
 
 ### Fixed

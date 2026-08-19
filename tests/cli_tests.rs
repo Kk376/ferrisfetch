@@ -156,6 +156,16 @@ fn test_combine_modules_and_disable_flags() {
 }
 
 #[test]
+fn test_installed_module_filtering() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.args(["--no-color", "--no-logo", "-m", "installed"]);
+    let assert = cmd.assert().success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(stdout.contains("Installed:"));
+    assert!(!stdout.contains("OS:"));
+}
+
+#[test]
 fn test_various_logo_overrides() {
     let logos = [
         ("debian", "_____"),
@@ -183,10 +193,10 @@ fn test_various_logo_overrides() {
 #[test]
 fn test_cli_version() {
     let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
-    cmd.arg("--version")
-        .assert()
+    cmd.arg("--version");
+    cmd.assert()
         .success()
-        .stdout(predicate::str::contains("ferrisfetch 0.4.2"));
+        .stdout(predicate::str::contains("ferrisfetch 0.5.0"));
 }
 
 #[test]
