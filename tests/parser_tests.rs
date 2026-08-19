@@ -201,10 +201,7 @@ fn test_fixture_cpu_intel() {
 fn test_fixture_cpu_amd() {
     let content = include_str!("fixtures/cpuinfo/amd_ryzen_7535hs.txt");
     let info = parse_cpu_info(content).expect("Failed to parse amd cpuinfo");
-    assert_eq!(
-        clean_cpu_model(&info.model),
-        "AMD Ryzen 5 7535HS with Radeon Graphics"
-    );
+    assert_eq!(clean_cpu_model(&info.model), "AMD Ryzen 5 7535HS");
 }
 
 #[test]

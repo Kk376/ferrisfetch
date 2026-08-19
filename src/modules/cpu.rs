@@ -18,6 +18,11 @@ pub fn clean_cpu_model(raw: &str) -> String {
         .replace("(tm)", "")
         .replace("CPU", "")
         .replace("Processor", "")
+        .replace("with Radeon Graphics", "")
+        .replace("with Radeon Vega Graphics", "")
+        .replace("with Intel UHD Graphics", "")
+        .replace("with Intel HD Graphics", "")
+        .replace("with Intel Iris Xe Graphics", "")
         .replace("Dual-Core", "")
         .replace("Quad-Core", "")
         .replace("Six-Core", "")
@@ -178,10 +183,7 @@ mod tests {
     #[test]
     fn test_clean_cpu_model_amd() {
         let raw = "AMD Ryzen 5 7535HS with Radeon Graphics";
-        assert_eq!(
-            clean_cpu_model(raw),
-            "AMD Ryzen 5 7535HS with Radeon Graphics"
-        );
+        assert_eq!(clean_cpu_model(raw), "AMD Ryzen 5 7535HS");
     }
 
     #[test]

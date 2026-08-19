@@ -329,6 +329,39 @@ pub fn detect_wsl_gpus() -> Vec<String> {
     gpus
 }
 
+/// Formats detected GPUs with [GPU0]/[GPU1] indices and type tags when multiple GPUs exist.
+pub fn format_gpu_list(gpus: &[String]) -> String {
+    if gpus.is_empty() {
+        return String::new();
+    }
+    if gpus.len() == 1 {
+        return gpus[0].clone();
+    }
+
+    let mut formatted = Vec::new();
+
+    for (idx, gpu) in gpus.iter().enumerate() {
+        let is_integrated = gpu.contains("Radeon 6")
+            || gpu.contains("Radeon 7")
+            || gpu.contains("Radeon Graphics")
+            || gpu.contains("Radeon Vega")
+            || gpu.contains("Iris")
+            || gpu.contains("UHD Graphics")
+            || gpu.contains("HD Graphics")
+            || (gpu.contains("Intel") && !gpu.contains("Arc"));
+
+        let tag = if is_integrated {
+            "[Integrated]"
+        } else {
+            "[Discrete]"
+        };
+
+        formatted.push(format!("[GPU{}] {} {}", idx, gpu, tag));
+    }
+
+    formatted.join(", ")
+}
+
 pub fn get_gpu_info() -> Option<String> {
     let sysfs_gpus = detect_gpus_sysfs();
 
@@ -349,17 +382,17 @@ pub fn get_gpu_info() -> Option<String> {
         // If in WSL or Direct3D detected, probe WSL GPU bridge (iGPU + dGPU)
         let wsl_gpus = detect_wsl_gpus();
         if !wsl_gpus.is_empty() {
-            return Some(wsl_gpus.join(", "));
+            return Some(format_gpu_list(&wsl_gpus));
         }
 
         let lspci_gpus = detect_gpus_lspci();
         if !lspci_gpus.is_empty() {
-            return Some(lspci_gpus.join(", "));
+            return Some(format_gpu_list(&lspci_gpus));
         }
     }
 
     if !sysfs_gpus.is_empty() {
-        return Some(sysfs_gpus.join(", "));
+        return Some(format_gpu_list(&sysfs_gpus));
     }
 
     None
@@ -497,5 +530,20 @@ mod tests {
         for gpu in wsl_gpus {
             assert!(!gpu.trim().is_empty());
         }
+    }
+
+    #[test]
+    fn test_format_gpu_list() {
+        let single = vec!["NVIDIA GeForce RTX 3060".to_string()];
+        assert_eq!(format_gpu_list(&single), "NVIDIA GeForce RTX 3060");
+
+        let dual = vec![
+            "AMD Radeon 660M".to_string(),
+            "NVIDIA GeForce RTX 2050".to_string(),
+        ];
+        assert_eq!(
+            format_gpu_list(&dual),
+            "[GPU0] AMD Radeon 660M [Integrated], [GPU1] NVIDIA GeForce RTX 2050 [Discrete]"
+        );
     }
 }
