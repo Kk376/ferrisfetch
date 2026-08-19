@@ -1,3 +1,5 @@
+%global debug_package %{nil}
+
 Name:           ferrisfetch
 Version:        0.1.0
 Release:        1%{?dist}
