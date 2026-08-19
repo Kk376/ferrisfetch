@@ -3,18 +3,16 @@ use crate::modules::{Collector, ModuleId, ModuleOutput};
 
 pub fn render_color_palette() -> String {
     let mut standard = String::new();
-    for code in 40..=47 {
-        standard.push_str(&format!("\x1b[{}m   ", code));
+    for code in 30..=37 {
+        standard.push_str(&format!("\x1b[{}m███\x1b[0m ", code));
     }
-    standard.push_str("\x1b[0m");
 
     let mut bright = String::new();
-    for code in 100..=107 {
-        bright.push_str(&format!("\x1b[{}m   ", code));
+    for code in 90..=97 {
+        bright.push_str(&format!("\x1b[{}m███\x1b[0m ", code));
     }
-    bright.push_str("\x1b[0m");
 
-    format!("{}\n{}", standard, bright)
+    format!("{}\n{}", standard.trim_end(), bright.trim_end())
 }
 
 pub struct ColorsCollector;
@@ -45,8 +43,8 @@ mod tests {
     #[test]
     fn test_render_color_palette() {
         let palette = render_color_palette();
-        assert!(palette.contains("\x1b[40m"));
-        assert!(palette.contains("\x1b[107m"));
+        assert!(palette.contains("\x1b[30m"));
+        assert!(palette.contains("\x1b[97m"));
         assert!(palette.contains('\n'));
     }
 }

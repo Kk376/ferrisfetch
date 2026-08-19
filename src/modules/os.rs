@@ -170,11 +170,18 @@ impl Collector for OsCollector {
 pub fn detect_host() -> Option<String> {
     // Check DMI product name and version
     let product_name = fs::read_to_string("/sys/devices/virtual/dmi/id/product_name")
+        .or_else(|_| fs::read_to_string("/sys/class/dmi/id/product_name"))
         .ok()
         .map(|s| s.trim().to_string());
     let product_version = fs::read_to_string("/sys/devices/virtual/dmi/id/product_version")
+        .or_else(|_| fs::read_to_string("/sys/class/dmi/id/product_version"))
         .ok()
         .map(|s| s.trim().to_string());
+
+    let is_wsl = fs::read_to_string("/proc/version")
+        .map(|v| v.contains("microsoft") || v.contains("WSL"))
+        .unwrap_or(false)
+        || std::env::var_os("WSL_DISTRO_NAME").is_some();
 
     if let Some(ref name) = product_name {
         let name_lower = name.to_lowercase();
@@ -199,27 +206,48 @@ pub fn detect_host() -> Option<String> {
                     full = format!("{} {}", name, ver);
                 }
             }
+            if is_wsl {
+                full = format!("{} (WSL2)", full);
+            }
             return Some(full);
         }
     }
 
     // Device tree model for ARM boards (Raspberry Pi, etc.)
-    if let Ok(model) = fs::read("/sys/firmware/devicetree/base/model") {
-        let clean = String::from_utf8_lossy(&model)
-            .trim_matches('\0')
-            .trim()
-            .to_string();
-        if !clean.is_empty() {
-            return Some(clean);
+    for dt_path in &[
+        "/sys/firmware/devicetree/base/model",
+        "/proc/device-tree/model",
+    ] {
+        if let Ok(model) = fs::read(dt_path) {
+            let clean = String::from_utf8_lossy(&model)
+                .trim_matches('\0')
+                .trim()
+                .to_string();
+            if !clean.is_empty() {
+                return Some(clean);
+            }
         }
     }
 
     // Board name fallback
-    if let Ok(board) = fs::read_to_string("/sys/devices/virtual/dmi/id/board_name") {
-        let clean = board.trim();
-        if !clean.is_empty() && clean != "None" && clean != "Default string" {
-            return Some(clean.to_string());
+    for board_path in &[
+        "/sys/devices/virtual/dmi/id/board_name",
+        "/sys/class/dmi/id/board_name",
+    ] {
+        if let Ok(board) = fs::read_to_string(board_path) {
+            let clean = board.trim();
+            if !clean.is_empty() && clean != "None" && clean != "Default string" {
+                let mut res = clean.to_string();
+                if is_wsl {
+                    res = format!("{} (WSL2)", res);
+                }
+                return Some(res);
+            }
         }
+    }
+
+    if is_wsl {
+        return Some("Windows Subsystem for Linux (WSL2)".to_string());
     }
 
     None

@@ -24,6 +24,7 @@ fn test_completion_files_exist_and_cover_all_flags() {
         "--no-logo",
         "--list-modules",
         "--disk-path",
+        "--json",
         "--help",
         "--version",
     ];

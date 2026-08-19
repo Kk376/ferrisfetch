@@ -237,6 +237,73 @@ pub fn count_snap() -> Option<usize> {
     count_snap_from_dirs(Path::new("/var/lib/snapd/snaps"), Path::new("/snap"))
 }
 
+/// Counts installed Homebrew formulae from standard Cellar paths.
+pub fn count_brew() -> Option<usize> {
+    let cellar_paths = [
+        Path::new("/home/linuxbrew/.linuxbrew/Cellar"),
+        Path::new("/opt/homebrew/Cellar"),
+        Path::new("/usr/local/Cellar"),
+    ];
+
+    for path in &cellar_paths {
+        if let Ok(entries) = fs::read_dir(path) {
+            let count = entries
+                .flatten()
+                .filter(|e| {
+                    e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                        && !e.file_name().to_string_lossy().starts_with('.')
+                })
+                .count();
+            if count > 0 {
+                return Some(count);
+            }
+        }
+    }
+
+    if let Ok(home) = std::env::var("HOME") {
+        let user_cellar = Path::new(&home).join(".linuxbrew/Cellar");
+        if let Ok(entries) = fs::read_dir(&user_cellar) {
+            let count = entries
+                .flatten()
+                .filter(|e| {
+                    e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                        && !e.file_name().to_string_lossy().starts_with('.')
+                })
+                .count();
+            if count > 0 {
+                return Some(count);
+            }
+        }
+    }
+
+    None
+}
+
+/// Counts installed Gentoo ebuild packages from /var/db/pkg.
+pub fn count_emerge() -> Option<usize> {
+    let pkg_dir = Path::new("/var/db/pkg");
+    if let Ok(categories) = fs::read_dir(pkg_dir) {
+        let mut total = 0;
+        for cat in categories.flatten() {
+            if cat.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                if let Ok(pkgs) = fs::read_dir(cat.path()) {
+                    total += pkgs
+                        .flatten()
+                        .filter(|p| {
+                            p.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                                && !p.file_name().to_string_lossy().starts_with('.')
+                        })
+                        .count();
+                }
+            }
+        }
+        if total > 0 {
+            return Some(total);
+        }
+    }
+    None
+}
+
 /// Gathers and formats package counts across all active package managers.
 pub fn get_packages_summary() -> Option<String> {
     let mut parts = Vec::new();
@@ -256,11 +323,17 @@ pub fn get_packages_summary() -> Option<String> {
     if let Some(xbps) = count_xbps() {
         parts.push(format!("{} (xbps)", xbps));
     }
+    if let Some(emerge) = count_emerge() {
+        parts.push(format!("{} (emerge)", emerge));
+    }
     if let Some(flatpak) = count_flatpak() {
         parts.push(format!("{} (flatpak)", flatpak));
     }
     if let Some(snap) = count_snap() {
         parts.push(format!("{} (snap)", snap));
+    }
+    if let Some(brew) = count_brew() {
+        parts.push(format!("{} (brew)", brew));
     }
 
     if !parts.is_empty() {
@@ -392,5 +465,34 @@ Section: libs
         let output = b"pkg1\npkg2\npkg3\n";
         assert_eq!(count_newline_entries(output), 3);
         assert_eq!(count_newline_entries(b""), 0);
+    }
+
+    #[test]
+    fn test_count_emerge_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cat1 = temp_dir.path().join("sys-apps");
+        let cat2 = temp_dir.path().join("app-editors");
+        fs::create_dir_all(&cat1).unwrap();
+        fs::create_dir_all(&cat2).unwrap();
+
+        fs::create_dir(cat1.join("coreutils-9.3")).unwrap();
+        fs::create_dir(cat1.join("systemd-254")).unwrap();
+        fs::create_dir(cat2.join("neovim-0.9.4")).unwrap();
+
+        let mut total = 0;
+        for cat in fs::read_dir(temp_dir.path()).unwrap().flatten() {
+            if cat.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                if let Ok(pkgs) = fs::read_dir(cat.path()) {
+                    total += pkgs
+                        .flatten()
+                        .filter(|p| {
+                            p.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                                && !p.file_name().to_string_lossy().starts_with('.')
+                        })
+                        .count();
+                }
+            }
+        }
+        assert_eq!(total, 3);
     }
 }

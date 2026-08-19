@@ -190,3 +190,16 @@ fn test_cli_version() {
         .success()
         .stdout(predicate::str::contains("ferrisfetch 0.1.0"));
 }
+
+#[test]
+fn test_json_output_flag() {
+    let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
+    cmd.arg("--json");
+    let assert = cmd.assert().success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    assert!(stdout.starts_with('{'));
+    assert!(stdout.trim().ends_with('}'));
+    assert!(stdout.contains("\"os\":"));
+    assert!(stdout.contains("\"kernel\":"));
+}

@@ -117,6 +117,46 @@ pub fn render_layout(
     rows.join("\n")
 }
 
+/// Escapes a string for valid JSON output.
+pub fn escape_json_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\x08' => out.push_str("\\b"),
+            '\x0c' => out.push_str("\\f"),
+            c if (c as u32) < 0x20 => {
+                out.push_str(&format!("\\u{:04x}", c as u32));
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Renders collected module outputs into a formatted JSON string.
+pub fn render_json(outputs: &[ModuleOutput]) -> String {
+    use crate::modules::ModuleId;
+
+    let mut fields: Vec<String> = Vec::new();
+    for out in outputs {
+        if out.id == ModuleId::Colors {
+            continue;
+        }
+        if !out.value.is_empty() {
+            let key = out.id.as_str();
+            let escaped = escape_json_string(&out.value);
+            fields.push(format!("  \"{}\": \"{}\"", key, escaped));
+        }
+    }
+
+    format!("{{\n{}\n}}", fields.join(",\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

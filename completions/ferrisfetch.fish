@@ -56,6 +56,13 @@ set -l logos \
     'void\tVoid Linux logo' \
     'pop\tPop!_OS logo' \
     'popos\tPop!_OS logo (alias)' \
+    'nixos\tNixOS snowflake logo' \
+    'nix\tNixOS logo (alias)' \
+    'kali\tKali Linux dragon/shield logo' \
+    'freebsd\tFreeBSD devil horns logo' \
+    'slackware\tSlackware Linux logo' \
+    'artix\tArtix Linux logo' \
+    'zorin\tZorin OS logo' \
     'generic\tGeneric Linux Tux logo' \
     'tux\tTux penguin (alias)' \
     'linux\tGeneric Linux (alias)' \
@@ -69,5 +76,6 @@ complete -c ferrisfetch -l disk-path -d 'Target mount point or directory path fo
 complete -c ferrisfetch -l no-color -d 'Disable colored ANSI output'
 complete -c ferrisfetch -l no-logo -d 'Do not display any ASCII logo'
 complete -c ferrisfetch -l list-modules -d 'List all available information modules and exit'
+complete -c ferrisfetch -l json -d 'Output system information in structured JSON format'
 complete -c ferrisfetch -s h -l help -d 'Print help'
 complete -c ferrisfetch -s V -l version -d 'Print version'

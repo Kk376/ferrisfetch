@@ -67,6 +67,13 @@ _ferrisfetch() {
         'void:Void Linux logo'
         'pop:Pop!_OS logo'
         'popos:Pop!_OS logo (alias)'
+        'nixos:NixOS snowflake logo'
+        'nix:NixOS logo (alias)'
+        'kali:Kali Linux dragon/shield logo'
+        'freebsd:FreeBSD devil horns logo'
+        'slackware:Slackware Linux logo'
+        'artix:Artix Linux logo'
+        'zorin:Zorin OS logo'
         'generic:Tux penguin generic Linux logo'
         'tux:Tux penguin (alias)'
         'linux:Generic Linux (alias)'
@@ -84,6 +91,7 @@ _ferrisfetch() {
         '--no-color[Disable colored ANSI output]' \
         '--no-logo[Do not display any ASCII logo]' \
         '--list-modules[List all available information modules and exit]' \
+        '--json[Output system information in structured JSON format]' \
         '-h[Print help]' \
         '--help[Print help]' \
         '-V[Print version]' \

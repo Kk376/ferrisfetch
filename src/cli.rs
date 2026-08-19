@@ -34,4 +34,8 @@ pub struct Cli {
     /// Target mount point or directory path for disk usage statistics (default: "/")
     #[arg(long = "disk-path", default_value = "/")]
     pub disk_path: String,
+
+    /// Output system information in structured JSON format
+    #[arg(long = "json")]
+    pub json: bool,
 }

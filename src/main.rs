@@ -2,7 +2,7 @@ use clap::Parser;
 use ferrisfetch::cli::Cli;
 use ferrisfetch::context::FetchContext;
 use ferrisfetch::modules::{ModuleId, ModuleRegistry};
-use ferrisfetch::output::formatter::render_layout;
+use ferrisfetch::output::formatter::{render_json, render_layout};
 use ferrisfetch::output::logo::match_logo;
 
 fn main() {
@@ -18,6 +18,11 @@ fn main() {
     let ctx = FetchContext::new(&cli);
     let registry = ModuleRegistry::new();
     let outputs = registry.collect_all(&ctx);
+
+    if cli.json {
+        println!("{}", render_json(&outputs));
+        return;
+    }
 
     let logo = if ctx.no_logo {
         None

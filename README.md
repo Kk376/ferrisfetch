@@ -106,6 +106,7 @@ ferrisfetch
 | `--no-color` | Disable ANSI color escapes |
 | `--disk-path <PATH>` | Target filesystem path for disk statistics (default: `/`) |
 | `--list-modules` | Print all available information modules and exit |
+| `--json` | Output system information in structured JSON format |
 | `-h, --help` | Print help information |
 | `-V, --version` | Print version information |
 
@@ -114,6 +115,11 @@ ferrisfetch
 **Select specific modules in custom order:**
 ```bash
 ferrisfetch -m os,cpu,memory,disk
+```
+
+**Output structured JSON for scripts or status bars:**
+```bash
+ferrisfetch --json
 ```
 
 **Disable GPU and packages modules:**

@@ -231,6 +231,67 @@ pub const ALL_LOGOS: &[Logo] = &[
         primary_color: "\x1b[38;5;37m",
         accent_color: "\x1b[38;5;214m",
     },
+    Logo {
+        name: "nixos",
+        raw_lines: &["  \\\\  //", " ==\\\\//==", "   //\\\\", "  //  \\\\"],
+        primary_color: "\x1b[38;5;75m",
+        accent_color: "\x1b[38;5;117m",
+    },
+    Logo {
+        name: "kali",
+        raw_lines: &[
+            "  .:::::::::.",
+            " :;;;;;;;;;;;:",
+            ":;;;;;;;;;;;;;:",
+            " :;;;;;;;;;;;:",
+            "  ':::::::::'",
+        ],
+        primary_color: "\x1b[38;5;33m",
+        accent_color: "\x1b[37m",
+    },
+    Logo {
+        name: "freebsd",
+        raw_lines: &["/\\   /\\", "(  ) (  )", " \\ \\_/ /", "  \\___/"],
+        primary_color: "\x1b[38;5;196m",
+        accent_color: "\x1b[37m",
+    },
+    Logo {
+        name: "slackware",
+        raw_lines: &[
+            "   ________",
+            "  / ____  /",
+            " / /   / /",
+            "/ /___/ /",
+            "/_______/",
+        ],
+        primary_color: "\x1b[38;5;61m",
+        accent_color: "\x1b[37m",
+    },
+    Logo {
+        name: "artix",
+        raw_lines: &[
+            "      /\\",
+            "     /  \\",
+            "    /`'.,\\",
+            "   /     ',",
+            "  /      ,`\\",
+            " /__,.'`'___\\",
+        ],
+        primary_color: "\x1b[38;5;39m",
+        accent_color: "\x1b[37m",
+    },
+    Logo {
+        name: "zorin",
+        raw_lines: &[
+            "  _______",
+            " / _____ \\",
+            "  / ___/ /",
+            " / /____",
+            "/_______/",
+        ],
+        primary_color: "\x1b[38;5;39m",
+        accent_color: "\x1b[37m",
+    },
 ];
 
 pub fn get_all_logos() -> &'static [Logo] {
@@ -291,6 +352,12 @@ fn find_logo_by_key(key: &str, logos: &'static [Logo]) -> Option<&'static Logo> 
         "gentoo" => logos.iter().find(|l| l.name == "gentoo"),
         "void" => logos.iter().find(|l| l.name == "void"),
         "pop" | "popos" | "pop_os" => logos.iter().find(|l| l.name == "pop"),
+        "nixos" | "nix" => logos.iter().find(|l| l.name == "nixos"),
+        "kali" | "kalilinux" => logos.iter().find(|l| l.name == "kali"),
+        "freebsd" | "bsd" => logos.iter().find(|l| l.name == "freebsd"),
+        "slackware" | "slack" => logos.iter().find(|l| l.name == "slackware"),
+        "artix" => logos.iter().find(|l| l.name == "artix"),
+        "zorin" | "zorinos" => logos.iter().find(|l| l.name == "zorin"),
         _ => None,
     }
 }

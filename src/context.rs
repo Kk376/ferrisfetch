@@ -117,6 +117,7 @@ mod tests {
             no_logo: false,
             list_modules: false,
             disk_path: "/".to_string(),
+            json: false,
         };
 
         let active = resolve_active_modules(&cli);
@@ -137,6 +138,7 @@ mod tests {
             no_logo: false,
             list_modules: false,
             disk_path: "/".to_string(),
+            json: false,
         };
 
         let active = resolve_active_modules(&cli);
@@ -159,6 +161,7 @@ mod tests {
             no_logo: false,
             list_modules: false,
             disk_path: "/".to_string(),
+            json: false,
         };
 
         let active = resolve_active_modules(&cli);
@@ -175,6 +178,7 @@ mod tests {
             no_logo: false,
             list_modules: false,
             disk_path: "/".to_string(),
+            json: false,
         };
 
         let active = resolve_active_modules(&cli);
