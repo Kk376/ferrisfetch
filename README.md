@@ -4,10 +4,11 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.2.0)
+## Latest Changes (v0.2.5)
 
+- **WSL2 Hybrid GPU Detection**: Automatically resolves both integrated graphics (e.g., `AMD Radeon 660M`/`680M`/`780M`, `Intel Iris Xe`/`UHD`) and discrete NVIDIA graphics (e.g., `NVIDIA GeForce RTX 2050`/`3050`/`4050`) in WSL2 via the native Windows driver bridge without requiring extra Linux drivers.
+- **Accurate Hardware Name Resolution**: Native `pci.ids` lookup directly resolves PCI vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
 - **Structured JSON Output**: Added `--json` CLI flag across all collectors without external dependencies.
-- **Accurate GPU Resolution**: Native `pci.ids` database parser resolving vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
 - **WSL2 & Host Detection**: Automatic hypervisor detection for WSL2 and ARM device-tree boards.
 - **New Package Managers**: Added package counting for **Homebrew** and **Gentoo** (`emerge`).
 - **Foreground Palette Blocks**: Solid foreground block rendering (`███`) in `ColorsCollector` for universal dark/light theme visibility.
@@ -57,28 +58,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.0/ferrisfetch_0.2.0-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.2.0-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch_0.2.5-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.2.5-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.2.0-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.2.5-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.0/ferrisfetch-0.2.0-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.2.0-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.2.0-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.0/ferrisfetch_0.2.0-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.2.0-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch_0.2.5-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.2.5-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.2.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.0/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```
@@ -227,7 +228,7 @@ Distribution packaging manifests and build instructions are documented in [`pack
 - **Nix / NixOS**: [`packaging/nix/`](packaging/nix/) (`default.nix`, `flake.nix`)
 - **Void Linux**: [`packaging/void/`](packaging/void/) (`template`)
 - **Alpine Linux**: [`packaging/alpine/`](packaging/alpine/) (`APKBUILD`)
-- **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.2.0.ebuild`)
+- **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.2.5.ebuild`)
 - **Homebrew**: [`packaging/homebrew/`](packaging/homebrew/) (`ferrisfetch.rb`)
 
 ---

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-08-19
+
+### Added
+- Native WSL2 hybrid GPU detection (`GpuCollector`) resolving both integrated graphics (e.g. `AMD Radeon 660M`/`680M`/`780M`, `Intel Iris Xe`/`UHD`) and discrete NVIDIA graphics (e.g. `NVIDIA GeForce RTX 2050`/`3050`/`4050`) via the native Windows driver bridge without extra Linux drivers.
+
 ## [0.2.0] - 2026-08-19
 
 ### Added

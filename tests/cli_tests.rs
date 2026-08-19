@@ -185,10 +185,10 @@ fn test_various_logo_overrides() {
 #[test]
 fn test_cli_version() {
     let mut cmd = Command::cargo_bin("ferrisfetch").unwrap();
-    cmd.arg("--version");
-    cmd.assert()
+    cmd.arg("--version")
+        .assert()
         .success()
-        .stdout(predicate::str::contains("ferrisfetch 0.2.0"));
+        .stdout(predicate::str::contains("ferrisfetch 0.2.5"));
 }
 
 #[test]

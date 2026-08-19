@@ -1,3 +1,9 @@
+ferrisfetch (0.2.5-1) unstable; urgency=medium
+
+  * Release 0.2.5: WSL2 hybrid GPU detection and enhancements.
+
+ -- FerrisFetch Packaging Team <packaging@ferrisfetch.rs>  Wed, 19 Aug 2026 08:00:00 +0530
+
 ferrisfetch (0.2.0-1) unstable; urgency=medium
 
   * Add structured JSON output flag (--json).
