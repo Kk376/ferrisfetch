@@ -4,15 +4,14 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.2.5)
+## Latest Changes (v0.3.0)
 
-- **WSL2 Hybrid GPU Detection**: Automatically resolves both integrated graphics (e.g., `AMD Radeon 660M`/`680M`/`780M`, `Intel Iris Xe`/`UHD`) and discrete NVIDIA graphics (e.g., `NVIDIA GeForce RTX 2050`/`3050`/`4050`) in WSL2 via the native Windows driver bridge without requiring extra Linux drivers.
-- **Accurate Hardware Name Resolution**: Native `pci.ids` lookup directly resolves PCI vendor/device hex IDs, preventing ACPI motherboard labels (`Onboard - Video`) from overriding graphics processor model names.
-- **Structured JSON Output**: Added `--json` CLI flag across all collectors without external dependencies.
-- **WSL2 & Host Detection**: Automatic hypervisor detection for WSL2 and ARM device-tree boards.
-- **New Package Managers**: Added package counting for **Homebrew** and **Gentoo** (`emerge`).
-- **Foreground Palette Blocks**: Solid foreground block rendering (`███`) in `ColorsCollector` for universal dark/light theme visibility.
-- **New Distro Logos**: Added ASCII art for **NixOS**, **Kali Linux**, **FreeBSD**, **Slackware**, **Artix Linux**, and **Zorin OS**.
+- **Multi-Socket CPU Scaling**: Formats multi-socket CPU systems as `<n>x <CPU Name> (<Total Threads>)` (e.g., `3x AMD EPYC 9654 (384)`).
+- **CPU Clock Speed**: Added frequency resolution (`@ nGHz`) from `/proc/cpuinfo` and `cpufreq` sysfs.
+- **Dynamic Sequential GPU Indexing**: Assigns sequential indices (`GPU0`, `GPU1`, `GPU2`, ...) without skipping numbers.
+- **iGPU `GPU0` Priority**: Integrated graphics always occupy `GPU0` and scale across multi-socket systems (`GPU0: <n>x <iGPU Name>`).
+- **dGPU Automatic Grouping**: Automatically groups identical discrete GPUs into a single line (`GPU<index>: <n>x <dGPU Name>`).
+- **Sub-30ms WSL GPU Caching**: Persistent caching for discrete GPU queries in WSL2, reducing execution time to under 30ms.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -58,28 +57,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch_0.2.5-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.2.5-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch_0.3.0-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.3.0-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.2.5-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.3.0-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.2.5-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.3.0-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch_0.2.5-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.2.5-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch_0.3.0-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.3.0-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.2.5/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.3.0/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```
