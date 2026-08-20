@@ -276,6 +276,10 @@ cargo build --release
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture guidelines, code standards, and PR instructions.
+
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).

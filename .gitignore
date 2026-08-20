@@ -1,3 +1,9 @@
 /target
 **/*.rs.bk
-
+vendor/
+.cargo/
+*.tar.gz
+*.deb
+*.dsc
+*.buildinfo
+*.changes
