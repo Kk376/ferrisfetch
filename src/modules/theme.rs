@@ -241,6 +241,13 @@ fn get_config_dir() -> PathBuf {
 }
 
 /// Detects theme information across GTK 3/4, KDE Plasma, XFCE, and GSettings.
+/// Probing precedence:
+/// 1. GTK 3.0 / 4.0 `settings.ini` (standard for GNOME/Cinnamon/MATE/modern apps)
+/// 2. KDE Plasma `kdeglobals` (Qt/KDE color schemes and look-and-feel packages)
+/// 3. XFCE `xsettings.xml` (xfconf channel storage)
+/// 4. Legacy GTK 2 `~/.gtkrc-2.0`
+/// 5. GSettings dconf query for active GNOME desktop interface schemas
+/// 6. `$GTK_THEME` environment variable override
 pub fn detect_theme_info() -> Option<ThemeInfo> {
     let config_dir = get_config_dir();
 

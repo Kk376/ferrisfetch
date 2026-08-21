@@ -31,9 +31,10 @@ pub fn detect_local_ip() -> Option<String> {
                     let ip_raw = u32::from_be((*sin).sin_addr.s_addr);
                     let ip = Ipv4Addr::from(ip_raw);
 
+                    // Skip loopback (127.0.0.1) and non-routable link-local APIPA (169.254.0.0/16)
                     if !ip.is_loopback() && !ip.is_link_local() {
                         let ip_str = ip.to_string();
-                        // Filter virtual container/bridge interfaces
+                        // Filter out container and virtual bridge network adapters to select the physical uplink
                         if !name.starts_with("docker")
                             && !name.starts_with("veth")
                             && !name.starts_with("virbr")

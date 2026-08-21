@@ -4,6 +4,7 @@ use std::fs;
 use std::mem::MaybeUninit;
 
 /// Parses total uptime seconds from `/proc/uptime` content.
+/// The first token represents total elapsed seconds as a floating-point number since kernel boot.
 pub fn parse_uptime(content: &str) -> Option<u64> {
     let first_token = content.split_whitespace().next()?;
     let seconds_f64: f64 = first_token.parse().ok()?;
@@ -36,14 +37,16 @@ pub fn format_uptime(total_seconds: u64) -> String {
     }
 }
 
-/// Reads system uptime from `/proc/uptime` or `libc::sysinfo`.
+/// Reads system uptime from `/proc/uptime` with fallback to `libc::sysinfo`.
 pub fn get_uptime() -> Option<u64> {
+    // Primary fast path via procfs
     if let Ok(content) = fs::read_to_string("/proc/uptime") {
         if let Some(secs) = parse_uptime(&content) {
             return Some(secs);
         }
     }
 
+    // Fallback for chroot/container environments where /proc is unmounted or restricted
     unsafe {
         let mut info = MaybeUninit::<libc::sysinfo>::uninit();
         if libc::sysinfo(info.as_mut_ptr()) == 0 {

@@ -35,7 +35,7 @@ pub fn clean_cpu_model(raw: &str) -> String {
         .replace("64-Core", "")
         .replace("128-Core", "");
 
-    // Strip clock speed patterns like "@ 2.60GHz"
+    // Strip clock speed patterns like "@ 2.60GHz" (handled dynamically via cpufreq)
     if let Some(idx) = cleaned.find('@') {
         cleaned = cleaned[..idx].to_string();
     }
@@ -45,6 +45,7 @@ pub fn clean_cpu_model(raw: &str) -> String {
 }
 
 /// Parses `/proc/cpuinfo` into model, logical core count, physical socket count, and frequency.
+/// Supports x86 (`model name`), ARM (`Hardware`/`model`), and PowerPC (`cpu`) stanza layouts.
 pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     if content.trim().is_empty() {
         return None;
@@ -132,6 +133,7 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     }
 
     let model = model_name.unwrap_or_else(|| "Unknown CPU".to_string());
+    // Fallback to POSIX sysconf when processor stanzas are missing or masked in containers
     let cores = if processor_count > 0 {
         processor_count
     } else {
@@ -145,6 +147,7 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
         }
     };
 
+    // Distinct physical id count indicates multi-socket server topology
     let sockets = if !physical_ids.is_empty() {
         physical_ids.len()
     } else {

@@ -208,7 +208,7 @@ pub fn detect_terminal() -> Option<String> {
     let term_prog_ver = std::env::var("TERM_PROGRAM_VERSION").ok();
     let term_val = std::env::var("TERM").ok();
 
-    // Check environment first
+    // 1. Check dedicated terminal emulator environment signatures
     let env_signatures = [
         "ALACRITTY_LOG",
         "ALACRITTY_WINDOW_ID",
@@ -238,12 +238,12 @@ pub fn detect_terminal() -> Option<String> {
         term_prog.as_deref(),
         term_prog_ver.as_deref(),
         &ref_vars,
-        None, // defer $TERM fallback until process ancestry checked
+        None, // Defer generic $TERM fallback until process ancestry is checked
     ) {
         return Some(term);
     }
 
-    // Process ancestry traversal
+    // 2. Process ancestry traversal: walk up to 8 levels of PPID to jump over subshells, tmux/screen, and sudo wrappers
     let mut current_pid = unsafe { libc::getpid() as u32 };
     for _ in 0..8 {
         let status_path = format!("/proc/{}/status", current_pid);
@@ -276,7 +276,7 @@ pub fn detect_terminal() -> Option<String> {
         }
     }
 
-    // Fallback to $TERM
+    // 3. Fallback to generic $TERM string if specific GUI terminal binary was not found
     if let Some(term) = term_val {
         let clean = term.trim();
         if !clean.is_empty() && clean != "unknown" && clean != "dumb" {

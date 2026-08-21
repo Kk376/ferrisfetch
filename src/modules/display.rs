@@ -66,7 +66,7 @@ pub fn parse_wlr_randr_output(output: &str) -> Option<DisplayInfo> {
 
 /// Probes display resolution and refresh rate from sysfs DRM or display servers.
 pub fn detect_display() -> Option<DisplayInfo> {
-    // 1. Fast cache for X11/Wayland/WSLg query (<0.1ms)
+    // 1. Fast cache for X11/Wayland/WSLg query (<0.1ms) avoiding server roundtrips
     let cache_dir = std::env::var_os("XDG_CACHE_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
@@ -90,7 +90,7 @@ pub fn detect_display() -> Option<DisplayInfo> {
         }
     }
 
-    // 2. Query xrandr or wlr-randr if graphical display session is active
+    // 2. Query xrandr or wlr-randr if graphical display session (X11 or Wayland socket) is active
     if std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some() {
         if let Ok(output) = Command::new("xrandr").output() {
             if output.status.success() {
@@ -131,7 +131,7 @@ pub fn detect_display() -> Option<DisplayInfo> {
         }
     }
 
-    // 3. Sysfs DRM modes fallback
+    // 3. Sysfs DRM modes fallback for KMS / TTY consoles when no X11/Wayland display server is running
     let drm_dir = "/sys/class/drm";
     if let Ok(entries) = fs::read_dir(drm_dir) {
         for entry in entries.flatten() {

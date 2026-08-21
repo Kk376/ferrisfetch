@@ -50,6 +50,9 @@ pub struct InstallInfo {
     pub formatted: String,
 }
 
+/// Direct statx syscall wrapper (Linux >= 4.11).
+/// Direct syscall invocation is required because `std::fs::Metadata::created()` is unsupported
+/// on older kernels/glibc versions and filesystems lacking explicit btime support.
 fn get_statx_birth_time(path: &str) -> Option<u64> {
     let c_path = CString::new(path).ok()?;
     let mut statx_buf = MaybeUninit::<Statx>::zeroed();
@@ -65,9 +68,11 @@ fn get_statx_birth_time(path: &str) -> Option<u64> {
     };
     if res == 0 {
         let buf = unsafe { statx_buf.assume_init() };
+        // Check if the underlying filesystem returned valid btime (creation time)
         if buf.stx_mask & STATX_BTIME != 0 && buf.stx_btime.tv_sec > 0 {
             return Some(buf.stx_btime.tv_sec as u64);
         }
+        // Fallback to inode ctime (status change time) when btime is unsupported (e.g. ext3, tmpfs)
         if buf.stx_ctime.tv_sec > 0 {
             return Some(buf.stx_ctime.tv_sec as u64);
         }
@@ -84,25 +89,25 @@ fn get_metadata_ctime(path: &str) -> Option<u64> {
 
 /// Probes OS installation timestamp via filesystem root birth time and installer logs.
 pub fn detect_install_timestamp() -> Option<u64> {
-    // 1. Filesystem root birth time
+    // 1. Filesystem root `/` birth time is the primary installation indicator
     if let Some(ts) = get_statx_birth_time("/") {
+        // Sanity check: must be after year 2000 (946684800) to filter uninitialized RTC timestamps (e.g. 1970-01-01)
         if ts > 946684800 {
-            // Year 2000+
             return Some(ts);
         }
     }
 
-    // 2. Candidate distribution install log / state files
+    // 2. Candidate distribution installer logs and earliest created package database files
     let candidate_paths = [
-        "/var/log/installer",
-        "/var/log/anaconda",
-        "/var/log/pacman.log",
-        "/var/lib/dpkg/info",
-        "/var/lib/pacman/local",
-        "/var/lib/rpm",
-        "/etc/apk/world",
-        "/etc/machine-id",
-        "/etc/fstab",
+        "/var/log/installer",    // Debian/Ubuntu Ubiquity/Subiquity
+        "/var/log/anaconda",     // RHEL/Fedora/CentOS Anaconda
+        "/var/log/pacman.log",   // Arch Linux initial pacstrap log
+        "/var/lib/dpkg/info",    // Debian base packages
+        "/var/lib/pacman/local", // Arch local db
+        "/var/lib/rpm",          // RPM database root
+        "/etc/apk/world",        // Alpine base package set
+        "/etc/machine-id",       // systemd first-boot machine ID
+        "/etc/fstab",            // Installer partition table setup
     ];
 
     for &path in &candidate_paths {

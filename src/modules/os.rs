@@ -10,7 +10,7 @@ pub struct OsInfo {
     pub distro_like: Vec<String>,
 }
 
-/// Parses standard `/etc/os-release` or `/usr/lib/os-release` file contents.
+/// Parses standard `/etc/os-release` or `/usr/lib/os-release` file contents per the systemd os-release spec.
 pub fn parse_os_release(content: &str) -> OsInfo {
     let mut pretty_name = None;
     let mut name = None;
@@ -28,6 +28,7 @@ pub fn parse_os_release(content: &str) -> OsInfo {
             let key = k.trim();
             let val = v.trim();
 
+            // Strip surrounding double/single quotes and unescape escaped quotation marks
             let mut val_str = val;
             if val_str.len() >= 2
                 && ((val_str.starts_with('"') && val_str.ends_with('"'))
@@ -56,6 +57,7 @@ pub fn parse_os_release(content: &str) -> OsInfo {
         }
     }
 
+    // PRETTY_NAME is preferred; fall back to "NAME VERSION" or "NAME" if PRETTY_NAME is unset
     let display_name = pretty_name
         .or_else(|| match (name, version) {
             (Some(n), Some(v)) => Some(format!("{} {}", n, v)),
@@ -65,6 +67,7 @@ pub fn parse_os_release(content: &str) -> OsInfo {
         .unwrap_or_else(|| "Linux".to_string());
 
     let distro_id = id.unwrap_or_else(|| "linux".to_string());
+    // ID_LIKE contains a space-separated list of parent distributions per the systemd spec
     let distro_like = id_like
         .map(|s| s.split_whitespace().map(|x| x.to_string()).collect())
         .unwrap_or_default();
@@ -78,7 +81,7 @@ pub fn parse_os_release(content: &str) -> OsInfo {
 
 /// Detects the operating system using standard and legacy paths.
 pub fn detect_os() -> OsInfo {
-    // 1. Primary standard os-release files
+    // 1. Primary standard os-release files (/usr/lib fallback handles stateless/immutable systems)
     for path in &["/etc/os-release", "/usr/lib/os-release"] {
         if let Ok(content) = fs::read_to_string(path) {
             let info = parse_os_release(&content);
@@ -88,7 +91,7 @@ pub fn detect_os() -> OsInfo {
         }
     }
 
-    // 2. Legacy distribution release files
+    // 2. Legacy distribution release files for pre-systemd environments
     if let Ok(deb) = fs::read_to_string("/etc/debian_version") {
         let trimmed = deb.trim();
         if !trimmed.is_empty() {
@@ -171,9 +174,9 @@ impl Collector for OsCollector {
     }
 }
 
-/// Detects hardware product/host model from sysfs or devicetree.
+/// Detects hardware product/host model from sysfs DMI or Open Firmware devicetree.
 pub fn detect_host() -> Option<String> {
-    // Check DMI product name and version
+    // Check DMI product name and version (sysfs /sys/devices/virtual/dmi and /sys/class/dmi)
     let product_name = fs::read_to_string("/sys/devices/virtual/dmi/id/product_name")
         .or_else(|_| fs::read_to_string("/sys/class/dmi/id/product_name"))
         .ok()
@@ -190,6 +193,7 @@ pub fn detect_host() -> Option<String> {
 
     if let Some(ref name) = product_name {
         let name_lower = name.to_lowercase();
+        // Ignore unpopulated SMBIOS placeholder values emitted by motherboard vendors
         let is_invalid = name_lower.is_empty()
             || name_lower == "none"
             || name_lower == "default string"
@@ -218,7 +222,7 @@ pub fn detect_host() -> Option<String> {
         }
     }
 
-    // Device tree model for ARM boards (Raspberry Pi, etc.)
+    // Devicetree model for ARM single-board computers (Raspberry Pi, Pine64, Rockchip) lacking SMBIOS
     for dt_path in &[
         "/sys/firmware/devicetree/base/model",
         "/proc/device-tree/model",
@@ -234,7 +238,7 @@ pub fn detect_host() -> Option<String> {
         }
     }
 
-    // Board name fallback
+    // Motherboard board_name fallback for custom desktop rigs
     for board_path in &[
         "/sys/devices/virtual/dmi/id/board_name",
         "/sys/class/dmi/id/board_name",

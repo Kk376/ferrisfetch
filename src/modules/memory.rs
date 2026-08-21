@@ -10,6 +10,8 @@ pub struct MemoryInfo {
 }
 
 /// Parses `/proc/meminfo` to calculate total and active used RAM.
+/// On Linux kernels >= 3.14, `MemAvailable` provides the kernel's accurate estimate of available memory
+/// without triggering swapping (accounting for page cache and `SReclaimable` slab while reserving watermarks).
 pub fn parse_meminfo(content: &str) -> Option<MemoryInfo> {
     let mut mem_total: Option<u64> = None;
     let mut mem_available: Option<u64> = None;
@@ -51,6 +53,7 @@ pub fn parse_meminfo(content: &str) -> Option<MemoryInfo> {
     let used = if let Some(avail) = mem_available {
         total.saturating_sub(avail)
     } else {
+        // Legacy fallback for Linux < 3.14 lacking MemAvailable
         let free = mem_free.unwrap_or(0);
         let buf = buffers.unwrap_or(0);
         let cach = cached.unwrap_or(0);

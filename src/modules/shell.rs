@@ -51,7 +51,7 @@ pub fn extract_shell_name(path: &str) -> String {
         .map(|s| s.to_string_lossy())
         .unwrap_or_else(|| clean.into());
 
-    // Login shells often prepend a hyphen, e.g. "-bash" or "-zsh"
+    // Login shells prepend a leading hyphen in argv[0] (e.g. "-bash" or "-zsh" per POSIX exec/login convention)
     file_name.trim_start_matches('-').to_lowercase()
 }
 
@@ -115,6 +115,7 @@ fn get_shell_cli_version(shell_name: &str) -> Option<String> {
 }
 
 fn format_shell_with_version(shell_name: &str) -> String {
+    // Fast-path: query shell version environment variables before spawning subprocesses
     let mut bash_ver = std::env::var("BASH_VERSION").ok();
     let mut zsh_ver = std::env::var("ZSH_VERSION").ok();
     let mut fish_ver = std::env::var("FISH_VERSION").ok();
@@ -146,6 +147,7 @@ fn format_shell_with_version(shell_name: &str) -> String {
 }
 
 /// Checks if a process name matches a known shell or valid versioned shell binary name.
+/// Prevents false matches against unrelated daemon names (e.g. `shadow`, `shared-mime`, `shark`).
 pub fn is_known_shell(name_clean: &str) -> bool {
     for &known in KNOWN_SHELLS {
         if name_clean == known {
@@ -167,7 +169,7 @@ pub fn is_known_shell(name_clean: &str) -> bool {
 pub fn detect_shell() -> Option<String> {
     let mut current_pid = unsafe { libc::getpid() as u32 };
 
-    // Traverse up to 5 process ancestors
+    // Traverse process parent chain (up to 5 ancestors) to identify the interactive shell that invoked ferrisfetch
     for _ in 0..5 {
         if let Some(ppid) = get_ppid(current_pid) {
             if ppid <= 1 {
@@ -185,7 +187,7 @@ pub fn detect_shell() -> Option<String> {
         }
     }
 
-    // Fallback to $SHELL environment variable
+    // Fallback to $SHELL environment variable if parent process tree is masked or in a container
     if let Ok(shell_path) = std::env::var("SHELL") {
         let name_clean = extract_shell_name(&shell_path);
         if !name_clean.is_empty() {

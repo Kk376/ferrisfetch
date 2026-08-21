@@ -3,6 +3,7 @@ use crate::output::color::format_label;
 use crate::output::logo::Logo;
 
 /// Returns the column display width of a Unicode character (1 for standard, 2 for wide CJK/emojis).
+/// Adheres to Unicode Standard Annex #11 (East Asian Width) for terminal cell occupancy.
 pub fn char_width(c: char) -> usize {
     match c as u32 {
         0x1100..=0x115F
@@ -19,6 +20,7 @@ pub fn char_width(c: char) -> usize {
 }
 
 /// Calculates the visible printable width of a string, ignoring ANSI escape sequences.
+/// Necessary so colored text does not distort column alignment calculations in side-by-side rendering.
 pub fn visible_width(s: &str) -> usize {
     let mut in_escape = false;
     let mut len = 0;
@@ -27,6 +29,7 @@ pub fn visible_width(s: &str) -> usize {
         if c == '\x1b' {
             in_escape = true;
         } else if in_escape {
+            // ANSI CSI sequences end with an alphabetic character (e.g. 'm' for SGR)
             if c.is_ascii_alphabetic() {
                 in_escape = false;
             }
@@ -67,7 +70,7 @@ pub fn render_layout(
 
     let logo_lines = logo.render_lines(enable_color);
 
-    // Narrow terminal fallback: vertical stacked layout
+    // Narrow terminal breakpoint: switch to vertical stacked layout below 60 columns to prevent line-wrapping
     if term_width < 60 {
         let mut full_output = Vec::new();
         full_output.extend(logo_lines);
@@ -78,7 +81,7 @@ pub fn render_layout(
         return full_output.join("\n");
     }
 
-    // Side-by-side two-column layout
+    // Side-by-side two-column layout: calculate max logo width to align the info column
     let max_logo_width = logo
         .raw_lines
         .iter()
@@ -100,6 +103,7 @@ pub fn render_layout(
             0
         };
 
+        // Pad shorter logo lines to match max_logo_width before inserting 3-space separator
         let pad_len = max_logo_width.saturating_sub(raw_len);
         let padding = " ".repeat(pad_len);
 

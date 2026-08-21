@@ -72,7 +72,7 @@ pub fn format_desktop_info(
 pub fn detect_de_version(de_name: &str) -> Option<String> {
     let lower = de_name.to_lowercase();
     if lower.contains("gnome") {
-        // Fast path 1: /usr/share/gnome/gnome-version.xml (<0.1ms)
+        // Fast path 1: Parse GNOME version XML metadata directly (<0.1ms) avoiding spawning gnome-shell
         if let Ok(xml) = fs::read_to_string("/usr/share/gnome/gnome-version.xml") {
             if let (Some(p_start), Some(m_start)) = (xml.find("<platform>"), xml.find("<minor>")) {
                 let platform = xml[p_start + 10..].split("</platform>").next()?.trim();
@@ -163,7 +163,7 @@ pub fn detect_desktop() -> Option<String> {
     let mut de = None;
     let mut wm = None;
 
-    // 1. Detect Desktop Environment
+    // 1. Detect Desktop Environment from standard desktop environment variables
     if let Ok(cur_de) = std::env::var("XDG_CURRENT_DESKTOP") {
         let clean = cur_de.trim();
         if !clean.is_empty() {
@@ -186,7 +186,7 @@ pub fn detect_desktop() -> Option<String> {
         }
     }
 
-    // 2. Detect Window Manager via Wayland signatures
+    // 2. Detect standalone Wayland Window Managers via compositor-specific socket variables
     if let Some(wayland_wm) = detect_wayland_wm_from_env(
         std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some(),
         std::env::var_os("SWAYSOCK").is_some(),

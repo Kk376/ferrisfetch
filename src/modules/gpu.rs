@@ -130,7 +130,8 @@ pub fn lookup_pci_ids(vendor_hex: &str, device_hex: &str) -> Option<String> {
     None
 }
 
-/// Probes a given PCI sysfs directory for display controllers (PCI class 0x03xxxx).
+/// Probes a given PCI sysfs directory for display controllers.
+/// Scans for PCI base class 0x03: VGA-compatible (0x0300), 3D controller (0x0302), and display (0x0380).
 pub fn detect_gpus_from_sysfs_dir(pci_dir: &Path) -> Vec<String> {
     let mut gpus = Vec::new();
 
@@ -140,7 +141,7 @@ pub fn detect_gpus_from_sysfs_dir(pci_dir: &Path) -> Vec<String> {
             let class_path = path.join("class");
             if let Ok(class_str) = fs::read_to_string(class_path) {
                 let class_trimmed = class_str.trim().to_lowercase();
-                // Class 0x03xxxx corresponds to VGA (0x0300), 3D (0x0302), and Display (0x0380)
+                // Class 0x03xxxx matches display adapter devices in PCI specification
                 if class_trimmed.starts_with("0x03") || class_trimmed.starts_with("3") {
                     let vendor_str = fs::read_to_string(path.join("vendor"))
                         .unwrap_or_default()
@@ -151,7 +152,7 @@ pub fn detect_gpus_from_sysfs_dir(pci_dir: &Path) -> Vec<String> {
                         .trim()
                         .to_string();
 
-                    // 1. Try local pci.ids database lookup
+                    // 1. Resolve vendor/device IDs against local pci.ids database without spawning lspci
                     if let Some(pci_name) = lookup_pci_ids(&vendor_str, &device_str) {
                         if !gpus.contains(&pci_name) {
                             gpus.push(pci_name);
@@ -271,6 +272,7 @@ pub fn format_gpu_with_specs(name: &str, vram_mb: Option<u64>, clock_mhz: Option
 }
 
 /// Detects GPUs when running inside Windows Subsystem for Linux (WSL2).
+/// In WSL2, raw PCI devices are virtualized under Hyper-V; probes CPU iGPU tables and NVIDIA-SMI bridge.
 pub fn detect_wsl_gpus() -> Vec<String> {
     let mut gpus = Vec::new();
 
@@ -327,7 +329,7 @@ pub fn detect_wsl_gpus() -> Vec<String> {
         }
     }
 
-    // 2. Fast-path: Check persistent user/system cache for discrete GPU (<0.2ms)
+    // 2. Fast-path: Check persistent user/system cache for discrete GPU to achieve sub-millisecond runs
     let cache_dir = std::env::var_os("XDG_CACHE_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
@@ -375,7 +377,7 @@ pub fn detect_wsl_gpus() -> Vec<String> {
                             if !gpus.contains(&formatted) {
                                 gpus.push(formatted.clone());
 
-                                // Write to persistent cache
+                                // Persist discrete GPU cache
                                 if let Some(ref dir) = cache_dir {
                                     let _ = fs::create_dir_all(dir);
                                 }
@@ -421,6 +423,7 @@ pub struct GpuGroup {
 }
 
 /// Groups identical dGPUs and assigns sequential dynamic indices starting at GPU0.
+/// Guarantees that iGPU occupies GPU0 on hybrid laptop configurations.
 pub fn group_and_index_gpus(raw_gpus: &[String], cpu_sockets: usize) -> Vec<ModuleOutput> {
     if raw_gpus.is_empty() {
         return Vec::new();

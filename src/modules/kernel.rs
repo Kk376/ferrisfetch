@@ -11,7 +11,8 @@ pub struct UnameInfo {
     pub architecture: String,
 }
 
-/// Retrieves POSIX uname system metadata via direct libc call.
+/// Retrieves POSIX utsname system metadata via direct libc uname syscall.
+/// Avoids spawning subprocesses (`uname -r`) and parsing `/proc/version` directly.
 pub fn get_uname_info() -> Option<UnameInfo> {
     unsafe {
         let mut uts = MaybeUninit::<libc::utsname>::uninit();

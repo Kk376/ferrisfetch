@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 /// Parses Debian `/var/lib/dpkg/status` content and counts installed packages.
+/// Fast path: stream-parses status file directly without spawning `dpkg-query`.
 pub fn parse_dpkg_status(content: &str) -> usize {
     let mut count = 0;
     for line in content.lines() {
@@ -32,7 +33,7 @@ pub fn count_dpkg() -> Option<usize> {
         return Some(count);
     }
 
-    // Fallback: dpkg-query command if status file is inaccessible
+    // Fallback: dpkg-query command if status file is inaccessible (e.g. non-standard chroot)
     if let Ok(output) = Command::new("dpkg-query")
         .args(["-f", "${binary:Package}\n", "-W"])
         .output()
@@ -49,6 +50,7 @@ pub fn count_dpkg() -> Option<usize> {
 }
 
 /// Counts installed packages for Arch Linux family from a given pacman local database directory.
+/// Each installed package corresponds to a subdirectory under `/var/lib/pacman/local`.
 pub fn count_pacman_from_dir(pacman_dir: &Path) -> Option<usize> {
     if let Ok(entries) = fs::read_dir(pacman_dir) {
         let count = entries
@@ -91,7 +93,7 @@ pub fn parse_rpm_output(output: &[u8]) -> usize {
 
 /// Counts installed packages for Red Hat / Fedora family via rpm.
 pub fn count_rpm() -> Option<usize> {
-    // Check if rpm databases exist first before invoking rpm
+    // Verify RPM BerkeleyDB or SQLite database files exist before invoking rpm to avoid subprocess overhead on non-RPM distros
     let rpm_paths = [
         "/var/lib/rpm/Packages",
         "/var/lib/rpm/rpmdb.sqlite",
@@ -119,7 +121,7 @@ pub fn parse_apk_installed(content: &str) -> usize {
     content.lines().filter(|l| l.starts_with("P:")).count()
 }
 
-/// Counts installed packages for Alpine Linux.
+/// Counts installed packages for Alpine Linux by parsing `/lib/apk/db/installed`.
 pub fn count_apk() -> Option<usize> {
     let path = Path::new("/lib/apk/db/installed");
     if let Ok(content) = fs::read_to_string(path) {
@@ -205,7 +207,7 @@ pub fn count_snap_from_dirs(snaps_path: &Path, snap_root: &Path) -> Option<usize
             let name = entry.file_name();
             let s = name.to_string_lossy();
             if s.ends_with(".snap") {
-                // Strip revision suffix, e.g. core22_1.snap -> core22
+                // Strip revision suffix, e.g. core22_1.snap -> core22 to count unique applications
                 let pkg_name = s.split_once('_').map(|(p, _)| p).unwrap_or(&s);
                 unique_snaps.insert(pkg_name.to_string());
             }
@@ -215,6 +217,7 @@ pub fn count_snap_from_dirs(snaps_path: &Path, snap_root: &Path) -> Option<usize
         }
     }
 
+    // Fallback: count subdirectories in /snap (excluding metadata and internal symlinks)
     if let Ok(entries) = fs::read_dir(snap_root) {
         let count = entries
             .flatten()
@@ -237,7 +240,7 @@ pub fn count_snap() -> Option<usize> {
     count_snap_from_dirs(Path::new("/var/lib/snapd/snaps"), Path::new("/snap"))
 }
 
-/// Counts installed Homebrew formulae from standard Cellar paths.
+/// Counts installed Homebrew formulae from standard Cellar paths across system and user prefixes.
 pub fn count_brew() -> Option<usize> {
     let cellar_paths = [
         Path::new("/home/linuxbrew/.linuxbrew/Cellar"),

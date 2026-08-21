@@ -6,7 +6,7 @@ use crate::output::logo::match_logo;
 use std::ffi::CStr;
 use std::fs;
 
-/// Retrieves the current username from environment or POSIX passwd.
+/// Retrieves the current username from environment or POSIX passwd database.
 pub fn get_username() -> String {
     if let Ok(user) = std::env::var("USER") {
         if !user.trim().is_empty() {
@@ -19,6 +19,7 @@ pub fn get_username() -> String {
         }
     }
 
+    // Fallback to POSIX user database entry for effective UID
     unsafe {
         let uid = libc::geteuid();
         let pw = libc::getpwuid(uid);
@@ -31,14 +32,16 @@ pub fn get_username() -> String {
     "user".to_string()
 }
 
-/// Retrieves the system hostname from uname, /proc, or /etc.
+/// Retrieves the system hostname from uname nodename, /proc, or /etc.
 pub fn get_hostname() -> String {
+    // 1. Direct uname nodename field
     if let Some(uname) = get_uname_info() {
         if !uname.hostname.is_empty() && uname.hostname != "(none)" {
             return uname.hostname;
         }
     }
 
+    // 2. Kernel sysctl procfs hostname
     if let Ok(host) = fs::read_to_string("/proc/sys/kernel/hostname") {
         let clean = host.trim();
         if !clean.is_empty() && clean != "(none)" {
@@ -46,6 +49,7 @@ pub fn get_hostname() -> String {
         }
     }
 
+    // 3. Static configuration file fallback
     if let Ok(host) = fs::read_to_string("/etc/hostname") {
         let clean = host.trim();
         if !clean.is_empty() && clean != "(none)" {
@@ -56,7 +60,7 @@ pub fn get_hostname() -> String {
     "localhost".to_string()
 }
 
-/// Formats the title line (`user@host`) and matching underline.
+/// Formats the title line (`user@host`) and matching underline separator.
 pub fn format_title(
     user: &str,
     host: &str,
@@ -64,6 +68,7 @@ pub fn format_title(
     enable_color: bool,
 ) -> String {
     let title_plain = format!("{}@{}", user, host);
+    // Divider length exactly matches printable character count to prevent underline misalignment
     let divider_len = title_plain.chars().count();
     let divider_plain = "-".repeat(divider_len);
 

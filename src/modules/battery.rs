@@ -8,6 +8,7 @@ pub struct BatteryInfo {
     pub status: String,
 }
 
+/// Checks if any AC adapter power supply (`AC`, `ACAD`, `Mains`) is connected.
 fn is_ac_online() -> bool {
     let power_supply_dir = "/sys/class/power_supply";
     if let Ok(entries) = fs::read_dir(power_supply_dir) {
@@ -25,7 +26,7 @@ fn is_ac_online() -> bool {
     false
 }
 
-/// Probes battery capacity and state, formatting cleanly without redundant virtual model names.
+/// Probes battery capacity and state from `/sys/class/power_supply/BAT*`.
 pub fn detect_battery() -> Option<BatteryInfo> {
     let power_supply_dir = "/sys/class/power_supply";
     let entries = fs::read_dir(power_supply_dir).ok()?;
@@ -38,7 +39,7 @@ pub fn detect_battery() -> Option<BatteryInfo> {
             continue;
         }
 
-        // Read capacity
+        // Read percentage capacity (0-100)
         let capacity_str = fs::read_to_string(path.join("capacity")).ok()?;
         let capacity = capacity_str.trim().parse::<u8>().ok()?;
 
@@ -49,6 +50,7 @@ pub fn detect_battery() -> Option<BatteryInfo> {
 
         let ac_online = is_ac_online();
 
+        // When battery threshold limits (e.g. 80%) are enabled in BIOS, status reports "Not charging" while connected to AC
         let status = if raw_status.eq_ignore_ascii_case("not charging") {
             if ac_online {
                 "AC Connected".to_string()

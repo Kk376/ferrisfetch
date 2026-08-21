@@ -30,14 +30,14 @@ const KNOWN_WMS: &[&str] = &[
 
 /// Probes active Window Manager from running processes, environment, or WSLg.
 pub fn detect_wm() -> Option<String> {
-    // 1. Check WSLg environment
+    // 1. WSLg environment check: Weston Wayland server provides X11/Wayland bridge on /mnt/wslg
     if (fs::metadata("/mnt/wslg").is_ok() || std::env::var_os("WSL_DISTRO_NAME").is_some())
         && (std::env::var_os("WAYLAND_DISPLAY").is_some() || std::env::var_os("DISPLAY").is_some())
     {
         return Some("WSLg (Weston)".to_string());
     }
 
-    // 2. Scan `/proc` for active known WM process
+    // 2. Scan `/proc` PID directories for active known WM process binaries
     if let Ok(entries) = fs::read_dir("/proc") {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -83,7 +83,7 @@ pub fn detect_wm() -> Option<String> {
         }
     }
 
-    // 3. Fallback to desktop session environment hints
+    // 3. Fallback to desktop session environment hints if /proc is masked or restricted
     if let Ok(de) = std::env::var("XDG_CURRENT_DESKTOP") {
         let de_lower = de.to_lowercase();
         if de_lower.contains("gnome") {

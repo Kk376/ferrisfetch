@@ -11,7 +11,7 @@ pub struct DiskUsage {
     pub percentage: u8,
 }
 
-/// Queries filesystem storage capacity and usage via POSIX statvfs.
+/// Queries filesystem storage capacity and usage via POSIX statvfs syscall.
 #[allow(clippy::unnecessary_cast)]
 pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
     let c_path = CString::new(path).ok()?;
@@ -22,6 +22,7 @@ pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
         }
         let stat = stat.assume_init();
 
+        // `f_frsize` (fundamental block size) determines true byte capacity; fallback to `f_bsize` if 0
         let block_size = if stat.f_frsize > 0 {
             stat.f_frsize as u64
         } else {
@@ -161,7 +162,8 @@ pub struct PartitionEntry {
     pub usage: DiskUsage,
 }
 
-/// Enumerates all real physical/virtual mount partitions.
+/// Enumerates all real physical/virtual mount partitions from `/proc/mounts`.
+/// Filters virtual kernel filesystems, snap/container overlays, and Android mount points.
 pub fn get_all_disks() -> Vec<PartitionEntry> {
     let mut entries = Vec::new();
     let Ok(content) = std::fs::read_to_string("/proc/mounts") else {
@@ -186,10 +188,12 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
         let mount_point = parts[1];
         let fs_type = parts[2];
 
+        // Ignore kernel pseudo-filesystems (proc, sysfs, tmpfs, cgroups)
         if IGNORED_FS_TYPES.contains(&fs_type) {
             continue;
         }
 
+        // Ignore container overlays, flatpak sandboxes, and WSL internal virtual mounts
         if IGNORED_MOUNT_PREFIXES
             .iter()
             .any(|prefix| mount_point.starts_with(prefix))
@@ -202,7 +206,7 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
         }
 
         if let Some(usage) = get_disk_usage(mount_point) {
-            // In WSL, convert /mnt/c to C, /mnt/d to D
+            // In WSL2, map 9P/drvfs drive mounts (/mnt/c -> C, /mnt/d -> D)
             let display_name = if let Some(wsl_drive) = mount_point.strip_prefix("/mnt/") {
                 if wsl_drive.len() == 1 && wsl_drive.chars().next().unwrap().is_ascii_alphabetic() {
                     wsl_drive.to_uppercase()
@@ -231,7 +235,7 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
         }
     }
 
-    // Always sort so root / comes first (Disk0), followed by other partitions
+    // Always sort so root / comes first (Disk0), followed by other mounted partitions
     entries.sort_by(|a, b| {
         if a.mount_point == "/" {
             std::cmp::Ordering::Less

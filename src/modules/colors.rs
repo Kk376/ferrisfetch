@@ -1,6 +1,7 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 
+/// Renders a 16-color ANSI terminal palette (8 standard SGR 30..=37 and 8 bright SGR 90..=97 blocks).
 pub fn render_color_palette() -> String {
     let mut standard = String::new();
     for code in 30..=37 {

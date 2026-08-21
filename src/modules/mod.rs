@@ -149,6 +149,7 @@ pub struct ModuleOutput {
     pub custom_rendered: Option<String>,
 }
 
+/// System metric collector trait. Supports both single-output and multi-output collectors (e.g. multi-GPU, multi-disk).
 pub trait Collector: Send + Sync {
     fn id(&self) -> ModuleId;
     fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput> {
@@ -193,7 +194,7 @@ impl ModuleRegistry {
         Self { collectors }
     }
 
-    /// Collects metrics from active modules in deterministic registration order.
+    /// Collects metrics from active modules in deterministic registration or user-configured CLI order.
     pub fn collect_all(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
         let mut results = Vec::new();
 

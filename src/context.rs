@@ -32,8 +32,9 @@ impl FetchContext {
     }
 }
 
-/// Detects terminal column width via ioctl TIOCGWINSZ or $COLUMNS fallback.
+/// Detects terminal column width via direct kernel ioctl TIOCGWINSZ or $COLUMNS fallback.
 pub fn get_terminal_width() -> u16 {
+    // Direct ioctl on standard output line discipline avoids shelling out to tput or stty
     unsafe {
         let mut ws: libc::winsize = std::mem::zeroed();
         if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut ws) == 0 && ws.ws_col > 0 {
@@ -41,6 +42,7 @@ pub fn get_terminal_width() -> u16 {
         }
     }
 
+    // Fallback when stdout is redirected into a pipe or subshell without a tty fd
     if let Ok(cols) = std::env::var("COLUMNS") {
         if let Ok(c) = cols.trim().parse::<u16>() {
             if c > 0 {
@@ -49,6 +51,7 @@ pub fn get_terminal_width() -> u16 {
         }
     }
 
+    // Standard VT100 / POSIX terminal column fallback
     80
 }
 
@@ -57,14 +60,17 @@ pub fn should_enable_color(no_color_flag: bool) -> bool {
     if no_color_flag {
         return false;
     }
+    // Compliance with https://no-color.org: any non-empty or empty NO_COLOR disables ANSI styling
     if std::env::var_os("NO_COLOR").is_some() {
         return false;
     }
+    // Disable styling on dumb terminals to avoid emitting raw escape sequences to teletypes
     if let Ok(term) = std::env::var("TERM") {
         if term == "dumb" {
             return false;
         }
     }
+    // Force color flags take precedence over tty detection for CI runners and piped test logs
     if std::env::var_os("CLICOLOR_FORCE").is_some() || std::env::var_os("FORCE_COLOR").is_some() {
         return true;
     }
@@ -92,7 +98,7 @@ pub fn resolve_active_modules(cli: &Cli) -> Vec<ModuleId> {
         base_modules
     };
 
-    // Deduplicate preserving appearance order
+    // Deduplicate while strictly preserving first-seen appearance order
     let mut seen = std::collections::HashSet::new();
     let mut deduped = Vec::new();
     for m in filtered {

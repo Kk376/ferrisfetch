@@ -299,6 +299,11 @@ pub fn get_all_logos() -> &'static [Logo] {
 }
 
 /// Matches a logo by name, distro_id, or distro_like chain.
+/// Resolution precedence:
+/// 1. Explicit CLI `--logo` override (supports "none" to disable logo rendering).
+/// 2. Primary `distro_id` matching `ID` from `/etc/os-release`.
+/// 3. Upstream distribution inheritance chain from `ID_LIKE` (e.g. Pop!_OS -> Ubuntu -> Debian).
+/// 4. Default fallback to Ferris the Rust crab mascot.
 pub fn match_logo(
     logo_override: Option<&str>,
     distro_id: &str,
@@ -326,10 +331,11 @@ pub fn match_logo(
         }
     }
 
-    // Default fallback is Ferris
+    // Default mascot fallback
     find_logo_by_key("ferris", all)
 }
 
+/// Normalizes common distribution aliases, derivative names, and shorthand keys.
 fn find_logo_by_key(key: &str, logos: &'static [Logo]) -> Option<&'static Logo> {
     let normalized = key.trim().to_lowercase();
     match normalized.as_str() {
