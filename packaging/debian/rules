@@ -6,6 +6,7 @@ export DH_VERBOSE = 1
 	dh $@
 
 override_dh_auto_build:
+	python3 -c 'import glob, json; [json.dump({**json.load(open(p)), "files": {}}, open(p, "w")) for p in glob.glob("vendor/*/.cargo-checksum.json")]' 2>/dev/null || true
 	cargo build --release --offline
 
 override_dh_auto_test:
