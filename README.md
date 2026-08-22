@@ -61,7 +61,7 @@ hyperfine --shell=none --warmup 50 --min-runs 500 \
 | `fastfetch --format json` | `8.2 ms ± 3.4 ms` | `4.6 ms` | `26.2 ms` | `3.4 ms` | `4.8 ms` | `1.00` (Baseline) |
 | `ferrisfetch --json` | **`4.3 ms ± 3.6 ms`** | **`1.8 ms`** | `29.7 ms` | **`1.6 ms`** | **`2.7 ms`** | **1.89 ± 1.63x faster** |
 
-*FerrisFetch achieves 2.12x less user CPU time and 1.77x less kernel syscall overhead due to single-pass zero-copy parsing and parallel scoped thread execution.*
+*FerrisFetch achieves lower CPU time and syscall overhead by reading `/proc` and `sysfs` directly in Rust, executing active module collectors concurrently in parallel using `std::thread::scope`, and compiling with Fat Link-Time Optimization (LTO).*
 
 ---
 
@@ -71,14 +71,14 @@ FerrisFetch includes high-contrast ASCII art logos with distro brand signature c
 
 | Family / Ecosystem | Supported Distributions & Targets |
 | :--- | :--- |
-| **Debian / Ubuntu Family** | Ubuntu, Debian, Linux Mint, Pop!_OS |
-| **Red Hat Family** | Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream |
-| **Arch Family** | Arch Linux, EndeavourOS, Manjaro, Artix Linux |
-| **Independent Linux** | Alpine Linux, Gentoo Linux, Void Linux, openSUSE, NixOS |
-| **BSD Family** | FreeBSD, OpenBSD, NetBSD |
-| **Windows** | Windows 11, Windows 10, Windows 7 (native Win32 x86_64) |
-| **Android / Mobile** | Android (via Termux aarch64 & x86_64) |
-| **Mascots & Generic** | Ferris the Rust Crab (`ferris`), Linux Penguin (`tux`) |
+| **Debian / Ubuntu Family** | Ubuntu, Debian, Linux Mint, Pop!_OS (4) |
+| **Red Hat Family** | Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream (5) |
+| **Arch Family** | Arch Linux, EndeavourOS, Manjaro, Artix Linux (4) |
+| **Independent Linux** | Alpine Linux, Gentoo Linux, Void Linux, openSUSE, NixOS (5) |
+| **BSD Family** | FreeBSD, OpenBSD, NetBSD (3) |
+| **Windows** | Windows 11, Windows 10 (native Win32 x86_64) (2) |
+| **Android / Mobile** | Android (via Termux aarch64 & x86_64) (1) |
+| **Mascots & Generic** | Ferris the Rust Crab (`ferris`), Linux Penguin (`tux`) (2) |
 
 ---
 
@@ -266,6 +266,38 @@ autoload -Uz compinit && compinit
 ```fish
 cp completions/ferrisfetch.fish ~/.config/fish/completions/
 # System-wide: sudo cp completions/ferrisfetch.fish /usr/share/fish/vendor_completions.d/
+```
+
+---
+
+## Distribution Packaging
+
+Package definitions and build specifications are organized in [`packaging/`](packaging/):
+
+* **Arch Linux (AUR)**: [`packaging/arch/`](packaging/arch/) (`PKGBUILD`, `.SRCINFO`)
+* **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (`control`, `rules`, `changelog`)
+* **Fedora / RHEL (Copr)**: [`packaging/rpm/`](packaging/rpm/) (`ferrisfetch.spec`)
+* **Alpine Linux**: [`packaging/alpine/`](packaging/alpine/) (`APKBUILD`)
+* **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.9.0.ebuild`)
+* **Void Linux**: [`packaging/void/`](packaging/void/) (`template`)
+* **Nix / NixOS**: [`packaging/nix/`](packaging/nix/) (`package.nix`)
+* **Homebrew Tap**: [`packaging/homebrew/`](packaging/homebrew/) (`ferrisfetch.rb`)
+* **Android (Termux)**: [`packaging/termux/`](packaging/termux/) (`build.sh`)
+* **Windows (WinGet)**: [`packaging/winget/`](packaging/winget/) (YAML manifests)
+
+---
+
+## Development & Testing
+
+```bash
+# Run all 186 unit, integration, and CLI snapshot tests
+cargo test
+
+# Run strict linter with zero warnings allowed
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Verify code formatting conforms to Rust standards
+cargo fmt --check
 ```
 
 ---
