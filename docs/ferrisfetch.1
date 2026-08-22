@@ -1,0 +1,45 @@
+.TH FERRISFETCH 1 "August 2026" "ferrisfetch 0.9.0" "User Commands"
+.SH NAME
+ferrisfetch \- A fast, lightweight Linux system information fetch tool written in Rust
+.SH SYNOPSIS
+.B ferrisfetch
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B ferrisfetch
+is a high-performance system information tool designed for speed and aesthetic terminal output.
+It gathers hardware and software details with minimal latency.
+.SH OPTIONS
+.TP
+\fB\-m\fR, \fB\-\-modules\fR \fI<MODULES>\fR
+Enable specific modules in order (comma-separated, e.g. "os,kernel,cpu,memory").
+.TP
+\fB\-d\fR, \fB\-\-disable\fR \fI<DISABLE>\fR
+Disable specific modules (comma-separated, e.g. "gpu,disk").
+.TP
+\fB\-\-no-color\fR
+Disable colored ANSI output.
+.TP
+\fB\-l\fR, \fB\-\-logo\fR \fI<LOGO>\fR
+Override the ASCII logo (e.g. "arch", "debian", "ubuntu", "ferris", "fedora", "tux").
+.TP
+\fB\-\-no-logo\fR
+Do not display any ASCII logo.
+.TP
+\fB\-\-list-modules\fR
+List all available information modules and exit.
+.TP
+\fB\-\-disk-path\fR \fI<DISK_PATH>\fR
+Target mount point or directory path for disk usage statistics (default: "/").
+.TP
+\fB\-\-json\fR
+Output system information in structured JSON format.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help information.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version information.
+.SH AUTHORS
+FerrisFetch Authors and Contributors.
+.SH COPYRIGHT
+MIT License.

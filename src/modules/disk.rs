@@ -213,6 +213,17 @@ pub struct PartitionEntry {
     pub usage: DiskUsage,
 }
 
+/// Normalizes filesystem type names. Maps WSL virtual network protocols (9p, drvfs, 9pnet_virtio)
+/// representing mounted Windows physical drives to "ntfs".
+pub fn normalize_fs_type(fs_type: &str, _mount_point: &str) -> String {
+    let lower = fs_type.to_lowercase();
+    if lower == "9p" || lower == "drvfs" || lower == "9pnet_virtio" {
+        "ntfs".to_string()
+    } else {
+        lower
+    }
+}
+
 #[cfg(not(windows))]
 pub fn get_fs_type_for_path(target: &str) -> Option<String> {
     let content = std::fs::read_to_string("/proc/mounts").ok()?;
@@ -236,7 +247,7 @@ pub fn get_fs_type_for_path(target: &str) -> Option<String> {
             }
         }
     }
-    best_match.map(|(_, fs)| fs.to_string())
+    best_match.map(|(mount, fs)| normalize_fs_type(fs, mount))
 }
 
 #[cfg(windows)]
@@ -345,10 +356,12 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
                 mount_point.to_string()
             };
 
+            let effective_fs = normalize_fs_type(fs_type, mount_point);
+
             entries.push(PartitionEntry {
                 mount_point: mount_point.to_string(),
                 display_name,
-                fs_type: fs_type.to_string(),
+                fs_type: effective_fs,
                 usage,
             });
         }
@@ -605,5 +618,15 @@ mod tests {
 
         let formatted_no_fs = format_disk_entry("/", &usage, None);
         assert_eq!(formatted_no_fs, "(/) 100.0 GiB / 500.0 GiB (20%)");
+    }
+
+    #[test]
+    fn test_normalize_fs_type() {
+        assert_eq!(normalize_fs_type("9p", "/mnt/c"), "ntfs");
+        assert_eq!(normalize_fs_type("drvfs", "/mnt/d"), "ntfs");
+        assert_eq!(normalize_fs_type("9pnet_virtio", "/mnt/c"), "ntfs");
+        assert_eq!(normalize_fs_type("ext4", "/"), "ext4");
+        assert_eq!(normalize_fs_type("btrfs", "/home"), "btrfs");
+        assert_eq!(normalize_fs_type("zfs", "/pool"), "zfs");
     }
 }

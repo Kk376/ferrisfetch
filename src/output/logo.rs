@@ -1,26 +1,38 @@
 use crate::output::color::RESET;
 
+pub const WHITE_COLOR: &str = "\x1b[38;5;231m";
+
 #[derive(Debug, Clone)]
 pub struct Logo {
     pub name: &'static str,
     pub raw_lines: &'static [&'static str],
-    pub primary_color: &'static str,
+    pub distro_color: &'static str,
+    pub outer_color: &'static str,
 }
 
 impl Logo {
-    /// Returns the logo lines formatted with single-tone ANSI colors if enabled.
+    /// Returns the logo lines formatted with ANSI colors if enabled.
+    /// The outer layer is styled with `outer_color` (white), and the
+    /// highlighted inner emblem is styled with `distro_color`.
     pub fn render_lines(&self, enable_color: bool) -> Vec<String> {
         self.raw_lines
             .iter()
             .map(|line| {
-                let clean = line
-                    .replace("{p}", "")
-                    .replace("{a}", "")
-                    .replace("{0}", "");
-                if enable_color && !clean.is_empty() {
-                    format!("{}{}{}", self.primary_color, clean, RESET)
+                if enable_color {
+                    let mut rendered = line
+                        .replace("{c}", self.distro_color)
+                        .replace("{w}", self.outer_color)
+                        .replace("{0}", RESET);
+                    if !line.contains("{c}") && !line.contains("{w}") && !line.is_empty() {
+                        rendered = format!("{}{}{}", self.distro_color, line, RESET);
+                    } else if !line.is_empty() {
+                        rendered.push_str(RESET);
+                    }
+                    rendered
                 } else {
-                    clean
+                    line.replace("{c}", "")
+                        .replace("{w}", "")
+                        .replace("{0}", "")
                 }
             })
             .collect()
@@ -31,616 +43,634 @@ pub const ALL_LOGOS: &[Logo] = &[
     Logo {
         name: "ferris",
         raw_lines: &[
-            "        /^^^\\     /^^^\\",
-            "       (  O  )   (  O  )",
-            "      .-'---'-----'---'-.",
-            "     /   _~^~^~^~^~_     \\",
-            "    |   /  o     o  \\     |",
-            "    |   |     -     |     |",
-            "    |   \\  '---'  /     |",
-            "     \\   '-------'     /",
-            "      '-._'-------'_.-'",
-            "          /       \\",
+            "        {w}/^^^\\     /^^^\\",
+            "       {w}(  O  )   (  O  )",
+            "      {c}.-'---'-----'---'-.",
+            "     {c}/   _~^~^~^~^~_     \\",
+            "    {c}|   /  {w}o     o{c}  \\     |",
+            "    {c}|   |     {w}-{c}     |     |",
+            "    {c}|   \\  {w}'---'{c}  /     |",
+            "     {c}\\   '-------'     /",
+            "      {c}'-._'-------'_.-'",
+            "          {w}/       \\",
         ],
-        primary_color: "\x1b[38;5;208m",
+        distro_color: "\x1b[38;5;208m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "debian",
         raw_lines: &[
-            "       _,met$$$$$gg.",
-            "    ,g$$$$$$$$$$$$$$$P.",
-            "  ,g$$P\"        \"\"\"Y$$.\".",
-            " ,$$P'              `$$$.",
-            "',$$P       ,ggs.     `$$b:",
-            "`d$$'     ,$P\"'   .    $$$",
-            " $$P      d$'     ,    $$P",
-            " $$:      $$.   -    ,d$$'",
-            " $$;      Y$b._   _,d$P'",
-            " Y$$.    `.`\"Y$$$$P\"'",
-            " `$$b      \"-.__",
-            "  `Y$$",
-            "   `Y$$.",
-            "     `$$b.",
-            "       `Y$$b.",
-            "          `\"Y$b._",
-            "              `\"\"\"",
+            "{c}       _,met$$$$$gg.",
+            "{c}    ,g$$$$$$$$$$$$$$$P.",
+            "{c}  ,g$$P\"        \"\"\"Y$$.\".",
+            "{c} ,$$P'              `$$$.",
+            "{c}',$$P       {w},ggs.{c}     `$$b:",
+            "{c}`d$$'     {w},$P\"'   .{c}    $$$",
+            "{c} $$P      {w}d$'     ,{c}    $$P",
+            "{c} $$:      {w}$$.   -{c}    ,d$$'",
+            "{c} $$;      {w}Y$b._   _,d$P'{c}",
+            "{c} Y$$.    {w}`.`\"Y$$$$P\"'{c}",
+            "{c} `$$b      {w}\"-.__{c}",
+            "{c}  `Y$$",
+            "{c}   `Y$$.",
+            "{c}     `$$b.",
+            "{c}       `Y$$b.",
+            "{c}          `\"Y$b._",
+            "{c}              `\"\"\"",
         ],
-        primary_color: "\x1b[38;5;196m",
+        distro_color: "\x1b[38;5;196m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "ubuntu",
         raw_lines: &[
-            "            .-/+oossssoo+\\-.",
-            "        ´:+ssssssssssssssssss+:`",
-            "      -+ssssssssssssssssssyyssss+-",
-            "    .ossssssssssssssssssdMMMNysssso.",
-            "   /ssssssssssshdmmNNmmyNMMMMhssssss\\",
-            "  +ssssssssshmydMMMMMMMNddddyssssssss+",
-            " /sssssssshNMMMyhhyyyyhmNMMMNhssssssss\\",
-            ".ssssssssdMMMNhsssssssssshNMMMdssssssss.",
-            "+sssshhhyNMMNyssssssssssssyNMMMysssssss+",
-            "ossyNMMMNyMMhsssssssssssssshmmmhssssssso",
-            "ossyNMMMNyMMhsssssssssssssshmmmhssssssso",
-            "+sssshhhyNMMNyssssssssssssyNMMMysssssss+",
-            ".ssssssssdMMMNhsssssssssshNMMMdssssssss.",
-            " \\sssssssshNMMMyhhyyyyhdNMMMNhssssssss/",
-            "  +sssssssssdmydMMMMMMMMddddyssssssss+",
-            "   \\ssssssssssshdmNNNNmyNMMMMhssssss/",
-            "    .ossssssssssssssssssdMMMNysssso.",
-            "      -+sssssssssssssssssyyyssss+-",
-            "        `:+ssssssssssssssssss+:`",
-            "            .-\\+oossssoo+/-.",
+            "{w}            .-/+oossssoo+\\-.",
+            "{w}        ´:+ssssssssssssssssss+:`",
+            "{w}      -+ssssssssssssssssssyyssss+-",
+            "{w}    .ossssssssssssssssss{c}dMMMNy{w}sssso.",
+            "{w}   /sssssssssss{c}hdmmNNmmyNMMMMh{w}ssssss\\",
+            "{w}  +sssssssss{c}hm{w}yd{c}MMMMMMMNddddy{w}ssssssss+",
+            "{w} /ssssssss{c}hNMMM{w}yh{c}hyyyyhmNMMMNh{w}ssssssss\\",
+            "{w}.ssssssss{c}dMMMNh{w}ssssssssss{c}hNMMMd{w}ssssssss.",
+            "{w}+ssss{c}hhhyNMMNy{w}ssssssssssss{c}yNMMMy{w}sssssss+",
+            "{w}oss{c}yNMMMNyMMh{w}ssssssssssssss{c}hmmmh{w}ssssssso",
+            "{w}oss{c}yNMMMNyMMh{w}ssssssssssssss{c}hmmmh{w}ssssssso",
+            "{w}+ssss{c}hhhyNMMNy{w}ssssssssssss{c}yNMMMy{w}sssssss+",
+            "{w}.ssssssss{c}dMMMNh{w}ssssssssss{c}hNMMMd{w}ssssssss.",
+            "{w} \\ssssssss{c}hNMMM{w}yh{c}hyyyyhdNMMMNh{w}ssssssss/",
+            "{w}  +sssssssss{c}dm{w}yd{c}MMMMMMMMddddy{w}ssssssss+",
+            "{w}   \\sssssssssss{c}hdmNNNNmyNMMMMh{w}ssssss/",
+            "{w}    .ossssssssssssssssss{c}dMMMNy{w}sssso.",
+            "{w}      -+sssssssssssssssss{c}yyy{w}ssss+-",
+            "{w}        `:+ssssssssssssssssss+:`",
+            "{w}            .-\\+oossssoo+/-.",
         ],
-        primary_color: "\x1b[38;5;208m",
+        distro_color: "\x1b[38;5;208m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "linuxmint",
         raw_lines: &[
-            "             ...-:::::-...",
-            "          .-MMMMMMMMMMMMMMM-.",
-            "      .-MMMM`..-:::::::-..`MMMM-.",
-            "    .:MMMM.:MMMMMMMMMMMMMMM:.MMMM:.",
-            "   -MMM-M---MMMMMMMMMMMMMMMMMMM.MMM-",
-            " `:MMM:MM`  :MMMM:....::-...-MMMM:MMM:`",
-            " :MMM:MMM`  :MM:`  ``    ``  `:MMM:MMM:",
-            ".MMM.MMMM`  :MM.  -MM.  .MM-  `MMMM.MMM.",
-            ":MMM:MMMM`  :MM.  -MM-  .MM:  `MMMM-MMM:",
-            ":MMM:MMMM`  :MM.  -MM-  .MM:  `MMMM:MMM:",
-            ":MMM:MMMM`  :MM.  -MM-  .MM:  `MMMM-MMM:",
-            ".MMM.MMMM`  :MM:--:MM:--:MM:  `MMMM.MMM.",
-            " :MMM:MMM-  `-MMMMMMMMMMMM-`  -MMM-MMM:",
-            "  :MMM:MMM:`                `:MMM:MMM:",
-            "   .MMM.MMMM:--------------:MMMM.MMM.",
-            "     '-MMMM.-MMMMMMMMMMMMMMM-.MMMM-'",
-            "       '.-MMMM``--:::::--``MMMM-.'",
-            "            '-MMMMMMMMMMMMM-'",
-            "               ``-:::::-``",
+            "{w}             ...-:::::-...",
+            "{w}          .-MMMMMMMMMMMMMMM-.",
+            "{w}      .-MMMM{c}`..-:::::::-..`{w}MMMM-.",
+            "{w}    .:MMMM{c}.:MMMMMMMMMMMMMMM:.{w}MMMM:.",
+            "{w}   -MMM{c}-M---MMMMMMMMMMMMMMMMMMM.{w}MMM-",
+            "{w} `:MMM{c}:MM`  :MMMM:....::-...-MMMM:{w}MMM:`",
+            "{w} :MMM{c}:MMM`  :MM:`  ``    ``  `:MMM:{w}MMM:",
+            "{w}.MMM{c}.MMMM`  :MM.  -MM.  .MM-  `MMMM.{w}MMM.",
+            "{w}:MMM{c}:MMMM`  :MM.  -MM-  .MM:  `MMMM-{w}MMM:",
+            "{w}:MMM{c}:MMMM`  :MM.  -MM-  .MM:  `MMMM:{w}MMM:",
+            "{w}:MMM{c}:MMMM`  :MM.  -MM-  .MM:  `MMMM-{w}MMM:",
+            "{w}.MMM{c}.MMMM`  :MM:--:MM:--:MM:  `MMMM.{w}MMM.",
+            "{w} :MMM{c}:MMM-  `-MMMMMMMMMMMM-`  -MMM-{w}MMM:",
+            "{w}  :MMM{c}:MMM:`                `:MMM:{w}MMM:",
+            "{w}   .MMM{c}.MMMM:--------------:MMMM.{w}MMM.",
+            "{w}     '-MMMM{c}.-MMMMMMMMMMMMMMM-.{w}MMMM-'",
+            "{w}       '.-MMMM{c}``--:::::--``{w}MMMM-.'",
+            "{w}            '-MMMMMMMMMMMMM-'",
+            "{w}               ``-:::::-``",
         ],
-        primary_color: "\x1b[38;5;46m",
+        distro_color: "\x1b[38;5;46m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "fedora",
         raw_lines: &[
-            "             .',;::::;,'.",
-            "         .';:cccccccccccc:;,.",
-            "      .;cccccccccccccccccccccc;.",
-            "    .:cccccccccccccccccccccccccc:.",
-            "  .;ccccccccccccc;.:dddl:.;ccccccc;.",
-            " .:ccccccccccccc;OWMKOOXMWd;ccccccc:.",
-            ".:ccccccccccccc;KMMc;cc;xMMc;ccccccc:.",
-            ",cccccccccccccc;MMM.;cc;;WW:;cccccccc,",
-            ":cccccccccccccc;MMM.;cccccccccccccccc:",
-            ":ccccccc;oxOOOo;MMM0OOk.;cccccccccccc:",
-            "cccccc;0MMKxdd:;MMMkddc.;cccccccccccc;",
-            "ccccc;XM0';cccc;MMM.;cccccccccccccccc'",
-            "ccccc;MMo;ccccc;MMW.;ccccccccccccccc;",
-            "ccccc;0MNc.ccc.xMMd;ccccccccccccccc;",
-            "cccccc;dNMWXXXWM0:;cccccccccccccc:,",
-            "cccccccc;.:odl:.;cccccccccccccc:,.",
-            ":cccccccccccccccccccccccccccc:'.",
-            ".:cccccccccccccccccccccc:;,..",
-            "  '::cccccccccccccc::;,.",
+            "{w}             .',;::::;,'.",
+            "{w}         .';:cccccccccccc:;,.",
+            "{w}      .;cccccccccccccccccccccc;.",
+            "{w}    .:cccccccccccccccccccccccccc:.",
+            "{w}  .;ccccccccccccc;{c}.:dddl:.{w};ccccccc;.",
+            "{w} .:ccccccccccccc;{c}OWMKOOXMWd{w};ccccccc:.",
+            "{w}.:ccccccccccccc;{c}KMMc{w};cc;{c}xMMc{w};ccccccc:.",
+            "{w},cccccccccccccc;{c}MMM.{w};cc;{c};WW:{w};cccccccc,",
+            "{w}:cccccccccccccc;{c}MMM.{w};cccccccccccccccc:",
+            "{w}:ccccccc;{c}oxOOOo{w};{c}MMM0OOk.{w};cccccccccccc:",
+            "{w}cccccc;{c}0MMKxdd:{w};{c}MMMkddc.{w};cccccccccccc;",
+            "{w}ccccc;{c}XM0'{w};cccc;{c}MMM.{w};cccccccccccccccc'",
+            "{w}ccccc;{c}MMo{w};ccccc;{c}MMW.{w};ccccccccccccccc;",
+            "{w}ccccc;{c}0MNc.{w}ccc{c}.xMMd{w};ccccccccccccccc;",
+            "{w}cccccc;{c}dNMWXXXWM0:{w};cccccccccccccc:,",
+            "{w}cccccccc;{c}.:odl:.{w};cccccccccccccc:,.",
+            "{w}:cccccccccccccccccccccccccccc:'.",
+            "{w}.:cccccccccccccccccccccc:;,..",
+            "{w}  '::cccccccccccccc::;,.",
         ],
-        primary_color: "\x1b[38;5;33m",
+        distro_color: "\x1b[38;5;33m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "arch",
         raw_lines: &[
-            "                   -`",
-            "                  .o+`",
-            "                 `ooo/",
-            "                `+oooo:",
-            "               `+oooooo:",
-            "               -+oooooo+:",
-            "             `/:-:++oooo+:",
-            "            `/++++/+++++++:",
-            "           `/++++++++++++++:",
-            "          `/+++ooooooooooooo/`",
-            "         ./ooosssso++osssssso+`",
-            "        .oossssso-````/ossssss+`",
-            "       -osssssso.      :ssssssso.",
-            "      :osssssss/        osssso+++.",
-            "     /ossssssss/        +ssssooo/-",
-            "   `/ossssso+/:-        -:/+osssso+-",
-            "  `+sso+:-`                 `.-/+oso:",
-            " `++:.                           `-/+/",
-            " .`                                 `/",
+            "{w}                   -`",
+            "{w}                  .o+`",
+            "{w}                 `ooo/",
+            "{w}                `+oooo:",
+            "{w}               `+oooooo:",
+            "{w}               -+oooooo+:",
+            "{w}             `/:-:++oooo+:",
+            "{w}            `/++++/+++++++:",
+            "{w}           `/++++++++++++++:",
+            "{w}          `/+++o{c}oooooooo{w}oooo/`",
+            "{w}         ./{c}ooosssso++osssssso{w}+`",
+            "{w}        .{c}oossssso-````/ossssss{w}+`",
+            "{w}       -{c}osssssso.      :ssssssso{w}.",
+            "{w}      :{c}osssssss/        {w}osssso+++.",
+            "{w}     /{c}ossssssss/        {w}+ssssooo/-",
+            "{w}   `/{c}ossssso+/:-        {w}-:/+osssso+-",
+            "{w}  `+sso+:-`                 `.-/+oso:",
+            "{w} `++:.                           `-/+/",
+            "{w} .`                                 `/",
         ],
-        primary_color: "\x1b[38;5;67m",
+        distro_color: "\x1b[38;5;39m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "rhel",
         raw_lines: &[
-            "             `.-..........`",
-            "            `////////::.`-/.",
-            "            -: ....-////////.",
-            "            //:-::///////////`",
-            "     `--::: `-://////////////:",
-            "     //////-    ``.-:///////// .`",
-            "     `://////:-.`    :///////::///:`",
-            "       .-/////////:---/////////////:",
-            "          .-://////////////////////.",
-            "         yMN+`.-::///////////////-`",
-            "      .-`:NMMNMs`  `..-------..`",
-            "       MN+/mMMMMMhoooyysshsss",
-            "MMM    MMMMMMMMMMMMMMyyddMMM+",
-            " MMMM   MMMMMMMMMMMMMNdyNMMh`     hyhMMM",
-            "  MMMMMMMMMMMMMMMMyoNNNMMM+.   MMMMMMMM",
-            "   MMNMMMNNMMMMMNM+ mhsMNyyyyMNMMMMsMM",
+            "{w}             `.-..........`",
+            "{w}            `////////::.`-/.",
+            "{w}            -: ....-////////.",
+            "{w}            //:-::///////////`",
+            "{w}     `--::: `-://////////////:",
+            "{w}     //////-    ``.-:///////// .`",
+            "{w}     `://////:-.`    :///////::///:`",
+            "{w}       .-/////////:---/////////////:",
+            "{w}          .-://////////////////////.",
+            "{c}         yMN+`.-{w}::///////////////-`",
+            "{c}      .-`:NMMNMs`  {w}`..-------..`",
+            "{c}       MN+/mMMMMMhoooyysshsss",
+            "{c}MMM    MMMMMMMMMMMMMMyyddMMM+",
+            "{c} MMMM   MMMMMMMMMMMMMNdyNMMh`     {w}hyhMMM",
+            "{c}  MMMMMMMMMMMMMMMMyoNNNMMM+.   {w}MMMMMMMM",
+            "{c}   MMNMMMNNMMMMMNM+ mhsMNyyyyMNMMMMsMM",
         ],
-        primary_color: "\x1b[38;5;196m",
+        distro_color: "\x1b[38;5;196m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "rocky",
         raw_lines: &[
-            "    `-/+++++++++/-.`",
-            " `-+++++++++++++++++-`",
-            ".+++++++++++++++++++++.",
-            "-+++++++++++++++++++++++.",
-            "+++++++++++++++/-/+++++++",
-            "+++++++++++++/.   ./+++++",
-            "+++++++++++:.       ./+++",
-            "+++++++++:`   `:/:`   .:/",
-            "-++++++:`   .:+++++:`",
-            " .+++-`   ./+++++++++:`",
-            "  `-`   ./+++++++++++-",
-            "       -+++++++++:-.`",
+            "{w}    `-/+++++++++/-.`",
+            "{w} `-+++++++++++++++++-`",
+            "{w}.+++++++++++++++++++++.",
+            "{w}-+++++++++++++++++++++++.",
+            "{c}+++++++++++++++{w}/-/{c}+++++++",
+            "{c}+++++++++++++/.   {w}./+++++",
+            "{c}+++++++++++:.       {w}./+++",
+            "{c}+++++++++:`   `:/:`   {w}.:/",
+            "{c}-++++++:`   .:+++++:`",
+            "{c} .+++-`   ./+++++++++:`",
+            "{c}  `-`   ./+++++++++++-",
+            "{c}       -+++++++++:-.`",
         ],
-        primary_color: "\x1b[38;5;35m",
+        distro_color: "\x1b[38;5;35m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "almalinux",
         raw_lines: &[
-            "         'c:.",
-            "        lkkkx, ..       ..   ,cc,",
-            "        okkkk:ckkx'  .lxkkx.okkkkd",
-            "        .:llcokkx'  :kkkxkko:xkkd,",
-            "      .xkkkkdood:  ;kx,  .lkxlll;",
-            "       xkkx.       xk'     xkkkkk:",
-            "       'xkx.       xd      .....,.",
-            "      .. :xkl'     :c      ..''..",
-            "    .dkx'  .:ldl:'. '  ':lollldkkxo;",
-            "  .''lkkko'                     ckkkx.",
-            "'xkkkd:kkd.       ..  ;'        :kkxo.",
-            ",xkkkd;kk'      ,d;    ld.   ':dkd::cc,",
-            " .,,.;xkko'.';lxo.      dx,  :kkk'xkkkkc",
-            "     'dkkkkkxo:.        ;kx  .kkk:;xkkd.",
-            "       .....   .;dk:.   lkk.  :;,",
-            "             :kkkkkkkdoxkkx",
-            "              ,c,,;;;:xkkd.",
-            "                ;kkkkl...",
-            "                ;kkkkl",
-            "                 ,od;",
+            "{w}         'c:.",
+            "{w}        lkkkx, ..       {c}..   ,cc,",
+            "{w}        okkkk:ckkx'  {c}.lxkkx.okkkkd",
+            "{w}        .:llcokkx'  {c}:kkkxkko:xkkd,",
+            "{w}      .xkkkkdood:  {c};kx,  .lkxlll;",
+            "{w}       xkkx.       {c}xk'     xkkkkk:",
+            "{w}       'xkx.       {c}xd      .....,.",
+            "{c}      .. {w}:xkl'     {c}:c      ..''..",
+            "{c}    .dkx'  {w}.:ldl:'. {c}'  ':lollldkkxo;",
+            "{c}  .''lkkko'                     ckkkx.",
+            "{c}'xkkkd:kkd.       ..  {w};'        {c}:kkxo.",
+            "{c},xkkkd;kk'      ,d;    {w}ld.   {c}':dkd::cc,",
+            "{c} .,,.;xkko'.';lxo.      {w}dx,  {c}:kkk'xkkkkc",
+            "{c}     'dkkkkkxo:.        {w};kx  {c}.kkk:;xkkd.",
+            "{c}       .....   {w}.;dk:.   lkk.  {c}:;,",
+            "{w}             :kkkkkkkdoxkkx",
+            "{w}              ,c,,;;;:xkkd.",
+            "{w}                ;kkkkl...",
+            "{w}                ;kkkkl",
+            "{w}                 ,od;",
         ],
-        primary_color: "\x1b[38;5;39m",
+        distro_color: "\x1b[38;5;39m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "endeavouros",
         raw_lines: &[
-            "                     ./o.",
-            "                   ./sssso-",
-            "                 `:osssssss+-",
-            "               `:+sssssssssso/.",
-            "             `-/ossssssssssssso/.",
-            "           `-/+sssssssssssssssso+:`",
-            "         `-:/+sssssssssssssssssso+/.",
-            "       `.://osssssssssssssssssssso++-",
-            "      .://+ssssssssssssssssssssssso++:",
-            "    .:///ossssssssssssssssssssssssso++:",
-            "  `:////ssssssssssssssssssssssssssso+++.",
-            "`-////+ssssssssssssssssssssssssssso++++-",
-            " `..-+oosssssssssssssssssssssssso+++++/`",
-            "   ./++++++++++++++++++++++++++++++/:.",
-            "  `:::::::::::::::::::::::::------``",
+            "{w}                     ./{c}o{w}.",
+            "{w}                   ./{c}sssso{w}-",
+            "{w}                 `:{c}osssssss+{w}-",
+            "{w}               `:+{c}sssssssssso{w}/.",
+            "{w}             `-/o{c}ssssssssssssso{w}/.",
+            "{w}           `-/+{c}sssssssssssssssso{w}+:`",
+            "{w}         `-:/+{c}sssssssssssssssssso{w}+/.",
+            "{w}       `.://o{c}sssssssssssssssssssso{w}++-",
+            "{w}      .://+{c}ssssssssssssssssssssssso{w}++:",
+            "{w}    .:///o{c}ssssssssssssssssssssssssso{w}++:",
+            "{w}  `:////{c}ssssssssssssssssssssssssssso{w}+++.",
+            "{w}`-////+{c}ssssssssssssssssssssssssssso{w}++++-",
+            "{w} `..-+{c}oosssssssssssssssssssssssso{w}+++++/`",
+            "{w}   ./++++++++++++++++++++++++++++++/:.",
+            "{w}  `:::::::::::::::::::::::::------``",
         ],
-        primary_color: "\x1b[38;5;127m",
+        distro_color: "\x1b[38;5;127m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "manjaro",
         raw_lines: &[
-            "██████████████████  ████████",
-            "██████████████████  ████████",
-            "██████████████████  ████████",
-            "██████████████████  ████████",
-            "████████            ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
-            "████████  ████████  ████████",
+            "{c}██████████████████  {w}████████",
+            "{c}██████████████████  {w}████████",
+            "{c}██████████████████  {w}████████",
+            "{c}██████████████████  {w}████████",
+            "{c}████████            {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
+            "{c}████████  {w}████████  {w}████████",
         ],
-        primary_color: "\x1b[38;5;34m",
+        distro_color: "\x1b[38;5;34m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "generic",
         raw_lines: &[
-            "        #####",
-            "       #######",
-            "       ##O#O##",
-            "       #######",
-            "     ###########",
-            "    #############",
-            "   ###############",
-            "   ################",
-            "  #################",
-            "#####################",
-            "#####################",
-            "  #################",
+            "{w}        #####",
+            "{w}       #######",
+            "{w}       ##{c}O{w}#{c}O{w}##",
+            "{w}       #{w}#####{w}#",
+            "{w}     ##{c}##{w}###{c}##{w}##",
+            "{w}    #{c}#######{w}####{c}#",
+            "{w}   #{c}#############{w}#",
+            "{w}  #{c}###############{w}#",
+            "{w} #{c}#################{w}#",
+            "{w} #{c}#################{w}#",
+            "{w} #{c}#################{w}#",
+            "{w} #{c}#################{w}#",
+            "{w}  #{c}###############{w}#",
+            "{w}   {c}#{w}#{c}###########{w}#{c}#",
+            "{c}    ####{w}#####{c}####",
+            "{c}    ###       ###",
         ],
-        primary_color: "\x1b[38;5;220m",
+        distro_color: "\x1b[38;5;220m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "opensuse",
         raw_lines: &[
-            "           .;ldkO0000Okdl;.",
-            "       .;d00xl:^''''''^:ok00d;.",
-            "     .d00l'                'o00d.",
-            "   .d0Kd'  Okxol:;,.          :O0d.",
-            "  .OKKKK0kOKKKKKKKKKKOxo:,      lKO.",
-            " ,0KKKKKKKKKKKKKKKK0P^,,,^dx:    ;00,",
-            ".OKKKKKKKKKKKKKKKKk'.oOPPb.'0k.   cKO.",
-            ":KKKKKKKKKKKKKKKKK: kKx..dd lKd   'OK:",
-            "dKKKKKKKKKKKOx0KKKd ^0KKKO' kKKc   dKd",
-            "dKKKKKKKKKKKK;.;oOKx,..^..;kKKK0.  dKd",
-            ":KKKKKKKKKKKK0o;...^cdxxOK0O/^^'  .0K:",
-            " kKKKKKKKKKKKKKKK0x;,,......,;od  lKk",
-            " '0KKKKKKKKKKKKKKKKKKKKK00KKOo^  c00'",
-            "  'kKKKOxddxkOO00000Okxoc;''   .dKk'",
-            "    l0Ko.                    .c00l'",
-            "     'l0Kk:.              .;xK0l'",
-            "        'lkK0xl:;,,,,;:ldO0kl'",
-            "            '^:ldxkkkkxdl:^'",
+            "{w}           .;ldkO0000Okdl;.",
+            "{w}         .;d00xl:^''''''^:ok00d;.",
+            "{w}       .d00l'                'o00d.",
+            "{w}     .d0Kd'{c}  Okxol:;,.          {w}:O0d.",
+            "{w}    .d{c}0Kx.  oOO00kkkxl:.         {w}:EKx.",
+            "{w}   .o{c}0Kx.  l00000000000kx:.       {w}.K0o.",
+            "{w}   :{c}0Kx.  l00000000000000000kx;     {w}K0:",
+            "{w}  .d{c}0Kx.  l000000000000000000000d.  {w}.EKx.",
+            "{w}  .d{c}0Kx.  o0000000000000000000000o  {w}.EKx.",
+            "{w}   :{c}0Kx.  l000000000000000000000o   {w}K0:",
+            "{w}   .o{c}0Kx.  l000000000000000000kx;  {w}.K0o.",
+            "{w}    .d{c}0Kx.  oOO00kkkxl:.         {w}:EKx.",
+            "{w}     .d0Kd'{c}  Okxol:;,.          {w}:O0d.",
+            "{w}       .d00l'                'o00d.",
+            "{w}         .;d00xl:^''''''^:ok00d;.",
+            "{w}           .;ldkO0000Okdl;.",
         ],
-        primary_color: "\x1b[38;5;71m",
+        distro_color: "\x1b[38;5;71m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "alpine",
         raw_lines: &[
-            "       .hddddddddddddddddddddddh.",
-            "      :dddddddddddddddddddddddddd:",
-            "     /dddddddddddddddddddddddddddd/",
-            "    +dddddddddddddddddddddddddddddd+",
-            "  `sdddddddddddddddddddddddddddddddds`",
-            " `ydddddddddddd++hdddddddddddddddddddy`",
-            ".hddddddddddd+`  `+ddddh:-sdddddddddddh.",
-            "hdddddddddd+`      `+y:    .sddddddddddh",
-            "ddddddddh+`   `//`   `.`     -sddddddddd",
-            "ddddddh+`   `/hddh/`   `:s-    -sddddddd",
-            "ddddh+`   `/+/dddddh/`   `+s-    -sddddd",
-            "ddd+`   `/o` :dddddddh/`   `oy-    .yddd",
-            "hdddyo+ohddyosdddddddddho+oydddy++ohdddh",
-            ".hddddddddddddddddddddddddddddddddddddh.",
-            " `yddddddddddddddddddddddddddddddddddy`",
-            "  `sdddddddddddddddddddddddddddddddds`",
-            "    +dddddddddddddddddddddddddddddd+",
-            "     /dddddddddddddddddddddddddddd/",
-            "      :dddddddddddddddddddddddddd:",
-            "       .hddddddddddddddddddddddh.",
+            "{w}       .hddddddddddddddddddddddh.",
+            "{w}      :dddddddddddddddddddddddddd:",
+            "{w}     /dddddddddddddddddddddddddddd/",
+            "{w}    +dddddddddddddddddddddddddddddd+",
+            "{w}  `sdddddddddddddddddddddddddddddddds`",
+            "{w} `yddddddddddddddddddddddddddddddddddy`",
+            "{w}.hddddddddddddddddddddddddddddddddddddh.",
+            "{w}+dddddddddddddddddddddddddddddddddddddd+",
+            "{w} `yddddddddddddddddddddddddddddddddddy`",
+            "{w}  `sdddddddddddddddddddddddddddddddds`",
+            "{w}    +dddddddddddddddddddddddddddddd+",
+            "{w}     /dddddddddddddddddddddddddddd/",
+            "{w}      :dddddddddddddddddddddddddd:",
+            "{w}       .hddddddddddddddddddddddh.",
         ],
-        primary_color: "\x1b[38;5;32m",
+        distro_color: "\x1b[38;5;32m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "gentoo",
         raw_lines: &[
-            "         -/oyddmdhs+:.",
-            "     -odNMMMMMMMMNNmhy+-`",
-            "   -yNMMMMMMMMMMMNNNmmdhy+-",
-            " `omMMMMMMMMMMMMNmdmmmmddhhy/`",
-            " omMMMMMMMMMMMNhhyyyohmdddhhhdo`",
-            ".ydMMMMMMMMMMdhs++so/smdddhhhhdm+`",
-            " oyhdmNMMMMMMMNdyooydmddddhhhhyhNd.",
-            "  :oyhhdNNMMMMMMMNNNmmdddhhhhhyymMh",
-            "    .:+sydNMMMMMNNNmmmdddhhhhhhmMmy",
-            "       /mMMMMMMNNNmmmdddhhhhhmMNhs:",
-            "    `oNMMMMMMMNNNmmmddddhhdmMNhs+`",
-            "  `sNMMMMMMMMNNNmmmdddddmNMmhs/.",
-            " /NMMMMMMMMNNNNmmmdddmNMNdso:`",
-            "+MMMMMMMNNNNNmmmmdmNMNdso/-",
-            "yMMNNNNNNNmmmmmNNMmhs+/-`",
-            "/hMMNNNNNNNNMNdhs++/-`",
-            "`/ohdmmddhys+++/:.`",
-            "  `-//////:--.",
+            "{w}         -/oyddmdhs+:.",
+            "{w}       -o{c}dNMMMMMMMMNNmhy+{w}-`",
+            "{w}     -y{c}NMMMMMMMMMMMNNNmmdhy{w}+-",
+            "{w}   `o{c}mMMMMMMMMMMMMNmdmmmmddhhy{w}/`",
+            "{w}   om{c}MMMMMMMMMMMN{w}hhyyyo{c}hmdddhhhdN{w}`",
+            "{w}  .yd{c}MMMMMMMMMMMM{w}hhhhhyo{c}yhhdddddhny{w}",
+            "{w}  `sh{c}MMMMMMMMMMMM{w}hhhhhhhy{c}yyyyyhddddy{w}",
+            "{w}   `d{c}NMMMMMMMMMMM{w}hhhhhhhy{c}yyyyyyddddh{w}`",
+            "{w}    .d{c}NMMMMMMMMMM{w}yhhhhhhy{c}yyyyyhddddh{w}-",
+            "{w}      -d{c}NMMMMMMMM{w}hhhhhyo{c}yyyyydddddy{w}+",
+            "{w}       `+h{c}NMMMMMM{w}hyso/{c}yyyyydddddy{w}+",
+            "{w}          `:+syd{w}hyyyyyhddddds{w}+",
+            "{w}              `-:+syhhhysoo+.",
         ],
-        primary_color: "\x1b[38;5;141m",
+        distro_color: "\x1b[38;5;141m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "void",
         raw_lines: &[
-            "                __.;=====;.__",
-            "            _.=+==++=++=+=+===;.",
-            "             -=+++=+===+=+=+++++=_",
-            "        .     -=:``     `--==+=++==.",
-            "       _vi,    `            --+=++++:",
-            "      .uvnvi.       _._       -==+==+.",
-            "     .vvnvnI`    .;==|==;.     :|=||=|.",
-            "+QmQQmpvvnv; _yYsyQQWUUQQQm #QmQ#:QQQWUV$QQm.",
-            " -QQWQWpvvowZ?.wQQQE==<QWWQ/QWQW.QQWW(: jQWQE",
-            "  -$QQQQmmU'  jQQQ@+=<QWQQ)mQQQ.mQQQC+;jWQQ@'",
-            "   -$WQ8YnI:   QWQQwgQQWV`mWQQ.jQWQQgyyWW@!",
-            "     -1vvnvv.     `~+++`        ++|+++",
-            "      +vnvnnv,                 `-|===",
-            "       +vnvnvns.           .      :=-",
-            "        -Invnvvnsi..___..=sv=.     `",
-            "          +Invnvnvnnnnnnnnvvnn;.",
-            "            ~|Invnvnvvnvvvnnv}+`",
-            "               -~|{*l}*|~",
+            "{w}                __.;=====;.__",
+            "{w}            _.=+==++=++=+=+===;.",
+            "{w}             -=+++=+===+=+=+++++=_",
+            "{w}        .     -=:``     `--==+=++==.",
+            "{w}       :@=._                `-====+=",
+            "{w}      ;@@@@@@={c}         .        {w}=*+",
+            "{w}    .========{c}         :@@@=._     {w}=",
+            "{w}   =++====++={c}        .@@@@@@@@=    {w}:",
+            "{w}  :+++=++++=={c}        +@@@@@@@@@.   {w}.",
+            "{w}  *+++=++++++{c}       .@@@@@@@@@@    {w}:",
+            "{w}  :+++=+++++={c}       .@@@@@@@@@+    {w}.",
+            "{w}   =++====++={c}        @@@@@@@@@     {w}:",
+            "{w}    .========{c}        :@@@@@@@=    {w}=",
+            "{w}      ;@@@@@@={c}         `*@@*'     {w}=*+",
+            "{w}       :@=._                `-====+=",
+            "{w}        .     -=:``     `--==+=++==.",
+            "{w}             -=+++=+===+=+=+++++=_",
+            "{w}            _.=+==++=++=+=+===;.",
+            "{w}                __.;=====;.__",
         ],
-        primary_color: "\x1b[38;5;35m",
+        distro_color: "\x1b[38;5;35m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "pop",
         raw_lines: &[
-            "             `.-:::-.`",
-            "         -+ydmNNNNNNNmdy+-",
-            "      .+dNmdhs+//////+shdmdo.",
-            "    .smmy+-`             ./sdy:",
-            "  `omdo.    `.-/+osssso+/-` `+dy.",
-            " `yms.   `:shmNmdhsoo++osyyo-``oh.",
-            " hm/   .odNmds/.`    ``.....:::-+s",
-            "/m:  `+dNmy:`   `./oyhhhhyyooo++so",
-            "ys  `yNmy-    .+hmmho:-.`     ```",
-            "s:  yNm+`   .smNd+.",
-            "`` /Nm:    +dNd+`",
-            "   yN+   `smNy.",
-            "   dm    oNNy`",
-            "   hy   -mNm.",
-            "   +y   oNNo",
-            "   `y`  sNN:",
-            "    `:  +NN:",
-            "     `  .mNo",
-            "         /mm`",
-            "          /my`",
-            "           .sy`",
-            "             .+:",
-            "                `",
+            "{w}             `.-:::-.`",
+            "{w}           -+ydmNNNNNNNmdy+-",
+            "{w}        .+dNmdhs+//////+shdmdo.",
+            "{w}      .smmy+-`             ./sdy:",
+            "{w}     +mds-`                   -sdy`",
+            "{w}    ymd-   {c}:++o-      -o++:    {w}-dmy",
+            "{w}   hmh`    {c}:ydN+      +Ndy:     {w}`hmh",
+            "{w}  -mm+     {c}:ydN+      +Ndy:      {w}+mm-",
+            "{w}  +mm.     {c}:ydN+      +Ndy:      {w}.mm+",
+            "{w}  -mm+     {c}:ydN+      +Ndy:      {w}+mm-",
+            "{w}   hmh`    {c}:ydN+      +Ndy:     {w}`hmh",
+            "{w}    ymd-   {c}:ydN+      +Ndy:    {w}-dmy",
+            "{w}     +mds- {c}:ydN+      +Ndy:  {w}-sdy`",
+            "{w}      .smmy{c}:ydN+      +Ndy:{w}./sdy:",
+            "{w}        .+dN{c}shs+//////+shd{w}mdo.",
+            "{w}           -+ydmNNNNNNNmdy+-",
+            "{w}             `.-:::-.`",
         ],
-        primary_color: "\x1b[38;5;37m",
+        distro_color: "\x1b[38;5;37m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "nixos",
         raw_lines: &[
-            "          ▗▄▄▄       ▗▄▄▄▄    ▄▄▄▖",
-            "          ▜███▙       ▜███▙  ▟███▛",
-            "           ▜███▙       ▜███▙▟███▛",
-            "            ▜███▙       ▜██████▛",
-            "     ▟█████████████████▙ ▜████▛     ▟▙",
-            "    ▟███████████████████▙ ▜███▙    ▟██▙",
-            "           ▄▄▄▄▖           ▜███▙  ▟███▛",
-            "          ▟███▛             ▜██▛ ▟███▛",
-            "         ▟███▛               ▜▛ ▟███▛",
-            "▟███████████▛                  ▟██████████▙",
-            "▜██████████▛                  ▟███████████▛",
-            "      ▟███▛ ▟▙               ▟███▛",
-            "     ▟███▛ ▟██▙             ▟███▛",
-            "    ▟███▛  ▜███▙           ▝▀▀▀▀",
-            "    ▜██▛    ▜███▙ ▜██████████████████▛",
-            "     ▜▛     ▟████▙ ▜████████████████▛",
-            "           ▟██████▙       ▜███▙",
-            "          ▟███▛▜███▙       ▜███▙",
-            "         ▟███▛  ▜███▙       ▜███▙",
-            "         ▝▀▀▀    ▀▀▀▀▘       ▀▀▀▘",
+            "{w}          ▗▄▄▄       {c}▗▄▄▄▄    ▄▄▄▖",
+            "{w}          ▜███▙       {c}▜███▙  ▟███▛",
+            "{w}           ▜███▙       {c}▜███▙▟███▛",
+            "{w}            ▜███▙       {c}▜██████▛",
+            "{w}     ▟█▙     ▜███▙       {c}▜████▛",
+            "{w}    ▟███▙     ▜███▙     {c}▟██████▙",
+            "{w}   ▟█████▙     ▜███▙   {c}▟███▛▜███▙",
+            "{w}  ▟███▛▜███▙    ▜███▙ {c}▟███▛  ▜███▙",
+            "{w} ▟███▛  ▜███▙    ▜███{c}▟███▛    ▜███▙",
+            "{w}▝▀▀▀▀    ▀▀▀▀▘    ▀▀▀▀▀▀▀      ▀▀▀▀▘",
+            "{c}     ▟█████████████████▙ {w}▜████▛     {c}▟▙",
+            "{c}    ▟███████████████████▙ {w}▜███▙    {c}▟██▙",
+            "{c}           ▄▄▄▄▖           ▜███▙  {w}▟███▛",
+            "{c}          ▟███▛             ▜██▛ {w}▟███▛",
+            "{c}         ▟███▛               ▜▛ {w}▟███▛",
+            "{c}▟███████████▛                  {w}▟██████████▙",
+            "{c}▜██████████▛                  {w}▟███████████▛",
+            "{c}      ▟███▛ {w}▟▙               {c}▟███▛",
+            "{c}     ▟███▛ {w}▟██▙             {c}▟███▛",
+            "{c}    ▟███▛  {w}▜███▙           {c}▝▀▀▀▀",
+            "{c}    ▜██▛    {w}▜███▙ {c}▜██████████████████▛",
+            "{c}     ▜▛     {w}▟████▙ {c}▜████████████████▛",
+            "{w}           ▟██████▙       {c}▜███▙",
+            "{w}          ▟███▛▜███▙       {c}▜███▙",
+            "{w}         ▟███▛  ▜███▙       {c}▜███▙",
+            "{w}         ▝▀▀▀    ▀▀▀▀▘       {c}▀▀▀▘",
         ],
-        primary_color: "\x1b[38;5;75m",
+        distro_color: "\x1b[38;5;75m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "kali",
         raw_lines: &[
-            "..............",
-            "            ..,;:ccc,.",
-            "          ......''';lxO.",
-            ".....''''..........,:ld;",
-            "           .';;;:::;,,.x,",
-            "      ..'''.            0Xxoc:,.  ...",
-            "  ....                ,ONkc;,;cokOdc',.",
-            " .                   OMo           ':ddo.",
-            "                    dMc               :OO;",
-            "                    0M.                 .:o.",
-            "                    ;Wd",
-            "                     ;XO,",
-            "                       ,d0Odlc;,..",
-            "                           ..',;:cdOOd::,.",
-            "                                    .:d;.':;.",
-            "                                       'd,  .'",
-            "                                         ;l   ..",
-            "                                          .o",
-            "                                            c",
-            "                                            .'",
-            "                                             .",
+            "{w}..............",
+            "{w}            ..,;:ccc,.",
+            "{w}          ......''';lxO.",
+            "{w}.....''''..........,:ld;",
+            "{w}           .';;;:::;,,.x,",
+            "{w}      ..'''.            {c}0Xxoc:,.  ...{w}",
+            "{w}  ....                {c},ONkc;,;cokOdc',.{w}",
+            "{w} .                   {c}OMo           ':ddo.{w}",
+            "{w}                    {c}dMc               :OO;{w}",
+            "{w}                    {c}0M.                 .:o.{w}",
+            "{w}                    {c};Wd{w}",
+            "{w}                     {c};XO,{w}",
+            "{w}                       {c},d0Odlc;,..{w}",
+            "{w}                           {c}..',;:cdOOd::,.{w}",
+            "{w}                                    {c}.:d;.':;.{w}",
+            "{w}                                       {c}'d,  .'{w}",
+            "{w}                                         {c};l   ..{w}",
+            "{w}                                          {c}.o{w}",
+            "{w}                                            {c}c{w}",
+            "{w}                                            {c}.'{w}",
+            "{w}                                             {c}.{w}",
         ],
-        primary_color: "\x1b[38;5;33m",
+        distro_color: "\x1b[38;5;33m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "freebsd",
         raw_lines: &[
-            "   ```                        `",
-            "  ` `.....---.......--.```   -/",
-            "  +o   .--`         /y:`      +.",
-            "   yo`:.            :o      `+-",
-            "    y/               -/`   -o/",
-            "   .-                  ::/sy+:.",
-            "   /                     `--  /",
-            "  `:                          :`",
-            "  `:                          :`",
-            "   /                          /",
-            "   .-                        -.",
-            "    --                      -.",
-            "     `:`                  `:`",
-            "       .--             `--.",
-            "          .---.....----.",
+            "{w}   ```                        {c}`",
+            "{w}  ` `.....---...{c}....--.```   -/{w}",
+            "{w}  +o   .--`         {c}/y:`      +.{w}",
+            "{w}   yo`:.            {c}:o      `+-{w}",
+            "{w}    y/               {c}-/`   -o/{w}",
+            "{w}   .-                  {c}::/sy+:.{w}",
+            "{w}   /                     {c}`--  /{w}",
+            "{w}  `:                          {c}:`{w}",
+            "{w}  `:                          {c}:`{w}",
+            "{w}   /                          {c}/{w}",
+            "{w}   .-                        {c}-.{w}",
+            "{w}    --                      {c}-.{w}",
+            "{w}     `:`                  {c}`:`{w}",
+            "{w}       .--             `--.",
+            "{w}          .---.....----.",
         ],
-        primary_color: "\x1b[38;5;196m",
+        distro_color: "\x1b[38;5;196m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "slackware",
         raw_lines: &[
-            "                  :::::::",
-            "            :::::::::::::::::::",
-            "         :::::::::::::::::::::::::",
-            "       ::::::::cllcccccllllllll::::::",
-            "    :::::::::lc               dc:::::::",
-            "   ::::::::cl   clllccllll    oc:::::::::",
-            "  :::::::::o   lc::::::::co   oc::::::::::",
-            " ::::::::::o    cccclc:::::clcc::::::::::::",
-            " :::::::::::lc        cclccclc:::::::::::::",
-            "::::::::::::::lcclcc          lc::::::::::::",
-            "::::::::::cclcc:::::lccclc     oc:::::::::::",
-            "::::::::::o    l::::::::::l    lc:::::::::::",
-            " :::::cll:o     clcllcccll     o:::::::::::",
-            " :::::occ:o                  clc:::::::::::",
-            "  ::::ocl:ccslclccclclccclclc:::::::::::::",
-            "   :::oclcccccccccccccllllllllllllll:::::",
-            "    ::lcc1lcccccccccccccccccccccccco::::",
-            "      ::::::::::::::::::::::::::::::::",
-            "        ::::::::::::::::::::::::::::",
-            "           ::::::::::::::::::::::",
-            "                ::::::::::::",
+            "{w}                  ::::::: ",
+            "{w}            ::::::::::::::::::: ",
+            "{w}         ::::::::::::::::::::::::: ",
+            "{w}       ::::::::{c}cllcccccllllllll{w}:::::: ",
+            "{w}    :::::::::{c}lc               dc{w}::::::: ",
+            "{w}   ::::::::{c}cl   clllccllll    oc{w}::::::::: ",
+            "{w}  :::::::::{c}o   lc{w}::::::::{c}co   oc{w}:::::::::: ",
+            "{w} ::::::::::{c}o    cccclc{w}:::::{c}clcc{w}:::::::::::: ",
+            "{w} :::::::::::{c}lc        cclccclc{w}::::::::::::: ",
+            "{w}::::::::::::::{c}lcclcc          lc{w}:::::::::::: ",
+            "{w}::::::::::{c}cclcc{w}:::::{c}lccclc     oc{w}::::::::::: ",
+            "{w}::::::::::{c}o    l{w}::::::::::{c}l    lc{w}::::::::::: ",
+            "{w} :::::{c}cll{w}:{c}o     clcllcccll     o{w}::::::::::: ",
+            "{w} :::::{c}occ{w}:{c}o                  clc{w}::::::::::: ",
+            "{w}  ::::{c}ocl{w}:{c}ccslclccclclccclclc{w}::::::::::::: ",
+            "{w}   :::{c}oclcccccccccccccllllllllllllll{w}::::: ",
+            "{w}    ::{c}lcc1lcccccccccccccccccccccccco{w}:::: ",
+            "{w}      :::::::::::::::::::::::::::::::: ",
+            "{w}        :::::::::::::::::::::::::::: ",
+            "{w}           :::::::::::::::::::::: ",
+            "{w}                :::::::::::: ",
         ],
-        primary_color: "\x1b[38;5;61m",
+        distro_color: "\x1b[38;5;61m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "artix",
         raw_lines: &[
-            "                   '",
-            "                  'o'",
-            "                 'ooo'",
-            "                'ooxoo'",
-            "               'ooxxxoo'",
-            "              'oookkxxoo'",
-            "             'oiioxkkxxoo'",
-            "            ':;:iiiioxxxoo'",
-            "               `'.;::ioxxoo'",
-            "          '-.      `':;jiooo'",
-            "         'oooio-..     `'i:io'",
-            "        'ooooxxxxoio:,.   `'-;'",
-            "       'ooooxxxxxkkxoooIi:-.  `'",
-            "      'ooooxxxxxkkkkxoiiiiiji'",
-            "     'ooooxxxxxkxxoiiii:'`     .i'",
-            "    'ooooxxxxxoi:::'`       .;ioxo'",
-            "   'ooooxooi::'`         .:iiixkxxo'",
-            "  'ooooi:'`                `'';ioxxo'",
-            " 'i:'`                          '':io'",
-            "'`                                   `'",
+            "{w}                   '",
+            "{w}                  'o'",
+            "{w}                 'ooo'",
+            "{w}                'ooxoo'",
+            "{w}               'ooxxxoo'",
+            "{w}              'oookkxxoo'",
+            "{w}             'oiioxkkxxoo'",
+            "{w}            ':;:iiiioxxxoo'",
+            "{w}               `'.;::ioxxoo'",
+            "{w}          '-.      `':;j{c}iooo{w}'",
+            "{w}         'oooio-..     `'{c}i:io{w}'",
+            "{w}        'ooooxxxxoio:,.   `'{c}-;'{w}",
+            "{w}       'ooooxxxxxkkxoooIi:-.  `'{c}",
+            "{w}      'ooooxxxxxkkkkxoiiiiiji'{c}",
+            "{w}     'ooooxxxxxkxxoiiii:'`     .{c}i'",
+            "{w}    'ooooxxxxxoi:::'`       .;i{c}oxo'",
+            "{w}   'ooooxooi::'`         .:iii{c}xkxxo'",
+            "{w}  'ooooi:'`                `'';{c}ioxxo'",
+            "{w} 'i:'`                          ''{c}:io'",
+            "{w}'`                                   `'",
         ],
-        primary_color: "\x1b[38;5;39m",
+        distro_color: "\x1b[38;5;39m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "zorin",
         raw_lines: &[
-            "        `osssssssssssssssssssso`",
-            "       .osssssssssssssssssssssso.",
-            "      .+oooooooooooooooooooooooo+.",
+            "{w}        `osssssssssssssssssssso`",
+            "{w}       .osssssssssssssssssssssso.",
+            "{w}      .+oooooooooooooooooooooooo+.",
             "",
             "",
-            "  `::::::::::::::::::::::.         .:`",
-            " `+ssssssssssssssssss+:.`     `.:+ssso`",
-            ".ossssssssssssssso/.       `-+ossssssso.",
-            "ssssssssssssso/-`      `-/osssssssssssss",
-            ".ossssssso/-`      .-/ossssssssssssssso.",
-            " `+sss+:.      `.:+ssssssssssssssssss+`",
-            "  `:.         .::::::::::::::::::::::`",
+            "{c}  `::::::::::::::::::::::.         .:`",
+            "{c} `+ssssssssssssssssss+:.`     `.:+ssso`",
+            "{c}.ossssssssssssssso/.       `-+ossssssso.",
+            "{c}ssssssssssssso/-`      `-/osssssssssssss",
+            "{c}.ossssssso/-`      .-/ossssssssssssssso.",
+            "{c} `+sss+:.      `.:+ssssssssssssssssss+`",
+            "{c}  `:.         .::::::::::::::::::::::`",
             "",
             "",
-            "      .+oooooooooooooooooooooooo+.",
-            "       -osssssssssssssssssssssso-",
-            "        `osssssssssssssssssssso`",
+            "{w}      .+oooooooooooooooooooooooo+.",
+            "{w}       -osssssssssssssssssssssso-",
+            "{w}        `osssssssssssssssssssso`",
         ],
-        primary_color: "\x1b[38;5;39m",
+        distro_color: "\x1b[38;5;39m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "windows11",
         raw_lines: &[
-            "                                ..,",
-            "                    ....,,:;+ccllll",
-            "      ...,,+:;  cllllllllllllllllll",
-            ",cclllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
+            "{w}                                ..,",
+            "{w}                    ....,,:;+ccllll",
+            "{w}      ...,,+:;  cllllllllllllllllll",
+            "{c},cclllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
             "",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "`'ccllllllllll  lllllllllllllllllll",
-            "       `' \\*::  :ccllllllllllllllll",
-            "                       ````''*::cll",
-            "                                 ``",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}`'ccllllllllll  {c}lllllllllllllllllll",
+            "{w}       `' \\*::  {c}:ccllllllllllllllll",
+            "{w}                       ````''*::cll",
+            "{w}                                 ``",
         ],
-        primary_color: "\x1b[38;5;39m",
+        distro_color: "\x1b[38;5;39m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "windows10",
         raw_lines: &[
-            "                                ..,",
-            "                    ....,,:;+ccllll",
-            "      ...,,+:;  cllllllllllllllllll",
-            ",cclllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
+            "{w}                                ..,",
+            "{w}                    ....,,:;+ccllll",
+            "{w}      ...,,+:;  cllllllllllllllllll",
+            "{c},cclllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
+            "{c}llllllllllllll  {w}lllllllllllllllllll",
             "",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "llllllllllllll  lllllllllllllllllll",
-            "`'ccllllllllll  lllllllllllllllllll",
-            "       `' \\*::  :ccllllllllllllllll",
-            "                       ````''*::cll",
-            "                                 ``",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}llllllllllllll  {c}lllllllllllllllllll",
+            "{w}`'ccllllllllll  {c}lllllllllllllllllll",
+            "{w}       `' \\*::  {c}:ccllllllllllllllll",
+            "{w}                       ````''*::cll",
+            "{w}                                 ``",
         ],
-        primary_color: "\x1b[38;5;33m",
+        distro_color: "\x1b[38;5;33m",
+        outer_color: WHITE_COLOR,
     },
     Logo {
         name: "windows7",
         raw_lines: &[
-            "        ,.=:!!t3Z3z.,",
-            "       :tt:::tt333EE3",
-            "       Et:::ztt33EEEL @Ee.,      ..,",
-            "      ;tt:::tt333EE7 ;EEEEEEttttt33#",
-            "     :Et:::zt333EEQ. $EEEEEttttt33QL",
-            "     it::::tt333EEF @EEEEEEttttt33F",
-            "    ;3=*^```\"*4EEV :EEEEEEttttt33@.",
-            "    ,.=::::!t=., ` @EEEEEEtttz33QF",
-            "   ;::::::::zt33)   \"4EEEtttji3P*",
-            "  :t::::::::tt33.:Z3z..  `` ,..g.",
-            "  i::::::::zt33F AEEEtttt::::ztF",
-            " ;:::::::::t33V ;EEEttttt::::t3",
-            " E::::::::zt33L @EEEtttt::::z3F",
-            "{3=*^```\"*4E3) ;EEEtttt:::::tZ`",
-            "             ` :EEEEtttt::::z7",
-            "                 \"VEzjt:;;z>*`",
+            "{w}        ,.=:!!t3Z3z.,",
+            "{w}       :tt:::tt333EE3",
+            "{w}       Et:::ztt33EEEL{c} @Ee.,      ..,{w}",
+            "{w}      ;tt:::tt333EE7{c} ;EEEEEEttttt33#{w}",
+            "{w}     :Et:::zt333EEQ.{c} $EEEEEttttt33QL{w}",
+            "{w}     it::::tt333EEF{c} @EEEEEEttttt33F{w}",
+            "{w}    ;3=*^```\"*4EEV{c} :EEEEEEttttt33@.{w}",
+            "{c}    ,.=::::!t=., {w}`{c} @EEEEEEtttz33QF",
+            "{c}   ;::::::::zt33)   \"4EEEtttji3P*",
+            "{c}  :t::::::::tt33.:Z3z..  `` ,..g.",
+            "{c}  i::::::::zt33F AEEEtttt::::ztF",
+            "{c} ;:::::::::t33V ;EEEttttt::::t3",
+            "{c} E::::::::zt33L @EEEtttt::::z3F",
+            "{c}{3=*^```\"*4E3) ;EEEtttt:::::tZ`",
+            "{c}             ` :EEEEtttt::::z7",
+            "{c}                 \"VEzjt:;;z>*`",
         ],
-        primary_color: "\x1b[38;5;33m",
+        distro_color: "\x1b[38;5;33m",
+        outer_color: WHITE_COLOR,
     },
 ];
 
@@ -664,125 +694,117 @@ pub fn match_logo(
         if name_lower == "mint" {
             return ALL_LOGOS.iter().find(|l| l.name == "linuxmint");
         }
+        if name_lower == "suse" {
+            return ALL_LOGOS.iter().find(|l| l.name == "opensuse");
+        }
         if name_lower == "tux" || name_lower == "linux" {
             return ALL_LOGOS.iter().find(|l| l.name == "generic");
         }
-        if name_lower == "win11" || name_lower == "windows11" || name_lower == "windows" {
+        if name_lower == "win" || name_lower == "windows" {
             return ALL_LOGOS.iter().find(|l| l.name == "windows11");
         }
-        if name_lower == "win10" || name_lower == "windows10" {
+        if name_lower == "win11" {
+            return ALL_LOGOS.iter().find(|l| l.name == "windows11");
+        }
+        if name_lower == "win10" {
             return ALL_LOGOS.iter().find(|l| l.name == "windows10");
         }
-        if name_lower == "win7" || name_lower == "windows7" {
+        if name_lower == "win7" {
             return ALL_LOGOS.iter().find(|l| l.name == "windows7");
         }
-        return ALL_LOGOS.iter().find(|l| l.name == "ferris");
     }
 
-    let distro_id_lower = distro_id.to_lowercase();
+    let id_clean = distro_id.to_lowercase().replace(' ', "");
 
     for logo in ALL_LOGOS {
-        if logo.name.eq_ignore_ascii_case(&distro_id_lower) {
+        if id_clean.contains(logo.name) || logo.name.contains(&id_clean) {
             return Some(logo);
         }
     }
 
-    // Heuristics for distro_id
-    if distro_id_lower.contains("ubuntu") {
+    if id_clean.contains("ubuntu") {
         return ALL_LOGOS.iter().find(|l| l.name == "ubuntu");
     }
-    if distro_id_lower.contains("arch") {
-        return ALL_LOGOS.iter().find(|l| l.name == "arch");
-    }
-    if distro_id_lower.contains("fedora") {
-        return ALL_LOGOS.iter().find(|l| l.name == "fedora");
-    }
-    if distro_id_lower.contains("debian") {
-        return ALL_LOGOS.iter().find(|l| l.name == "debian");
-    }
-    if distro_id_lower.contains("mint") {
+    if id_clean.contains("mint") {
         return ALL_LOGOS.iter().find(|l| l.name == "linuxmint");
     }
-    if distro_id_lower.contains("suse") {
-        return ALL_LOGOS.iter().find(|l| l.name == "opensuse");
+    if id_clean.contains("fedora") {
+        return ALL_LOGOS.iter().find(|l| l.name == "fedora");
     }
-    if distro_id_lower.contains("gentoo") {
-        return ALL_LOGOS.iter().find(|l| l.name == "gentoo");
+    if id_clean.contains("arch") {
+        return ALL_LOGOS.iter().find(|l| l.name == "arch");
     }
-    if distro_id_lower.contains("void") {
-        return ALL_LOGOS.iter().find(|l| l.name == "void");
+    if id_clean.contains("debian") {
+        return ALL_LOGOS.iter().find(|l| l.name == "debian");
     }
-    if distro_id_lower.contains("pop") {
-        return ALL_LOGOS.iter().find(|l| l.name == "pop");
-    }
-    if distro_id_lower.contains("nix") {
-        return ALL_LOGOS.iter().find(|l| l.name == "nixos");
-    }
-    if distro_id_lower.contains("manjaro") {
-        return ALL_LOGOS.iter().find(|l| l.name == "manjaro");
-    }
-    if distro_id_lower.contains("alpine") {
-        return ALL_LOGOS.iter().find(|l| l.name == "alpine");
-    }
-    if distro_id_lower.contains("kali") {
-        return ALL_LOGOS.iter().find(|l| l.name == "kali");
-    }
-    if distro_id_lower.contains("freebsd") {
-        return ALL_LOGOS.iter().find(|l| l.name == "freebsd");
-    }
-    if distro_id_lower.contains("rhel") || distro_id_lower.contains("redhat") {
+    if id_clean.contains("redhat") || id_clean.contains("rhel") {
         return ALL_LOGOS.iter().find(|l| l.name == "rhel");
     }
-    if distro_id_lower.contains("rocky") {
+    if id_clean.contains("rocky") {
         return ALL_LOGOS.iter().find(|l| l.name == "rocky");
     }
-    if distro_id_lower.contains("alma") {
+    if id_clean.contains("alma") {
         return ALL_LOGOS.iter().find(|l| l.name == "almalinux");
     }
-    if distro_id_lower.contains("endeavour") {
-        return ALL_LOGOS.iter().find(|l| l.name == "endeavouros");
+    if id_clean.contains("suse") || id_clean.contains("opensuse") {
+        return ALL_LOGOS.iter().find(|l| l.name == "opensuse");
     }
-    if distro_id_lower.contains("slackware") {
+    if id_clean.contains("gentoo") {
+        return ALL_LOGOS.iter().find(|l| l.name == "gentoo");
+    }
+    if id_clean.contains("alpine") {
+        return ALL_LOGOS.iter().find(|l| l.name == "alpine");
+    }
+    if id_clean.contains("void") {
+        return ALL_LOGOS.iter().find(|l| l.name == "void");
+    }
+    if id_clean.contains("pop") {
+        return ALL_LOGOS.iter().find(|l| l.name == "pop");
+    }
+    if id_clean.contains("nix") {
+        return ALL_LOGOS.iter().find(|l| l.name == "nixos");
+    }
+    if id_clean.contains("kali") {
+        return ALL_LOGOS.iter().find(|l| l.name == "kali");
+    }
+    if id_clean.contains("freebsd") {
+        return ALL_LOGOS.iter().find(|l| l.name == "freebsd");
+    }
+    if id_clean.contains("slackware") {
         return ALL_LOGOS.iter().find(|l| l.name == "slackware");
     }
-    if distro_id_lower.contains("artix") {
+    if id_clean.contains("artix") {
         return ALL_LOGOS.iter().find(|l| l.name == "artix");
     }
-    if distro_id_lower.contains("zorin") {
+    if id_clean.contains("zorin") {
         return ALL_LOGOS.iter().find(|l| l.name == "zorin");
     }
-    if distro_id_lower.contains("windows 11") {
+    if id_clean.contains("windows11") || id_clean.contains("win11") {
         return ALL_LOGOS.iter().find(|l| l.name == "windows11");
     }
-    if distro_id_lower.contains("windows 10") {
+    if id_clean.contains("windows10") || id_clean.contains("win10") {
         return ALL_LOGOS.iter().find(|l| l.name == "windows10");
     }
-    if distro_id_lower.contains("windows 7") {
+    if id_clean.contains("windows7") || id_clean.contains("win7") {
         return ALL_LOGOS.iter().find(|l| l.name == "windows7");
     }
-    if distro_id_lower.contains("windows") {
+    if id_clean.contains("windows") || id_clean.contains("win") {
         return ALL_LOGOS.iter().find(|l| l.name == "windows11");
     }
 
-    // Try distro_like fallbacks
     for like in distro_like {
         let like_lower = like.to_lowercase();
-        for logo in ALL_LOGOS {
-            if logo.name.eq_ignore_ascii_case(&like_lower) {
-                return Some(logo);
-            }
-        }
         if like_lower.contains("ubuntu") {
             return ALL_LOGOS.iter().find(|l| l.name == "ubuntu");
+        }
+        if like_lower.contains("debian") {
+            return ALL_LOGOS.iter().find(|l| l.name == "debian");
         }
         if like_lower.contains("arch") {
             return ALL_LOGOS.iter().find(|l| l.name == "arch");
         }
         if like_lower.contains("fedora") {
             return ALL_LOGOS.iter().find(|l| l.name == "fedora");
-        }
-        if like_lower.contains("debian") {
-            return ALL_LOGOS.iter().find(|l| l.name == "debian");
         }
         if like_lower.contains("rhel") {
             return ALL_LOGOS.iter().find(|l| l.name == "rhel");

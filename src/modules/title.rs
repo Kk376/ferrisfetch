@@ -119,7 +119,7 @@ impl Collector for TitleCollector {
             &ctx.os_info.distro_id,
             &ctx.os_info.distro_like,
         );
-        let primary = logo.map(|l| l.primary_color);
+        let primary = logo.map(|l| l.distro_color);
 
         let custom_rendered = format_title(&user, &host, primary, ctx.enable_color);
 

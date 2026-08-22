@@ -1,5 +1,5 @@
 Name:           ferrisfetch
-Version:        0.8.6
+Version:        0.9.0
 Release:        1%{?dist}
 Summary:        Fast, lightweight Linux system information fetch tool written in Rust
 

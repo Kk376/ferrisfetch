@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           ferrisfetch
-Version:        0.8.5
+Version:        0.9.0
 Release:        1%{?dist}
 Summary:        Fast, lightweight Linux system information fetch tool written in Rust
 
@@ -52,6 +52,11 @@ install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 %{_datadir}/fish/vendor_completions.d/%{name}.fish
 
 %changelog
+* Sat Aug 22 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.9.0-1
+- Release version 0.9.0
+- Enhanced ASCII Distro Art: High-contrast white outer framing with brand-colored inner emblems across all 26+ distributions
+- WSL2 Storage Resolution: Normalized 9p/drvfs virtualization filesystem mappings to native NTFS for Windows drive mounts
+
 * Sun Aug 16 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.1.0-1
 - Initial RPM release for version 0.1.0
 - Added modular system metric collectors

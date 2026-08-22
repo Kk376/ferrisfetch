@@ -47,7 +47,7 @@ pub fn render_layout(
     term_width: u16,
     enable_color: bool,
 ) -> String {
-    let primary_color = logo.map(|l| l.primary_color).unwrap_or("\x1b[38;5;208m");
+    let distro_color = logo.map(|l| l.distro_color).unwrap_or("\x1b[38;5;208m");
 
     // Flatten module outputs into display lines
     let mut info_lines: Vec<String> = Vec::new();
@@ -57,7 +57,7 @@ pub fn render_layout(
                 info_lines.push(line.to_string());
             }
         } else if !out.value.is_empty() {
-            let label = format_label(&out.label, primary_color, enable_color);
+            let label = format_label(&out.label, distro_color, enable_color);
             info_lines.push(format!("{} {}", label, out.value));
         }
     }
@@ -206,7 +206,8 @@ mod tests {
         let logo = Logo {
             name: "test",
             raw_lines: &["AA", "BB"],
-            primary_color: "",
+            distro_color: "",
+            outer_color: "",
         };
 
         let outputs = vec![ModuleOutput {
@@ -225,7 +226,8 @@ mod tests {
         let logo = Logo {
             name: "test",
             raw_lines: &["A", "BBB"],
-            primary_color: "",
+            distro_color: "",
+            outer_color: "",
         };
 
         let outputs = vec![
