@@ -291,7 +291,11 @@ pub fn detect_wsl_version() -> Option<String> {
         }
     }
 
-    for cmd in &["wsl.exe", "/mnt/c/Windows/System32/wsl.exe", "/mnt/c/Program Files/WSL/wsl.exe"] {
+    for cmd in &[
+        "wsl.exe",
+        "/mnt/c/Windows/System32/wsl.exe",
+        "/mnt/c/Program Files/WSL/wsl.exe",
+    ] {
         if let Ok(output) = std::process::Command::new(cmd).arg("--version").output() {
             if output.status.success() {
                 let text = decode_utf16le_or_utf8(&output.stdout);
@@ -363,10 +367,8 @@ pub fn detect_host() -> Option<String> {
                     full = format!("{} {}", name, ver);
                 }
             }
-            if is_wsl {
-                if !wsl_suffix.is_empty() {
-                    full = format!("{} {}", full, wsl_suffix);
-                }
+            if is_wsl && !wsl_suffix.is_empty() {
+                full = format!("{} {}", full, wsl_suffix);
             }
             return Some(full);
         }
@@ -397,10 +399,8 @@ pub fn detect_host() -> Option<String> {
             let clean = board.trim();
             if !clean.is_empty() && clean != "None" && clean != "Default string" {
                 let mut res = clean.to_string();
-                if is_wsl {
-                    if !wsl_suffix.is_empty() {
-                        res = format!("{} {}", res, wsl_suffix);
-                    }
+                if is_wsl && !wsl_suffix.is_empty() {
+                    res = format!("{} {}", res, wsl_suffix);
                 }
                 return Some(res);
             }
@@ -593,7 +593,8 @@ ID=custom
 
     #[test]
     fn test_parse_wsl_version_output() {
-        let sample = "WSL version: 2.7.12.0\r\nKernel version: 6.18.33.2-2\r\nWSLg version: 1.0.73.2\r\n";
+        let sample =
+            "WSL version: 2.7.12.0\r\nKernel version: 6.18.33.2-2\r\nWSLg version: 1.0.73.2\r\n";
         assert_eq!(
             parse_wsl_version_output(sample),
             Some("2.7.12.0".to_string())
