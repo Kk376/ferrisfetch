@@ -1,3 +1,9 @@
+//! System installation date probe and localized timezone formatting.
+//!
+//! Features and architectural recommendations contributed by @Laynsb (https://github.com/Laynsb):
+//! 1. Probing OS installation timestamp via filesystem root birth time (`statx_btime`) and installer records.
+//! 2. Converting raw UTC epoch seconds into localized wall-clock time according to system timezone and DST.
+
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 #[cfg(not(windows))]

@@ -290,7 +290,8 @@ cargo build --release
 Special thanks to community contributors for architectural recommendations and feature suggestions:
 
 - **[@Laynsb](https://github.com/Laynsb)**:
-  - **Localized Installation Timestamps**: Recommended native local timezone conversion for the `Installed` module (converting raw UTC kernel/registry epoch timestamps to the user's localized wall-clock time according to system timezone and DST).
+  - **System Installation Date Module (`Installed`)**: Recommended adding the OS installation date module, probing root filesystem creation timestamp (`stx_btime`) and distribution installer records with human-readable relative time deltas (e.g. `23 Jan 2026, 12:22 AM (211 days ago)`).
+  - **Localized Installation Timestamps**: Recommended native local timezone and daylight saving time conversion for the `Installed` module, ensuring timestamps reflect the user's localized wall-clock time instead of raw UTC+0.
 
 ---
 
