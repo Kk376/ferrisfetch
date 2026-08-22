@@ -48,7 +48,7 @@ To install and run manually in PowerShell, run these 3 short commands one by one
 
 #### Step 1: Download
 ```powershell
-curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.7.0/ferrisfetch-windows-x86_64.zip
+curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch-windows-x86_64.zip
 ```
 
 #### Step 2: Extract
@@ -87,28 +87,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch_0.5.0-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.5.0-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch_0.8.5-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.8.5-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.5.0-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.8.5-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch-0.8.5-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.8.5-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.5.0-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.8.5-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch_0.5.0-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.5.0-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch_0.8.5-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.8.5-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.5.0/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```

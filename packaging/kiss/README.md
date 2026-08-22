@@ -5,8 +5,8 @@ This directory contains the KISS Linux package recipe files for `ferrisfetch`.
 ## Package Structure
 
 - `build`: Posix shell script executing `cargo build --release --locked` and installing binaries, shell completions, documentation, and license.
-- `version`: Package version and release (`0.1.0 1`).
-- `sources`: Source tarball location (`https://github.com/kk376/ferrisfetch/archive/refs/tags/v0.1.0.tar.gz`).
+- `version`: Package version and release (`0.8.5 1`).
+- `sources`: Source tarball location (`https://github.com/kk376/ferrisfetch/archive/refs/tags/v0.8.5.tar.gz`).
 - `checksums`: SHA256 checksum for source tarball validation.
 - `depends`: Build/runtime dependencies (`rust make`).
 

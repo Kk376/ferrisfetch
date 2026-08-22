@@ -29,6 +29,6 @@ xlint srcpkgs/ferrisfetch/template
 5. Run linter: `xlint srcpkgs/ferrisfetch/template`.
 6. Commit with the standard Void message format:
    ```bash
-   git commit -m "New package: ferrisfetch-0.1.0"
+   git commit -m "New package: ferrisfetch-0.8.5"
    ```
 7. Push and open a PR against `void-linux/void-packages:master`.
