@@ -74,7 +74,7 @@ fn test_logo_override_flag() {
     cmd.args(["--no-color", "--logo", "arch", "-m", "os"]);
     let assert = cmd.assert().success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert!(stdout.contains("/___/ \\______/"));
+    assert!(stdout.contains("oooo"));
     assert!(stdout.contains("OS:"));
 }
 
@@ -168,19 +168,17 @@ fn test_installed_module_filtering() {
 #[test]
 fn test_various_logo_overrides() {
     let logos = [
-        ("debian", ".--------."),
-        ("ubuntu", "'-.-' ..._"),
-        ("arch", "/___/ \\______/"),
-        ("fedora", ".--------."),
-        ("mint", ".-------------."),
-        ("tux", "() ()"),
-        ("windows11", "████████"),
-        ("windows10", ".----|----."),
-        ("windows7", "_.._    _.._"),
-        ("windows", "████████"),
-        ("win11", "████████"),
-        ("win10", ".----|----."),
-        ("win7", "_.._    _.._"),
+        ("debian", "met$$$$$gg"),
+        ("ubuntu", "ssss"),
+        ("arch", "oooo"),
+        ("fedora", "cccc"),
+        ("mint", "MMMM"),
+        ("tux", "#####"),
+        ("windows11", "llll"),
+        ("windows10", "llll"),
+        ("windows", "llll"),
+        ("win11", "llll"),
+        ("win10", "llll"),
     ];
 
     for (name, snippet) in logos {

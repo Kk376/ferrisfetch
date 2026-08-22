@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-08-22
+
+### Added
+- **Neofetch Dual-Tone ASCII Art Suite**: Integrated the complete, classic multi-color ASCII art logo suite from Neofetch across all 26 supported distributions and operating systems (Ubuntu, Fedora, Arch Linux, Debian, Linux Mint, NixOS, openSUSE, Gentoo, Void, Pop!_OS, RHEL, Rocky, AlmaLinux, EndeavourOS, Manjaro, Alpine, Kali, FreeBSD, Slackware, Artix, Zorin, Windows 11/10/7, Tux, and Ferris the Crab).
+- **Dual-Tone Color Token Rendering Engine**: Added internal ANSI color token parsing (`{p}` for primary distro color, `{a}` for accent/white highlights, `{0}` for reset) with automated ANSI stripping for `--no-color` mode and zero-distortion column alignment.
+- **Filesystem Type Discovery on Disks**: Enumerates filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`, `vfat`, `zfs`) across all mounted storage partitions on Linux (`/proc/mounts`) and Windows (`GetVolumeInformationW`) with zero subprocess overhead (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **ZRAM Compression Algorithm Discovery on Swap**: Detects active in-memory swap compression algorithms from `/sys/block/zram*/comp_algorithm` (e.g. `Swap: 0.00 GiB / 4.00 GiB (0%) - LZ4`) on ZRAM-enabled distributions (Fedora, Pop!_OS, ChromeOS, Android), while leaving traditional swap files/partitions clean (suggested by [@Laynsb](https://github.com/Laynsb)).
+
 ## [0.8.0] - 2026-08-22
 
 ### Added

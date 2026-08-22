@@ -82,8 +82,7 @@ pub fn render_layout(
     }
 
     // Side-by-side two-column layout: calculate max logo width to align the info column
-    let max_logo_width = logo
-        .raw_lines
+    let max_logo_width = logo_lines
         .iter()
         .map(|l| visible_width(l))
         .max()
@@ -97,14 +96,14 @@ pub fn render_layout(
         let has_info = i < info_lines.len();
 
         let l_line = if has_logo { &logo_lines[i] } else { "" };
-        let raw_len = if has_logo {
-            visible_width(logo.raw_lines.get(i).unwrap_or(&""))
+        let vis_len = if has_logo {
+            visible_width(&logo_lines[i])
         } else {
             0
         };
 
         // Pad shorter logo lines to match max_logo_width before inserting 3-space separator
-        let pad_len = max_logo_width.saturating_sub(raw_len);
+        let pad_len = max_logo_width.saturating_sub(vis_len);
         let padding = " ".repeat(pad_len);
 
         let i_line = if has_info { &info_lines[i] } else { "" };

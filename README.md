@@ -4,12 +4,12 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.7.0)
+## Latest Changes (v0.8.5)
 
-- **Localized Installation Timestamps**: Formats system installation time (`Installed:`) according to the user's local timezone and daylight saving time via native POSIX (`localtime_r` / `tm_gmtoff`) and Win32 (`GetTimeZoneInformation`) APIs, replacing raw UTC+0 display (suggested by [@Laynsb](https://github.com/Laynsb)).
-- **Native Windows NT Support**: Direct Win32 hardware and subsystem detection without spawning shell subprocesses.
-- **Windows Package Managers**: Native package counting for **WinGet**, **Chocolatey**, and **Cargo**.
-- **Windows ASCII Art Logos**: High-resolution ANSI ASCII art for **Windows 11**, **Windows 10**, and **Classic Windows**.
+- **Neofetch Dual-Tone ASCII Art Suite**: Complete, classic multi-color ASCII art logo suite from Neofetch across all 26 supported distributions and operating systems.
+- **Dual-Tone Color Token Rendering Engine**: Internal ANSI color token parsing (`{p}` for primary color, `{a}` for accent highlights) with zero-distortion column alignment.
+- **Filesystem Type Discovery**: Automatically identifies partition filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`) with zero subprocess overhead (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **ZRAM Compression Algorithm Discovery**: Detects in-memory swap compression algorithms (`LZ4`, `ZSTD`, `LZO`) on ZRAM-enabled systems (suggested by [@Laynsb](https://github.com/Laynsb)).
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 

@@ -1,3 +1,13 @@
+ferrisfetch (0.8.5-1~ppa1~noble) noble; urgency=medium
+
+  * Release version 0.8.5: Neofetch dual-tone ASCII art suite and dual-tone ANSI parser.
+  * Integrate classic Neofetch ASCII art logos across 26 Linux distributions and Windows.
+  * Add internal dual-tone ANSI color token rendering engine ({p}, {a}, {0}).
+  * Add filesystem type discovery on Disks (ext4, btrfs, ntfs, 9p, vfat, zfs).
+  * Add active ZRAM compression algorithm discovery on Swap (LZ4, ZSTD, LZO).
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 13:25:00 +0000
+
 ferrisfetch (0.8.0-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.8.0: Filesystem types, ZRAM compression detection, and redesigned ASCII logos.
