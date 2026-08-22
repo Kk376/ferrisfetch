@@ -44,9 +44,13 @@ FerrisFetch is built and tested across:
 
 ### Windows (WinGet)
 
+*WinGet package submission is currently under review by Microsoft and will soon be live.*
+
 ```powershell
 winget install ferrisfetch
 ```
+
+Direct standalone binaries (`ferrisfetch-windows-x86_64.zip`) are also available for download under [GitHub Releases](https://github.com/kk376/ferrisfetch/releases).
 
 ### Ubuntu / Linux Mint / Pop!_OS (PPA)
 
