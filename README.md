@@ -303,6 +303,9 @@ Special thanks to community contributors for architectural recommendations and f
 - **[@Laynsb](https://github.com/Laynsb)**:
   - **System Installation Date Module (`Installed`)**: Recommended adding the OS installation date module, probing root filesystem creation timestamp (`stx_btime`) and distribution installer records with human-readable relative time deltas (e.g. `23 Jan 2026, 12:22 AM (211 days ago)`).
   - **Localized Installation Timestamps**: Recommended native local timezone and daylight saving time conversion for the `Installed` module, ensuring timestamps reflect the user's localized wall-clock time instead of raw UTC+0.
+  - **Filesystem Type Detection (`Disk`)**: Recommended displaying explicit filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`, `vfat`, `zfs`) for all mounted storage partitions.
+  - **ZRAM Compression Algorithm Discovery (`Swap`)**: Recommended detecting active in-memory swap compression algorithms from `/sys/block/zram*/comp_algorithm` (e.g. `Swap: 0.00 GiB / 4.00 GiB (0%) - LZ4`) while keeping traditional swap files/partitions clean.
+  - **High-Fidelity ASCII Art Logos**: Recommended redesigning distro ASCII art logos to be proportionally taller and visually balanced alongside multi-line telemetry.
 
 ---
 

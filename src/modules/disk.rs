@@ -1,3 +1,9 @@
+//! Storage Partition & Filesystem Type Collector
+//!
+//! Enumerates mounted storage partitions across POSIX and Windows filesystems via `statvfs`
+//! and `GetDiskFreeSpaceExW`. Displays partition capacity, percentage, and filesystem types
+//! (`ext4`, `btrfs`, `ntfs`, `9p`, `vfat`, `zfs`), suggested by @Laynsb.
+
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 #[cfg(not(windows))]
@@ -203,7 +209,83 @@ const IGNORED_MOUNT_PREFIXES: &[&str] = &[
 pub struct PartitionEntry {
     pub mount_point: String,
     pub display_name: String,
+    pub fs_type: String,
     pub usage: DiskUsage,
+}
+
+#[cfg(not(windows))]
+pub fn get_fs_type_for_path(target: &str) -> Option<String> {
+    let content = std::fs::read_to_string("/proc/mounts").ok()?;
+    let mut best_match: Option<(&str, &str)> = None;
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 3 {
+            let mount = parts[1];
+            let fs = parts[2];
+            if target == mount
+                || (target.starts_with(mount)
+                    && (mount == "/" || target[mount.len()..].starts_with('/')))
+            {
+                if let Some((best_mount, _)) = best_match {
+                    if mount.len() > best_mount.len() {
+                        best_match = Some((mount, fs));
+                    }
+                } else {
+                    best_match = Some((mount, fs));
+                }
+            }
+        }
+    }
+    best_match.map(|(_, fs)| fs.to_string())
+}
+
+#[cfg(windows)]
+pub fn get_fs_type_for_path(target: &str) -> Option<String> {
+    get_volume_fs_type(target)
+}
+
+#[cfg(windows)]
+pub fn get_volume_fs_type(path: &str) -> Option<String> {
+    use crate::modules::win_util::ffi;
+    let root_path = if path.is_empty() || path == "/" {
+        "C:\\".to_string()
+    } else if path.ends_with('\\') || path.ends_with('/') {
+        path.replace('/', "\\")
+    } else {
+        format!("{}\\", path.replace('/', "\\"))
+    };
+    let wide: Vec<u16> = root_path.encode_utf16().chain(std::iter::once(0)).collect();
+    let mut fs_name_buf = [0u16; 256];
+    unsafe {
+        if ffi::GetVolumeInformationW(
+            wide.as_ptr(),
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            fs_name_buf.as_mut_ptr(),
+            fs_name_buf.len() as u32,
+        ) != 0
+        {
+            let len = fs_name_buf.iter().position(|&c| c == 0).unwrap_or(0);
+            if len > 0 {
+                return Some(String::from_utf16_lossy(&fs_name_buf[..len]));
+            }
+        }
+    }
+    None
+}
+
+/// Formats a complete disk display string including mount label, capacity, and filesystem type.
+pub fn format_disk_entry(display_label: &str, usage: &DiskUsage, fs_type: Option<&str>) -> String {
+    let base = format!("({}) {}", display_label, format_disk_usage(usage));
+    if let Some(fs) = fs_type {
+        if !fs.is_empty() {
+            return format!("{} - {}", base, fs);
+        }
+    }
+    base
 }
 
 /// Enumerates all real physical/virtual mount partitions from `/proc/mounts`.
@@ -216,6 +298,7 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
             entries.push(PartitionEntry {
                 mount_point: "/".to_string(),
                 display_name: "/".to_string(),
+                fs_type: "ext4".to_string(),
                 usage,
             });
         }
@@ -265,6 +348,7 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
             entries.push(PartitionEntry {
                 mount_point: mount_point.to_string(),
                 display_name,
+                fs_type: fs_type.to_string(),
                 usage,
             });
         }
@@ -275,6 +359,7 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
             entries.push(PartitionEntry {
                 mount_point: "/".to_string(),
                 display_name: "/".to_string(),
+                fs_type: "ext4".to_string(),
                 usage,
             });
         }
@@ -310,9 +395,12 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
             // DRIVE_REMOVABLE = 2, DRIVE_FIXED = 3
             if drive_type == 2 || drive_type == 3 {
                 if let Some(usage) = get_disk_usage(&root_path) {
+                    let fs_type =
+                        get_volume_fs_type(&root_path).unwrap_or_else(|| "NTFS".to_string());
                     entries.push(PartitionEntry {
                         mount_point: root_path,
                         display_name: format!("{}:", drive_letter),
+                        fs_type,
                         usage,
                     });
                 }
@@ -322,9 +410,11 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
 
     if entries.is_empty() {
         if let Some(usage) = get_disk_usage("C:\\") {
+            let fs_type = get_volume_fs_type("C:\\").unwrap_or_else(|| "NTFS".to_string());
             entries.push(PartitionEntry {
                 mount_point: "C:\\".to_string(),
                 display_name: "C:".to_string(),
+                fs_type,
                 usage,
             });
         }
@@ -359,14 +449,15 @@ impl Collector for DiskCollector {
         };
         let usage = get_disk_usage(target)?;
         let display_label = if cfg!(windows) && is_default_root {
-            "(C:)".to_string()
+            "C:".to_string()
         } else {
-            format!("({})", ctx.disk_target_path)
+            ctx.disk_target_path.clone()
         };
+        let fs_type = get_fs_type_for_path(target);
         Some(ModuleOutput {
             id: ModuleId::Disk,
             label: "Disk0".to_string(),
-            value: format!("{} {}", display_label, format_disk_usage(&usage)),
+            value: format_disk_entry(&display_label, &usage, fs_type.as_deref()),
             custom_rendered: None,
         })
     }
@@ -376,10 +467,11 @@ impl Collector for DiskCollector {
             ctx.disk_target_path == "/" || (cfg!(windows) && ctx.disk_target_path == "C:\\");
         if !is_default {
             if let Some(usage) = get_disk_usage(&ctx.disk_target_path) {
+                let fs_type = get_fs_type_for_path(&ctx.disk_target_path);
                 return vec![ModuleOutput {
                     id: ModuleId::Disk,
                     label: "Disk0".to_string(),
-                    value: format!("({}) {}", ctx.disk_target_path, format_disk_usage(&usage)),
+                    value: format_disk_entry(&ctx.disk_target_path, &usage, fs_type.as_deref()),
                     custom_rendered: None,
                 }];
             } else {
@@ -392,11 +484,7 @@ impl Collector for DiskCollector {
 
         for (idx, entry) in disks.iter().enumerate() {
             let label = format!("Disk{}", idx);
-            let value = format!(
-                "({}) {}",
-                entry.display_name,
-                format_disk_usage(&entry.usage)
-            );
+            let value = format_disk_entry(&entry.display_name, &entry.usage, Some(&entry.fs_type));
             outputs.push(ModuleOutput {
                 id: ModuleId::Disk,
                 label,
@@ -502,5 +590,20 @@ mod tests {
             .collect();
 
         assert_eq!(filtered, vec!["/", "/data", "/storage/FF70-CD48"]);
+    }
+
+    #[test]
+    fn test_format_disk_entry_with_fs() {
+        let usage = DiskUsage {
+            total_bytes: 500 * 1024 * 1024 * 1024,
+            used_bytes: 100 * 1024 * 1024 * 1024,
+            free_bytes: 400 * 1024 * 1024 * 1024,
+            percentage: 20,
+        };
+        let formatted = format_disk_entry("/", &usage, Some("ext4"));
+        assert_eq!(formatted, "(/) 100.0 GiB / 500.0 GiB (20%) - ext4");
+
+        let formatted_no_fs = format_disk_entry("/", &usage, None);
+        assert_eq!(formatted_no_fs, "(/) 100.0 GiB / 500.0 GiB (20%)");
     }
 }

@@ -1,3 +1,12 @@
+ferrisfetch (0.8.0-1~ppa1~noble) noble; urgency=medium
+
+  * Release version 0.8.0: Filesystem types, ZRAM compression detection, and redesigned ASCII logos.
+  * Add filesystem type discovery on Disks (ext4, btrfs, ntfs, 9p, vfat, zfs).
+  * Add active ZRAM compression algorithm discovery on Swap (LZ4, ZSTD, LZO).
+  * Redesign high-fidelity ASCII art logos across all Linux distributions and Windows.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 12:50:00 +0000
+
 ferrisfetch (0.7.0-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.7.0: Localized system installation timestamp.

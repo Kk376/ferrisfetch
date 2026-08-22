@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-22
+
+### Added
+- **Filesystem Type Discovery on Disks**: Enumerates filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`, `vfat`, `zfs`) across all mounted storage partitions on Linux (`/proc/mounts`) and Windows (`GetVolumeInformationW`) with zero subprocess overhead (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **ZRAM Compression Algorithm Discovery on Swap**: Detects active in-memory swap compression algorithms from `/sys/block/zram*/comp_algorithm` (e.g. `Swap: 0.00 GiB / 4.00 GiB (0%) - LZ4`) on ZRAM-enabled distributions (Fedora, Pop!_OS, ChromeOS, Android), while leaving traditional swap files/partitions clean (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **High-Fidelity Distro ASCII Art Logos**: Redesigned all distribution and OS ASCII art logos with proportionally taller, high-contrast silhouettes across Ubuntu, Fedora, Debian, Arch Linux, Linux Mint, RHEL, Rocky, AlmaLinux, openSUSE, Gentoo, Void, Pop!_OS, NixOS, Kali, FreeBSD, Windows 11/10/7, and Tux (suggested by [@Laynsb](https://github.com/Laynsb)).
+
 ## [0.7.0] - 2026-08-22
 
 ### Added

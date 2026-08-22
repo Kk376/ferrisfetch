@@ -109,6 +109,16 @@ pub mod ffi {
         pub fn GetDriveTypeW(lpRootPathName: *const u16) -> u32;
         pub fn GetSystemPowerStatus(lpSystemPowerStatus: *mut SYSTEM_POWER_STATUS) -> i32;
         pub fn GetTimeZoneInformation(lpTimeZoneInformation: *mut TIME_ZONE_INFORMATION) -> u32;
+        pub fn GetVolumeInformationW(
+            lpRootPathName: *const u16,
+            lpVolumeNameBuffer: *mut u16,
+            nVolumeNameSize: u32,
+            lpVolumeSerialNumber: *mut u32,
+            lpMaximumComponentLength: *mut u32,
+            lpFileSystemFlags: *mut u32,
+            lpFileSystemNameBuffer: *mut u16,
+            nFileSystemNameSize: u32,
+        ) -> i32;
     }
 
     fn to_wide(s: &str) -> Vec<u16> {

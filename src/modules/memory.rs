@@ -1,3 +1,8 @@
+//! Physical RAM & Virtual Swap Space Collector
+//!
+//! Parses `/proc/meminfo` and `/proc/swaps` on Linux and `GlobalMemoryStatusEx` on Windows.
+//! Automatically discovers in-memory ZRAM compression algorithms (`LZ4`, `ZSTD`, `LZO`), suggested by @Laynsb.
+
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 #[cfg(not(windows))]
@@ -200,6 +205,50 @@ pub fn get_swap_info() -> Option<SwapInfo> {
     None
 }
 
+/// Parses the active ZRAM compression algorithm from `/proc/swaps` and `/sys/block/zram*/comp_algorithm`.
+/// Algorithmic string format: `lzo lzo-rle [lz4] lz4hc zstd` where bracketed entry is active.
+#[cfg(not(windows))]
+pub fn detect_zram_algorithm() -> Option<String> {
+    let swaps = fs::read_to_string("/proc/swaps").ok()?;
+    if !swaps.contains("zram") {
+        return None;
+    }
+
+    if let Ok(entries) = fs::read_dir("/sys/block") {
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let name = file_name.to_string_lossy();
+            if name.starts_with("zram") {
+                let comp_path = entry.path().join("comp_algorithm");
+                if let Ok(content) = fs::read_to_string(comp_path) {
+                    if let Some(start) = content.find('[') {
+                        if let Some(end) = content[start..].find(']') {
+                            let active = &content[start + 1..start + end];
+                            let trimmed = active.trim();
+                            if !trimmed.is_empty() {
+                                return Some(trimmed.to_uppercase());
+                            }
+                        }
+                    }
+                    if let Some(first) = content.split_whitespace().next() {
+                        let trimmed = first.trim();
+                        if !trimmed.is_empty() {
+                            return Some(trimmed.to_uppercase());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Some("ZRAM".to_string())
+}
+
+#[cfg(windows)]
+pub fn detect_zram_algorithm() -> Option<String> {
+    None
+}
+
 #[cfg(windows)]
 pub fn get_swap_info() -> Option<SwapInfo> {
     use crate::modules::win_util::ffi;
@@ -232,6 +281,33 @@ pub fn get_swap_info() -> Option<SwapInfo> {
     None
 }
 
+/// Formats swap memory with optional ZRAM compression algorithm tag.
+pub fn format_swap(info: &SwapInfo, zram_algo: Option<&str>) -> String {
+    let one_gib_kb = 1024.0 * 1024.0;
+    let base = if info.total_kb as f64 >= one_gib_kb {
+        let used_gib = info.used_kb as f64 / one_gib_kb;
+        let total_gib = info.total_kb as f64 / one_gib_kb;
+        format!(
+            "{:.2} GiB / {:.2} GiB ({}%)",
+            used_gib, total_gib, info.percent
+        )
+    } else {
+        let used_mib = info.used_kb as f64 / 1024.0;
+        let total_mib = info.total_kb as f64 / 1024.0;
+        format!(
+            "{:.0} MiB / {:.0} MiB ({}%)",
+            used_mib, total_mib, info.percent
+        )
+    };
+
+    if let Some(algo) = zram_algo {
+        if !algo.is_empty() {
+            return format!("{} - {}", base, algo);
+        }
+    }
+    base
+}
+
 pub struct SwapCollector;
 
 impl Collector for SwapCollector {
@@ -241,22 +317,8 @@ impl Collector for SwapCollector {
 
     fn collect(&self, _ctx: &FetchContext) -> Option<ModuleOutput> {
         let swap = get_swap_info()?;
-        let one_gib_kb = 1024.0 * 1024.0;
-        let value = if swap.total_kb as f64 >= one_gib_kb {
-            let used_gib = swap.used_kb as f64 / one_gib_kb;
-            let total_gib = swap.total_kb as f64 / one_gib_kb;
-            format!(
-                "{:.2} GiB / {:.2} GiB ({}%)",
-                used_gib, total_gib, swap.percent
-            )
-        } else {
-            let used_mib = swap.used_kb as f64 / 1024.0;
-            let total_mib = swap.total_kb as f64 / 1024.0;
-            format!(
-                "{:.0} MiB / {:.0} MiB ({}%)",
-                used_mib, total_mib, swap.percent
-            )
-        };
+        let zram_algo = detect_zram_algorithm();
+        let value = format_swap(&swap, zram_algo.as_deref());
 
         Some(ModuleOutput {
             id: ModuleId::Swap,
@@ -323,5 +385,23 @@ Shmem:            256000 kB
         assert_eq!(info.total_kb, 8192000);
         assert!(info.used_kb > 0);
         assert!(info.percent > 0);
+    }
+
+    #[test]
+    fn test_parse_swapinfo() {
+        let fixture = r#"
+SwapTotal:       4194304 kB
+SwapFree:        4194304 kB
+"#;
+        let info = parse_swapinfo(fixture).unwrap();
+        assert_eq!(info.total_kb, 4194304);
+        assert_eq!(info.used_kb, 0);
+        assert_eq!(info.percent, 0);
+
+        let formatted = format_swap(&info, Some("LZ4"));
+        assert_eq!(formatted, "0.00 GiB / 4.00 GiB (0%) - LZ4");
+
+        let formatted_traditional = format_swap(&info, None);
+        assert_eq!(formatted_traditional, "0.00 GiB / 4.00 GiB (0%)");
     }
 }
