@@ -137,7 +137,11 @@ dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
 
 ---
 
-### Windows (PowerShell)
+### Windows (PowerShell / WinGet)
+
+*Note: WinGet manifest submission is currently pending review in `microsoft/winget-pkgs`. Once merged, installation will be available via `winget install ferrisfetch`.*
+
+**Manual Download & Run via PowerShell:**
 
 ```powershell
 # 1. Download
@@ -290,7 +294,7 @@ Package definitions and build specifications are organized in [`packaging/`](pac
 ## Development & Testing
 
 ```bash
-# Run all 186 unit, integration, and CLI snapshot tests
+# Run the full test suite (unit, integration, and CLI snapshot tests)
 cargo test
 
 # Run strict linter with zero warnings allowed
