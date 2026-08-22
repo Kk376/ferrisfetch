@@ -4,22 +4,70 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-/// Parses Debian `/var/lib/dpkg/status` content and counts installed packages.
-/// Fast path: stream-parses status file directly without spawning `dpkg-query`.
-pub fn parse_dpkg_status(content: &str) -> usize {
+/// Parses Debian `/var/lib/dpkg/status` raw bytes and counts installed packages.
+/// Fast path: stream-parses status file directly without string allocations or UTF-8 decoding.
+pub fn parse_dpkg_status_bytes(bytes: &[u8]) -> usize {
     let mut count = 0;
-    for line in content.lines() {
-        if line.starts_with("Status:") && line.ends_with(" installed") {
+    for line in bytes.split(|&b| b == b'\n') {
+        if line.starts_with(b"Status:") && line.ends_with(b" installed") {
             count += 1;
         }
     }
     count
 }
 
+/// Parses Debian `/var/lib/dpkg/status` content and counts installed packages.
+pub fn parse_dpkg_status(content: &str) -> usize {
+    parse_dpkg_status_bytes(content.as_bytes())
+}
+
 /// Counts installed packages for Debian/Ubuntu family from a status file path.
 pub fn count_dpkg_from_path(path: &Path) -> Option<usize> {
-    if let Ok(content) = fs::read_to_string(path) {
-        let count = parse_dpkg_status(&content);
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir.as_ref().map(|d| d.join("dpkg_v1.cache"));
+
+    if let Ok(meta) = fs::metadata(path) {
+        if let Ok(mtime) = meta.modified() {
+            let mtime_sec = mtime
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+
+            if let Some(ref c_path) = cache_file {
+                if let Ok(cached) = fs::read_to_string(c_path) {
+                    if let Some((saved_mtime, saved_count)) = cached.trim().split_once(' ') {
+                        if let (Ok(s_mtime), Ok(count)) =
+                            (saved_mtime.parse::<u64>(), saved_count.parse::<usize>())
+                        {
+                            if s_mtime == mtime_sec && count > 0 {
+                                return Some(count);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Ok(bytes) = fs::read(path) {
+                let count = parse_dpkg_status_bytes(&bytes);
+                if count > 0 {
+                    if let Some(ref dir) = cache_dir {
+                        let _ = fs::create_dir_all(dir);
+                    }
+                    if let Some(ref c_path) = cache_file {
+                        let _ = fs::write(c_path, format!("{} {}", mtime_sec, count));
+                    }
+                    return Some(count);
+                }
+            }
+        }
+    }
+
+    if let Ok(bytes) = fs::read(path) {
+        let count = parse_dpkg_status_bytes(&bytes);
         if count > 0 {
             return Some(count);
         }

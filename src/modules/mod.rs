@@ -195,17 +195,27 @@ impl ModuleRegistry {
         Self { collectors }
     }
 
-    /// Collects metrics from active modules in deterministic registration or user-configured CLI order.
+    /// Collects metrics from active modules concurrently using std::thread::scope while preserving deterministic ordering.
     pub fn collect_all(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
-        let mut results = Vec::new();
-
-        for module_id in &ctx.active_modules {
-            if let Some(collector) = self.collectors.iter().find(|c| c.id() == *module_id) {
-                results.extend(collector.collect_multiple(ctx));
-            }
+        let active = &ctx.active_modules;
+        if active.is_empty() {
+            return Vec::new();
         }
 
-        results
+        let outputs: Vec<Vec<ModuleOutput>> = std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(active.len());
+            for &module_id in active {
+                if let Some(collector) = self.collectors.iter().find(|c| c.id() == module_id) {
+                    handles.push(s.spawn(move || collector.collect_multiple(ctx)));
+                }
+            }
+            handles
+                .into_iter()
+                .map(|h| h.join().unwrap_or_default())
+                .collect()
+        });
+
+        outputs.into_iter().flatten().collect()
     }
 }
 

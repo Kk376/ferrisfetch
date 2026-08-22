@@ -344,6 +344,9 @@ pub fn detect_wsl_gpus() -> Vec<String> {
     if let Some(ref path) = cache_file {
         if let Ok(cached) = fs::read_to_string(path) {
             let trimmed = cached.trim();
+            if trimmed == "NONE" {
+                return gpus;
+            }
             if !trimmed.is_empty() && !gpus.contains(&trimmed.to_string()) {
                 gpus.push(trimmed.to_string());
                 return gpus;
@@ -352,6 +355,7 @@ pub fn detect_wsl_gpus() -> Vec<String> {
     }
 
     // 3. Fallback: Query nvidia-smi with name, VRAM and clock speed
+    let mut found_dgpu = false;
     for smi_path in &["/usr/lib/wsl/lib/nvidia-smi", "nvidia-smi"] {
         if let Ok(output) = Command::new(smi_path)
             .args([
@@ -380,6 +384,7 @@ pub fn detect_wsl_gpus() -> Vec<String> {
                             let formatted = format_gpu_with_specs(raw_name, vram_mb, clock_mhz);
                             if !gpus.contains(&formatted) {
                                 gpus.push(formatted.clone());
+                                found_dgpu = true;
 
                                 // Persist discrete GPU cache
                                 if let Some(ref dir) = cache_dir {
@@ -398,6 +403,15 @@ pub fn detect_wsl_gpus() -> Vec<String> {
             g.contains("NVIDIA") || g.contains("GeForce") || g.contains("RTX") || g.contains("GTX")
         }) {
             break;
+        }
+    }
+
+    if !found_dgpu {
+        if let Some(ref dir) = cache_dir {
+            let _ = fs::create_dir_all(dir);
+        }
+        if let Some(ref path) = cache_file {
+            let _ = fs::write(path, "NONE");
         }
     }
 
@@ -545,7 +559,36 @@ pub fn parse_windows_gpu_names(adapters: &[String]) -> Vec<String> {
 }
 
 #[cfg(not(windows))]
+static GPU_CACHE: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+
+#[cfg(not(windows))]
 pub fn get_gpu_list() -> Vec<String> {
+    GPU_CACHE.get_or_init(get_gpu_list_uncached).clone()
+}
+
+#[cfg(not(windows))]
+fn get_gpu_list_uncached() -> Vec<String> {
+    // 0. Fast-path: Check persistent cache
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir.as_ref().map(|d| d.join("gpu_list_v1.cache"));
+
+    if let Some(ref path) = cache_file {
+        if let Ok(content) = fs::read_to_string(path) {
+            let list: Vec<String> = content
+                .lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect();
+            if !list.is_empty() {
+                return list;
+            }
+        }
+    }
+
     let sysfs_gpus = detect_gpus_sysfs();
 
     // Check if sysfs produced only generic/unresolved IDs (e.g. "Intel (0x5917)" or "Microsoft Direct3D")
@@ -578,7 +621,7 @@ pub fn get_gpu_list() -> Vec<String> {
         sysfs_gpus
     };
 
-    raw_list
+    let result: Vec<String> = raw_list
         .into_iter()
         .enumerate()
         .map(|(idx, gpu)| {
@@ -589,7 +632,18 @@ pub fn get_gpu_list() -> Vec<String> {
             }
             gpu
         })
-        .collect()
+        .collect();
+
+    if !result.is_empty() {
+        if let Some(ref dir) = cache_dir {
+            let _ = fs::create_dir_all(dir);
+        }
+        if let Some(ref path) = cache_file {
+            let _ = fs::write(path, result.join("\n"));
+        }
+    }
+
+    result
 }
 
 /// Reads display adapter names from Windows registry under Display Class GUID.

@@ -112,6 +112,24 @@ pub fn format_shell_name_version(
 }
 
 fn get_shell_cli_version(shell_name: &str) -> Option<String> {
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir
+        .as_ref()
+        .map(|d| d.join(format!("shell_{}.cache", shell_name)));
+
+    if let Some(ref path) = cache_file {
+        if let Ok(cached) = std::fs::read_to_string(path) {
+            let trimmed = cached.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
     let output = std::process::Command::new(shell_name)
         .arg("--version")
         .output()
@@ -128,7 +146,14 @@ fn get_shell_cli_version(shell_name: &str) -> Option<String> {
                 && clean.contains('.')
             {
                 let ver = clean.split('(').next().unwrap_or(clean);
-                return Some(ver.to_string());
+                let ver_str = ver.to_string();
+                if let Some(ref dir) = cache_dir {
+                    let _ = std::fs::create_dir_all(dir);
+                }
+                if let Some(ref path) = cache_file {
+                    let _ = std::fs::write(path, &ver_str);
+                }
+                return Some(ver_str);
             }
         }
     }

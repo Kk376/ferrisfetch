@@ -182,6 +182,13 @@ fn query_gsettings_theme() -> ThemeInfo {
         ..Default::default()
     };
 
+    if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none()
+        && std::env::var_os("DISPLAY").is_none()
+        && std::env::var_os("WAYLAND_DISPLAY").is_none()
+    {
+        return info;
+    }
+
     if let Ok(output) = Command::new("gsettings")
         .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
         .output()
@@ -271,8 +278,71 @@ pub fn parse_windows_theme(apps_use_light_theme: u32) -> ThemeInfo {
 /// 5. GSettings dconf query for active GNOME desktop interface schemas
 /// 6. `$GTK_THEME` environment variable override
 #[cfg(not(windows))]
+static THEME_CACHE: std::sync::OnceLock<Option<ThemeInfo>> = std::sync::OnceLock::new();
+
+#[cfg(not(windows))]
 pub fn detect_theme_info() -> Option<ThemeInfo> {
+    THEME_CACHE.get_or_init(detect_theme_info_uncached).clone()
+}
+
+#[cfg(not(windows))]
+fn detect_theme_info_uncached() -> Option<ThemeInfo> {
+    // 0. Fast-path: Check persistent cache
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir.as_ref().map(|d| d.join("theme_v1.cache"));
+
+    if let Some(ref path) = cache_file {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            let lines: Vec<&str> = content.lines().collect();
+            if lines.len() >= 5 {
+                let theme = if lines[0].is_empty() {
+                    None
+                } else {
+                    Some(lines[0].to_string())
+                };
+                let icon_theme = if lines[1].is_empty() {
+                    None
+                } else {
+                    Some(lines[1].to_string())
+                };
+                let font = if lines[2].is_empty() {
+                    None
+                } else {
+                    Some(lines[2].to_string())
+                };
+                let cursor = if lines[3].is_empty() {
+                    None
+                } else {
+                    Some(lines[3].to_string())
+                };
+                let dark_mode = lines[4] == "1" || lines[4].eq_ignore_ascii_case("true");
+                let source = match lines.get(5).copied().unwrap_or("") {
+                    "Gtk" => Some(ThemeSource::Gtk),
+                    "Kde" => Some(ThemeSource::Kde),
+                    "Xfce" => Some(ThemeSource::Xfce),
+                    "GSettings" => Some(ThemeSource::GSettings),
+                    "Env" => Some(ThemeSource::Env),
+                    _ => None,
+                };
+
+                return Some(ThemeInfo {
+                    theme,
+                    icon_theme,
+                    font,
+                    cursor,
+                    dark_mode,
+                    source,
+                });
+            }
+        }
+    }
+
     let config_dir = get_config_dir();
+    let mut resolved: Option<ThemeInfo> = None;
 
     // 1. GTK 3.0 / 4.0 settings.ini
     for gtk_ver in ["gtk-4.0", "gtk-3.0"] {
@@ -281,65 +351,104 @@ pub fn detect_theme_info() -> Option<ThemeInfo> {
             if let Ok(content) = std::fs::read_to_string(&gtk_settings) {
                 let info = parse_gtk_settings_ini(&content);
                 if info.theme.is_some() || info.icon_theme.is_some() {
-                    return Some(info);
+                    resolved = Some(info);
+                    break;
                 }
             }
         }
     }
 
     // 2. KDE Plasma kdeglobals
-    let kde_globals = config_dir.join("kdeglobals");
-    if kde_globals.is_file() {
-        if let Ok(content) = std::fs::read_to_string(&kde_globals) {
-            let info = parse_kde_globals(&content);
-            if info.theme.is_some() || info.icon_theme.is_some() {
-                return Some(info);
+    if resolved.is_none() {
+        let kde_globals = config_dir.join("kdeglobals");
+        if kde_globals.is_file() {
+            if let Ok(content) = std::fs::read_to_string(&kde_globals) {
+                let info = parse_kde_globals(&content);
+                if info.theme.is_some() || info.icon_theme.is_some() {
+                    resolved = Some(info);
+                }
             }
         }
     }
 
     // 3. XFCE xsettings.xml
-    let xfce_settings = config_dir.join("xfce4/xfconf/xfce-perchannel-xml/xsettings.xml");
-    if xfce_settings.is_file() {
-        if let Ok(content) = std::fs::read_to_string(&xfce_settings) {
-            let info = parse_xfce_xsettings(&content);
-            if info.theme.is_some() || info.icon_theme.is_some() {
-                return Some(info);
+    if resolved.is_none() {
+        let xfce_settings = config_dir.join("xfce4/xfconf/xfce-perchannel-xml/xsettings.xml");
+        if xfce_settings.is_file() {
+            if let Ok(content) = std::fs::read_to_string(&xfce_settings) {
+                let info = parse_xfce_xsettings(&content);
+                if info.theme.is_some() || info.icon_theme.is_some() {
+                    resolved = Some(info);
+                }
             }
         }
     }
 
     // 4. GTK 2 ~/.gtkrc-2.0
-    if let Ok(home) = std::env::var("HOME") {
-        let gtk2_rc = Path::new(&home).join(".gtkrc-2.0");
-        if gtk2_rc.is_file() {
-            if let Ok(content) = std::fs::read_to_string(&gtk2_rc) {
-                let info = parse_gtk_settings_ini(&content);
-                if info.theme.is_some() || info.icon_theme.is_some() {
-                    return Some(info);
+    if resolved.is_none() {
+        if let Ok(home) = std::env::var("HOME") {
+            let gtk2_rc = Path::new(&home).join(".gtkrc-2.0");
+            if gtk2_rc.is_file() {
+                if let Ok(content) = std::fs::read_to_string(&gtk2_rc) {
+                    let info = parse_gtk_settings_ini(&content);
+                    if info.theme.is_some() || info.icon_theme.is_some() {
+                        resolved = Some(info);
+                    }
                 }
             }
         }
     }
 
     // 5. GSettings fallback for GNOME sessions
-    let gsettings_info = query_gsettings_theme();
-    if gsettings_info.theme.is_some() || gsettings_info.icon_theme.is_some() {
-        return Some(gsettings_info);
-    }
-
-    // 6. Environment variable fallbacks
-    if let Ok(theme) = std::env::var("GTK_THEME") {
-        if !theme.is_empty() {
-            return Some(ThemeInfo {
-                theme: Some(theme),
-                source: Some(ThemeSource::Env),
-                ..Default::default()
-            });
+    if resolved.is_none() {
+        let gsettings_info = query_gsettings_theme();
+        if gsettings_info.theme.is_some() || gsettings_info.icon_theme.is_some() {
+            resolved = Some(gsettings_info);
         }
     }
 
-    None
+    // 6. Environment variable fallbacks
+    if resolved.is_none() {
+        if let Ok(theme) = std::env::var("GTK_THEME") {
+            if !theme.is_empty() {
+                resolved = Some(ThemeInfo {
+                    theme: Some(theme),
+                    source: Some(ThemeSource::Env),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+
+    // Save to persistent cache
+    if let Some(ref info) = resolved {
+        if let Some(ref dir) = cache_dir {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Some(ref path) = cache_file {
+            let src_str = match info.source {
+                Some(ThemeSource::Gtk) => "Gtk",
+                Some(ThemeSource::Kde) => "Kde",
+                Some(ThemeSource::Xfce) => "Xfce",
+                Some(ThemeSource::GSettings) => "GSettings",
+                Some(ThemeSource::Env) => "Env",
+                Some(ThemeSource::Windows) => "Windows",
+                None => "",
+            };
+            let serialized = format!(
+                "{}\n{}\n{}\n{}\n{}\n{}\n",
+                info.theme.as_deref().unwrap_or(""),
+                info.icon_theme.as_deref().unwrap_or(""),
+                info.font.as_deref().unwrap_or(""),
+                info.cursor.as_deref().unwrap_or(""),
+                if info.dark_mode { "1" } else { "0" },
+                src_str
+            );
+            let _ = std::fs::write(path, serialized);
+        }
+    }
+
+    resolved
 }
 
 /// Detects active Windows application theme (Dark / Light) from user registry.
