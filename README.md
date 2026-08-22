@@ -4,12 +4,13 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.8.6)
+## Latest Changes (v0.9.0)
 
+- **Enhanced Distro-Colored ASCII Logos**: Distro brand signature colors (Ubuntu Orange, Fedora Blue, Debian Red, Arch Cyan, Mint Green, Gentoo Purple) on inner emblems with crisp white (`\x1b[38;5;231m`) outer layer framing across all 26+ logos.
+- **WSL2 Storage Filesystem Normalization**: Automatically normalizes virtualized 9P and DrvFS mounts (`/mnt/c`, `/mnt/d`) to native **NTFS** filesystem labels.
 - **Neofetch Dual-Tone ASCII Art Suite**: Complete, classic multi-color ASCII art logo suite from Neofetch across all 26 supported distributions and operating systems.
-- **Dual-Tone Color Token Rendering Engine**: Internal ANSI color token parsing (`{p}` for primary color, `{a}` for accent highlights) with zero-distortion column alignment.
-- **Filesystem Type Discovery**: Automatically identifies partition filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`) with zero subprocess overhead (suggested by [@Laynsb](https://github.com/Laynsb)).
-- **ZRAM Compression Algorithm Discovery**: Detects in-memory swap compression algorithms (`LZ4`, `ZSTD`, `LZO`) on ZRAM-enabled systems (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **Dual-Tone Color Token Rendering Engine**: Internal ANSI color token parsing with zero-distortion column alignment.
+- **Direct Hardware & Subsystem Discovery**: Fast zero-overhead metrics collection for CPU, GPU, Memory, Disks, and Battery.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -48,7 +49,7 @@ To install and run manually in PowerShell, run these 3 short commands one by one
 
 #### Step 1: Download
 ```powershell
-curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch-windows-x86_64.zip
+curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-windows-x86_64.zip
 ```
 
 #### Step 2: Extract
@@ -87,28 +88,28 @@ Direct packages and release binaries are available under [`releases/`](releases/
 
 - **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch_0.8.6-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.8.6-1_amd64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_amd64.deb
+  sudo dpkg -i ferrisfetch_0.9.0-1_amd64.deb
   ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.8.6-1_amd64.deb`)*
+  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.9.0-1_amd64.deb`)*
 
 - **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch-0.8.6-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.8.6-1-x86_64.pkg.tar.zst
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
+  sudo pacman -U ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
   ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.8.6-1-x86_64.pkg.tar.zst`)*
+  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst`)*
 
 - **Android (Termux ARM64)** (`.deb`):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch_0.8.6-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.8.6-1_termux_aarch64.deb
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_termux_aarch64.deb
+  dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
   ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
+  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
 
 - **Standalone Static Binary** (Any 64-bit Linux / musl):
   ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch-linux-musl-x86_64
+  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-linux-musl-x86_64
   chmod +x ferrisfetch-linux-musl-x86_64
   sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
   ```
