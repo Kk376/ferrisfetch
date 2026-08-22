@@ -172,6 +172,7 @@ pub fn epoch_to_datetime(epoch_secs: u64) -> (i32, u8, u8, u8, u8, u8) {
 #[cfg(not(windows))]
 pub fn get_local_timezone_offset_secs(epoch: u64) -> i64 {
     unsafe {
+        #[allow(deprecated)]
         let time = epoch as libc::time_t;
         let mut tm = MaybeUninit::<libc::tm>::zeroed();
         if !libc::localtime_r(&time, tm.as_mut_ptr()).is_null() {
