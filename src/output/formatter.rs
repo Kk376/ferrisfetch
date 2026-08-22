@@ -207,7 +207,6 @@ mod tests {
             name: "test",
             raw_lines: &["AA", "BB"],
             primary_color: "",
-            accent_color: "",
         };
 
         let outputs = vec![ModuleOutput {
@@ -227,7 +226,6 @@ mod tests {
             name: "test",
             raw_lines: &["A", "BBB"],
             primary_color: "",
-            accent_color: "",
         };
 
         let outputs = vec![

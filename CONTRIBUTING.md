@@ -101,7 +101,7 @@ FerrisFetch contains compact ASCII art logos for Linux distributions.
 ### Logo Guidelines
 
 - **Dimensions**: Keep logos compact (typically 4 to 8 lines high, under 25 columns wide) so they fit comfortably next to module text on 80-column terminals.
-- **Escape sequences**: Use raw strings without embedded ANSI codes in `raw_lines`. Colors are applied dynamically via `primary_color` and `accent_color`.
+- **Escape sequences**: Use raw strings without embedded ANSI codes in `raw_lines`. Colors are applied dynamically via `primary_color`.
 
 ### Step 1: Add logo entry in `src/output/logo.rs`
 
@@ -117,7 +117,6 @@ Logo {
         "  (---)",
     ],
     primary_color: "\x1b[38;5;39m",
-    accent_color: "\x1b[37m",
 },
 ```
 
