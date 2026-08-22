@@ -1,3 +1,9 @@
+ferrisfetch (0.8.6-3~ppa1~noble) noble; urgency=medium
+
+  * Patch vendored clap_lex crate to edition 2021 for Cargo 1.75 compatibility on Ubuntu 24.04 Noble.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 14:48:00 +0000
+
 ferrisfetch (0.8.6-2~ppa1~noble) noble; urgency=medium
 
   * Fix vendored sources path in offline .cargo/config.toml (debian/vendor).
