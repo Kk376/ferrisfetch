@@ -8,10 +8,10 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 - **Native Windows NT Support**: Native Win32 execution with zero external runtime dependencies.
 - **Win32 Probers**: Full support for Windows OS, Kernel, Host, CPU, GPU, Memory, Disks, Battery, Theme, Uptime, and Installation Date.
-- **Windows Package Managers**: Direct counting for **WinGet**, **Scoop**, **Chocolatey**, and **Cargo**.
+- **Windows Package Managers**: Direct counting for **WinGet**, **Chocolatey**, and **Cargo**.
 - **Windows Shells & Terminals**: Recognition for **PowerShell 7** (`pwsh`), **Windows PowerShell 5.1**, **Command Prompt** (`cmd`), **Nushell**, and **Windows Terminal**.
 - **Windows ASCII Art Logos**: High-resolution ANSI ASCII art for **Windows 11**, **Windows 10**, and **Classic Windows**.
-- **Distribution Channels**: Added packaging manifests for **Scoop** and **WinGet**.
+- **Distribution Channels**: Added packaging manifests for **WinGet**.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -20,7 +20,7 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 ## Features
 
 - **Direct OS kernel probing**: Reads `/proc`, `/sys`, POSIX APIs, and Win32 registry/system calls directly without spawning shell subprocesses.
-- **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`, `winget`, `scoop`, `chocolatey`, `cargo`, `npm`, `pip`) without network calls or locks.
+- **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`, `winget`, `chocolatey`, `cargo`, `npm`, `pip`) without network calls or locks.
 - **Dynamic layout engine**: Computes column alignment and ANSI visible widths dynamically with automatic vertical fallback on narrow terminals (< 60 columns).
 - **Distro & OS logos**: Includes compact ASCII art logos for Windows (11, 10, Classic), major Linux distributions (Arch, Debian, Ubuntu, Fedora, Mint, RHEL, Rocky, Alma, EndeavourOS, Manjaro, openSUSE, Alpine, Gentoo, Void, Pop!_OS), and the Ferris mascot.
 - **Resilient fallback design**: Modules degrade gracefully when optional hardware, environment variables, or metadata files are missing.
@@ -42,17 +42,11 @@ FerrisFetch is built and tested across:
 
 ## Installation
 
-### Windows (Scoop / WinGet)
+### Windows (WinGet)
 
-- **Scoop**:
-  ```powershell
-  scoop install ferrisfetch
-  ```
-
-- **WinGet**:
-  ```powershell
-  winget install ferrisfetch
-  ```
+```powershell
+winget install ferrisfetch
+```
 
 ### Ubuntu / Linux Mint / Pop!_OS (PPA)
 

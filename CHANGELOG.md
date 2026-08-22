@@ -22,10 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Install Date**: Formats system installation timestamp from registry records with relative time delta.
   - **Theme**: Detects Windows Light/Dark mode preference from personalization registry keys.
   - **Desktop & WM**: Reports `Windows Explorer` and `Desktop Window Manager (DWM)`.
-- **Windows Package Managers**: Native package counting for **WinGet** (`%LOCALAPPDATA%\Microsoft\WinGet`), **Scoop** (`%USERPROFILE%\scoop\apps`), **Chocolatey** (`C:\ProgramData\chocolatey\lib`), and **Cargo** (`.crates.toml`).
+- **Windows Package Managers**: Native package counting for **WinGet** (`%LOCALAPPDATA%\Microsoft\WinGet`), **Chocolatey** (`C:\ProgramData\chocolatey\lib`), and **Cargo** (`.crates.toml`).
 - **Windows Shells & Terminals**: Detection and version parsing for **PowerShell 7** (`pwsh`), **Windows PowerShell 5.1** (`powershell`), **Command Prompt** (`cmd`), **Nushell** (`nu`), **Windows Terminal** (`$WT_SESSION`), and **Console Window Host** (`ConHost`).
 - **Windows ASCII Art Logos**: Added high-resolution ANSI logos for **Windows 11**, **Windows 10**, and **Classic Windows / Windows 7**.
-- **Distribution Channels**: Added packaging manifests for **Scoop** and **Winget**.
+- **Distribution Channels**: Added packaging manifests for **WinGet**.
 
 ## [0.5.0] - 2026-08-19
 

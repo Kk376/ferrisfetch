@@ -346,43 +346,6 @@ pub fn count_winget() -> Option<usize> {
     count_winget_from_dirs(&packages, &links)
 }
 
-/// Counts installed Scoop applications from apps directory, excluding Scoop itself.
-pub fn count_scoop_from_dir(apps_path: &Path) -> Option<usize> {
-    if let Ok(entries) = fs::read_dir(apps_path) {
-        let count = entries
-            .flatten()
-            .filter(|e| {
-                if let Ok(ft) = e.file_type() {
-                    if ft.is_dir() {
-                        let name = e.file_name();
-                        let s = name.to_string_lossy();
-                        return !s.starts_with('.') && !s.eq_ignore_ascii_case("scoop");
-                    }
-                }
-                false
-            })
-            .count();
-        if count > 0 {
-            return Some(count);
-        }
-    }
-    None
-}
-
-/// Counts installed Scoop applications.
-pub fn count_scoop() -> Option<usize> {
-    if let Ok(scoop_dir) = std::env::var("SCOOP") {
-        if let Some(c) = count_scoop_from_dir(&Path::new(&scoop_dir).join("apps")) {
-            return Some(c);
-        }
-    }
-    let user_profile = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .ok()?;
-    let apps = Path::new(&user_profile).join("scoop").join("apps");
-    count_scoop_from_dir(&apps)
-}
-
 /// Counts installed Chocolatey packages from lib directory.
 pub fn count_choco_from_dir(lib_path: &Path) -> Option<usize> {
     if let Ok(entries) = fs::read_dir(lib_path) {
@@ -636,9 +599,6 @@ pub fn get_packages_summary() -> Option<String> {
     if let Some(winget) = count_winget() {
         parts.push(format!("{} (winget)", winget));
     }
-    if let Some(scoop) = count_scoop() {
-        parts.push(format!("{} (scoop)", scoop));
-    }
     if let Some(choco) = count_choco() {
         parts.push(format!("{} (choco)", choco));
     }
@@ -843,23 +803,6 @@ Section: libs
             count_winget_from_dirs(empty_pkgs.path(), links_tmp.path()),
             Some(2)
         );
-    }
-
-    #[test]
-    fn test_count_scoop_from_dir_mock() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let apps = temp_dir.path().join("apps");
-        fs::create_dir_all(&apps).unwrap();
-
-        // Scoop itself must be excluded from count
-        fs::create_dir(apps.join("scoop")).unwrap();
-        fs::create_dir(apps.join("7zip")).unwrap();
-        fs::create_dir(apps.join("neovim")).unwrap();
-        fs::create_dir(apps.join("ripgrep")).unwrap();
-        fs::create_dir(apps.join(".hidden")).unwrap();
-        fs::write(apps.join("README.txt"), b"").unwrap();
-
-        assert_eq!(count_scoop_from_dir(&apps), Some(3));
     }
 
     #[test]
