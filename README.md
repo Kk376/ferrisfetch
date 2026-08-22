@@ -40,15 +40,26 @@ FerrisFetch is built and tested across:
 
 ## Installation
 
-### Windows (WinGet)
+### Windows (Manual / WinGet)
 
-*WinGet package submission is currently under review by Microsoft and will soon be live.*
+*WinGet package submission is currently under review by Microsoft and will soon be live (`winget install ferrisfetch`).*
 
+To install and run manually in PowerShell, run these 3 short commands one by one:
+
+#### Step 1: Download
 ```powershell
-winget install ferrisfetch
+curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.7.0/ferrisfetch-windows-x86_64.zip
 ```
 
-Direct standalone binaries (`ferrisfetch-windows-x86_64.zip`) are also available for download under [GitHub Releases](https://github.com/kk376/ferrisfetch/releases).
+#### Step 2: Extract
+```powershell
+tar.exe -xf ferrisfetch-windows-x86_64.zip
+```
+
+#### Step 3: Run
+```powershell
+.\ferrisfetch.exe
+```
 
 ### Ubuntu / Linux Mint / Pop!_OS (PPA)
 
