@@ -1,3 +1,9 @@
+ferrisfetch (0.9.5-1~ppa1~noble) noble; urgency=medium
+
+  * Release version 0.9.5: WSLg version discovery and GPU type classification.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 23:02:00 +0530
+
 ferrisfetch (0.9.0-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.9.0: Distro-colored ASCII logos with high-contrast white outer layer.

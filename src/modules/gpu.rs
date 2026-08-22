@@ -421,16 +421,43 @@ pub fn detect_wsl_gpus() -> Vec<String> {
 /// Classifies whether a GPU model name is an integrated graphics processor.
 pub fn is_integrated_gpu(gpu_name: &str) -> bool {
     let lower = gpu_name.to_lowercase();
-    lower.contains("radeon 6")
-        || lower.contains("radeon 7")
-        || lower.contains("radeon(tm) 6")
-        || lower.contains("radeon(tm) 7")
+
+    // Explicit discrete GPU markers
+    if lower.contains("geforce")
+        || lower.contains("rtx")
+        || lower.contains("gtx")
+        || lower.contains("quadro")
+        || lower.contains("tesla")
+        || lower.contains("arc a")
+        || lower.contains("arc b")
+        || lower.contains("arc pro")
+        || lower.contains("radeon rx")
+        || lower.contains("rx ")
+        || lower.contains("radeon pro")
+        || lower.contains("firepro")
+    {
+        return false;
+    }
+
+    // Explicit integrated GPU markers
+    lower.contains("660m")
+        || lower.contains("680m")
+        || lower.contains("760m")
+        || lower.contains("780m")
+        || lower.contains("740m")
+        || lower.contains("880m")
+        || lower.contains("890m")
         || lower.contains("radeon graphics")
         || lower.contains("radeon vega")
+        || lower.contains("vega ")
         || lower.contains("iris")
         || lower.contains("uhd graphics")
         || lower.contains("hd graphics")
         || (lower.contains("intel") && !lower.contains("arc"))
+        || lower.contains("adreno")
+        || lower.contains("mali")
+        || lower.contains("videocore")
+        || lower.contains("apple m")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -441,7 +468,7 @@ pub struct GpuGroup {
 }
 
 /// Groups identical dGPUs and assigns sequential dynamic indices starting at GPU0.
-/// Guarantees that iGPU occupies GPU0 on hybrid laptop configurations.
+/// Guarantees that iGPU occupies GPU0 on hybrid laptop configurations and appends [Integrated] / [Discrete] tags.
 pub fn group_and_index_gpus(raw_gpus: &[String], cpu_sockets: usize) -> Vec<ModuleOutput> {
     if raw_gpus.is_empty() {
         return Vec::new();
@@ -493,10 +520,23 @@ pub fn group_and_index_gpus(raw_gpus: &[String], cpu_sockets: usize) -> Vec<Modu
     let mut outputs = Vec::new();
     for (idx, group) in groups.iter().enumerate() {
         let label = format!("GPU{}", idx);
-        let value = if group.count > 1 {
-            format!("{}x {}", group.count, group.name)
+        let tag = if group.is_integrated {
+            "[Integrated]"
         } else {
-            group.name.clone()
+            "[Discrete]"
+        };
+
+        let formatted_name =
+            if group.name.contains("[Integrated]") || group.name.contains("[Discrete]") {
+                group.name.clone()
+            } else {
+                format!("{} {}", group.name, tag)
+            };
+
+        let value = if group.count > 1 {
+            format!("{}x {}", group.count, formatted_name)
+        } else {
+            formatted_name
         };
 
         outputs.push(ModuleOutput {
@@ -846,13 +886,13 @@ mod tests {
         let outputs = group_and_index_gpus(&gpus, 3);
         assert_eq!(outputs.len(), 4);
         assert_eq!(outputs[0].label, "GPU0");
-        assert_eq!(outputs[0].value, "3x AMD Radeon Graphics");
+        assert_eq!(outputs[0].value, "3x AMD Radeon Graphics [Integrated]");
         assert_eq!(outputs[1].label, "GPU1");
-        assert_eq!(outputs[1].value, "2x NVIDIA GeForce RTX 4090");
+        assert_eq!(outputs[1].value, "2x NVIDIA GeForce RTX 4090 [Discrete]");
         assert_eq!(outputs[2].label, "GPU2");
-        assert_eq!(outputs[2].value, "NVIDIA GeForce RTX 3090");
+        assert_eq!(outputs[2].value, "NVIDIA GeForce RTX 3090 [Discrete]");
         assert_eq!(outputs[3].label, "GPU3");
-        assert_eq!(outputs[3].value, "Intel Arc A770");
+        assert_eq!(outputs[3].value, "Intel Arc A770 [Discrete]");
     }
 
     #[test]
@@ -864,7 +904,7 @@ mod tests {
         let outputs = group_and_index_gpus(&gpus, 1);
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].label, "GPU0");
-        assert_eq!(outputs[0].value, "2x NVIDIA GeForce RTX 3080");
+        assert_eq!(outputs[0].value, "2x NVIDIA GeForce RTX 3080 [Discrete]");
     }
 
     #[test]
@@ -873,7 +913,7 @@ mod tests {
         let outputs = group_and_index_gpus(&gpus, 1);
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].label, "GPU0");
-        assert_eq!(outputs[0].value, "NVIDIA GeForce RTX 3060");
+        assert_eq!(outputs[0].value, "NVIDIA GeForce RTX 3060 [Discrete]");
     }
 
     #[test]
@@ -885,9 +925,9 @@ mod tests {
         let outputs = group_and_index_gpus(&gpus, 1);
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].label, "GPU0");
-        assert_eq!(outputs[0].value, "Intel Iris Xe Graphics");
+        assert_eq!(outputs[0].value, "Intel Iris Xe Graphics [Integrated]");
         assert_eq!(outputs[1].label, "GPU1");
-        assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 4070");
+        assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 4070 [Discrete]");
     }
 
     #[test]

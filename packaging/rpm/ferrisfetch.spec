@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           ferrisfetch
-Version:        0.9.0
+Version:        0.9.5
 Release:        1%{?dist}
 Summary:        Fast, lightweight Linux system information fetch tool written in Rust
 
@@ -52,6 +52,11 @@ install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 %{_datadir}/fish/vendor_completions.d/%{name}.fish
 
 %changelog
+* Sat Aug 22 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.9.5-1
+- Release version 0.9.5
+- WSLg Version Discovery: Probes and reports active WSLg version
+- GPU Type Classification: Identifies and annotates [Integrated] vs [Discrete] GPUs
+
 * Sat Aug 22 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.9.0-1
 - Release version 0.9.0
 - Enhanced ASCII Distro Art: High-contrast white outer framing with brand-colored inner emblems across all 26+ distributions

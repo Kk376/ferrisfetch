@@ -13,12 +13,12 @@ A fast, lightweight, zero-subprocess system information fetch tool written in Ru
 .ssssssssdMMMNhsssssssssshNMMMdssssssss.   Packages: 1197 (dpkg), 2 (cargo), 1 (npm)
 +sssshhhyNMMNyssssssssssssyNMMMysssssss+   Shell: zsh 5.9
 ossyNMMMNyMMhsssssssssssssshmmmhssssssso   Display: 1920x1080 @ 60Hz
-ossyNMMMNyMMhsssssssssssssshmmmhssssssso   WM: WSLg (Weston)
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso   WM: WSLg 1.0.73.2 (Wayland)
 +sssshhhyNMMNyssssssssssssyNMMMysssssss+   Terminal: Windows Terminal
 .ssssssssdMMMNhsssssssssshNMMMdssssssss.   CPU: AMD Ryzen 5 7535HS (4) @ 3.294GHz
- \sssssssshNMMMyhhyyyyhdNMMMNhssssssss/    GPU0: AMD Radeon 660M (512 MiB) @ 1.900GHz
-  +sssssssssdmydMMMMMMMMddddyssssssss+     GPU1: NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz
-   \ssssssssssshdmNNNNmyNMMMMhssssss/      Memory: 1.54 GiB / 7.76 GiB (20%)
+ \sssssssshNMMMyhhyyyyhdNMMMNhssssssss/    GPU0: AMD Radeon 660M (512 MiB) @ 1.900GHz [Integrated]
+  +sssssssssdmydMMMMMMMMddddyssssssss+     GPU1: NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz [Discrete]
+   \ssssssssssshdmNNNNmyNMMMMhssssss/      Memory: 1.31 GiB / 3.82 GiB (34%)
     .ossssssssssssssssssdMMMNysssso.       Swap: 0.00 GiB / 2.00 GiB (0%)
       -+sssssssssssssssssyyyssss+-         Disk0: (/) 21.9 GiB / 1006.9 GiB (2%) - ext4
         `:+ssssssssssssssssss+:`           Disk1: (C) 223.5 GiB / 475.9 GiB (47%) - ntfs
@@ -94,8 +94,8 @@ sudo apt update && sudo apt install -y ferrisfetch
 
 **Via Pre-built `.deb`:**
 ```bash
-curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_amd64.deb
-sudo dpkg -i ferrisfetch_0.9.0-1_amd64.deb
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.5/ferrisfetch_0.9.5-1_amd64.deb
+sudo dpkg -i ferrisfetch_0.9.5-1_amd64.deb
 ```
 
 ---
@@ -114,8 +114,8 @@ sudo dnf install -y ferrisfetch
 
 **Via Pre-built Pacman Package:**
 ```bash
-curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
-sudo pacman -U ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.5/ferrisfetch-0.9.5-1-x86_64.pkg.tar.zst
+sudo pacman -U ferrisfetch-0.9.5-1-x86_64.pkg.tar.zst
 ```
 
 ---
@@ -131,8 +131,8 @@ brew install kk376/tap/ferrisfetch
 ### Android (Termux)
 
 ```bash
-curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_termux_aarch64.deb
-dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.5/ferrisfetch_0.9.5-1_termux_aarch64.deb
+dpkg -i ferrisfetch_0.9.5-1_termux_aarch64.deb
 ```
 
 ---
@@ -145,7 +145,7 @@ dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
 
 ```powershell
 # 1. Download
-curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-windows-x86_64.zip
+curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.5/ferrisfetch-windows-x86_64.zip
 
 # 2. Extract
 tar.exe -xf ferrisfetch-windows-x86_64.zip
@@ -161,7 +161,7 @@ tar.exe -xf ferrisfetch-windows-x86_64.zip
 Statically linked with musl (zero external dependencies):
 
 ```bash
-curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-linux-musl-x86_64
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.5/ferrisfetch-linux-musl-x86_64
 chmod +x ferrisfetch-linux-musl-x86_64
 sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
 ```
@@ -282,7 +282,7 @@ Package definitions and build specifications are organized in [`packaging/`](pac
 * **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (`control`, `rules`, `changelog`)
 * **Fedora / RHEL (Copr)**: [`packaging/rpm/`](packaging/rpm/) (`ferrisfetch.spec`)
 * **Alpine Linux**: [`packaging/alpine/`](packaging/alpine/) (`APKBUILD`)
-* **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.9.0.ebuild`)
+* **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.9.5.ebuild`)
 * **Void Linux**: [`packaging/void/`](packaging/void/) (`template`)
 * **Nix / NixOS**: [`packaging/nix/`](packaging/nix/) (`package.nix`)
 * **Homebrew Tap**: [`packaging/homebrew/`](packaging/homebrew/) (`ferrisfetch.rb`)

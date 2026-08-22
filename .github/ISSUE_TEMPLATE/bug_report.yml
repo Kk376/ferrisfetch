@@ -12,7 +12,7 @@ body:
     attributes:
       label: FerrisFetch Version
       description: Run `ferrisfetch --version` and paste the output.
-      placeholder: ferrisfetch 0.9.0
+      placeholder: ferrisfetch 0.9.5
     validations:
       required: true
   - type: input

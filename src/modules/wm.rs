@@ -30,6 +30,30 @@ const KNOWN_WMS: &[&str] = &[
     "river",
 ];
 
+/// Parses the WSLg version from the contents of `/mnt/wslg/versions.txt`.
+pub fn parse_wslg_version(content: &str) -> Option<String> {
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("WSLg") {
+            if let Some((_, ver)) = trimmed.split_once(':') {
+                let clean = ver.trim();
+                if !clean.is_empty() {
+                    return Some(clean.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Probes the active WSLg version from `/mnt/wslg/versions.txt`.
+#[cfg(not(windows))]
+pub fn detect_wslg_version() -> Option<String> {
+    fs::read_to_string("/mnt/wslg/versions.txt")
+        .ok()
+        .and_then(|c| parse_wslg_version(&c))
+}
+
 /// Probes active Window Manager from running processes, environment, or WSLg.
 #[cfg(not(windows))]
 pub fn detect_wm() -> Option<String> {
@@ -37,7 +61,11 @@ pub fn detect_wm() -> Option<String> {
     if (fs::metadata("/mnt/wslg").is_ok() || std::env::var_os("WSL_DISTRO_NAME").is_some())
         && (std::env::var_os("WAYLAND_DISPLAY").is_some() || std::env::var_os("DISPLAY").is_some())
     {
-        return Some("WSLg (Weston)".to_string());
+        if let Some(wslg_ver) = detect_wslg_version() {
+            return Some(format!("WSLg {} (Wayland)", wslg_ver));
+        } else {
+            return Some("WSLg (Wayland)".to_string());
+        }
     }
 
     // 2. Scan `/proc` PID directories for active known WM process binaries
@@ -142,5 +170,17 @@ mod tests {
     #[test]
     fn test_detect_wm_live() {
         let _ = detect_wm();
+    }
+
+    #[test]
+    fn test_parse_wslg_version() {
+        let sample = "WSLg ( x86_64 ): 1.0.73.2\nBuilt at: Mon May 18 22:31:53 UTC 2026\n";
+        assert_eq!(parse_wslg_version(sample), Some("1.0.73.2".to_string()));
+
+        let sample_arm = "WSLg ( aarch64 ): 1.0.65.0\n";
+        assert_eq!(parse_wslg_version(sample_arm), Some("1.0.65.0".to_string()));
+
+        let empty = "Azure Linux: VERSION=\"3.0\"\n";
+        assert_eq!(parse_wslg_version(empty), None);
     }
 }
