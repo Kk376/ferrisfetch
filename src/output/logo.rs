@@ -1,3 +1,10 @@
+//! ASCII Art Logos and ANSI Color Layout Engine.
+//!
+//! Distribution ASCII art boundary outlines are based on classic designs from
+//! Neofetch (MIT License, Copyright (c) 2016-2022 Dylan Araps), enhanced in
+//! FerrisFetch with high-contrast white structural framing (`{w}`) and
+//! distribution brand signature color emblems (`{c}`).
+
 use crate::output::color::RESET;
 
 pub const WHITE_COLOR: &str = "\x1b[38;5;231m";

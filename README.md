@@ -1,118 +1,166 @@
 # FerrisFetch
 
-FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux, macOS, and native Windows systems. It queries system metrics directly from virtual filesystems (`/proc`, `/sys`), Win32 APIs, and standard interfaces without spawning shell subprocesses.
+A fast, lightweight, zero-subprocess system information fetch tool written in Rust for Linux, Windows, and macOS.
+
+```text
+            .-/+oossssoo+\-.               kk376@MSI-Thin-A15
+        ´:+ssssssssssssssssss+:`           ------------------
+      -+ssssssssssssssssssyyssss+-         OS: Ubuntu 24.04.4 LTS x86_64
+    .ossssssssssssssssssdMMMNysssso.       Host: Windows Subsystem for Linux (WSL2)
+   /ssssssssssshdmmNNmmyNMMMMhssssss\      Kernel: 6.18.33.2-microsoft-standard-WSL2
+  +ssssssssshmydMMMMMMMNddddyssssssss+     Installed: 23 Jan 2026, 12:22 AM (211 days ago)
+ /sssssssshNMMMyhhyyyyhmNMMMNhssssssss\    Uptime: 3 hours, 14 mins
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.   Packages: 1197 (dpkg), 2 (cargo), 1 (npm)
++sssshhhyNMMNyssssssssssssyNMMMysssssss+   Shell: zsh 5.9
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso   Display: 1920x1080 @ 60Hz
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso   WM: WSLg (Weston)
++sssshhhyNMMNyssssssssssssyNMMMysssssss+   Terminal: Windows Terminal
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.   CPU: AMD Ryzen 5 7535HS (4) @ 3.294GHz
+ \sssssssshNMMMyhhyyyyhdNMMMNhssssssss/    GPU0: AMD Radeon 660M (512 MiB) @ 1.900GHz
+  +sssssssssdmydMMMMMMMMddddyssssssss+     GPU1: NVIDIA GeForce RTX 2050 (4 GiB) @ 2.100GHz
+   \ssssssssssshdmNNNNmyNMMMMhssssss/      Memory: 1.54 GiB / 7.76 GiB (20%)
+    .ossssssssssssssssssdMMMNysssso.       Swap: 0.00 GiB / 2.00 GiB (0%)
+      -+sssssssssssssssssyyyssss+-         Disk0: (/) 21.9 GiB / 1006.9 GiB (2%) - ext4
+        `:+ssssssssssssssssss+:`           Disk1: (C) 223.5 GiB / 475.9 GiB (47%) - ntfs
+            .-\+oossssoo+/-.               Disk2: (D) 452.5 GiB / 931.5 GiB (49%) - ntfs
+                                           Battery: 96% [AC Connected]
+                                           Local IP: 172.30.193.167
+                                           Theme: Adwaita [GTK/GNOME]
+                                           Icons: Adwaita [GTK/GNOME]
+```
 
 ---
 
-## Latest Changes (v0.9.0)
+## Why FerrisFetch?
 
-- **Enhanced Distro-Colored ASCII Logos**: Distro brand signature colors (Ubuntu Orange, Fedora Blue, Debian Red, Arch Cyan, Mint Green, Gentoo Purple) on inner emblems with crisp white (`\x1b[38;5;231m`) outer layer framing across all 26+ logos.
-- **WSL2 Storage Filesystem Normalization**: Automatically normalizes virtualized 9P and DrvFS mounts (`/mnt/c`, `/mnt/d`) to native **NTFS** filesystem labels.
-- **Neofetch Dual-Tone ASCII Art Suite**: Complete, classic multi-color ASCII art logo suite from Neofetch across all 26 supported distributions and operating systems.
-- **Dual-Tone Color Token Rendering Engine**: Internal ANSI color token parsing with zero-distortion column alignment.
-- **Direct Hardware & Subsystem Discovery**: Fast zero-overhead metrics collection for CPU, GPU, Memory, Disks, and Battery.
+Most fetch tools either spawn multiple shell child processes (`neofetch`) or dynamically link heavy C runtime libraries (`fastfetch`). FerrisFetch is built with a different design philosophy:
 
-*For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
-
----
-
-## Features
-
-- **Direct OS kernel probing**: Reads `/proc`, `/sys`, POSIX APIs, and Win32 registry/system calls directly without spawning shell subprocesses.
-- **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`, `winget`, `chocolatey`, `cargo`, `npm`, `pip`) without network calls or locks.
-- **Dynamic layout engine**: Computes column alignment and ANSI visible widths dynamically with automatic vertical fallback on narrow terminals (< 60 columns).
-- **Distro & OS logos**: Includes compact ASCII art logos for Windows (11, 10, Classic), major Linux distributions (Arch, Debian, Ubuntu, Fedora, Mint, RHEL, Rocky, Alma, EndeavourOS, Manjaro, openSUSE, Alpine, Gentoo, Void, Pop!_OS), and the Ferris mascot.
-- **Resilient fallback design**: Modules degrade gracefully when optional hardware, environment variables, or metadata files are missing.
+* **Sub-3ms Latency**: Queries virtual filesystems (`/proc`, `/sys`), POSIX syscalls, and Win32 APIs directly with zero child process spawning (`fork`/`execve`). In statistical benchmarks, it is **1.89x faster than Fastfetch** on raw data collection.
+* **Native OS Install Date**: Probes root filesystem creation timestamp (`statx` birth time) and installer logs, showing exact installation date and relative age (`211 days ago`).
+* **First-Class WSL2 & Windows Support**: Normalizes virtualized 9P and DrvFS network mounts (`/mnt/c`, `/mnt/d`) to native **NTFS** labels, discovers dual integrated and discrete GPUs, and detects WSLg displays.
+* **Standalone Static Binary**: Zero libc runtime dependencies when using the musl build. Drop the binary into any Linux system and it runs.
 
 ---
 
-## Supported Operating Systems
+## Benchmarks
 
-FerrisFetch is built and tested across:
+Benchmarked against Fastfetch using [`hyperfine`](https://github.com/sharkdp/hyperfine) across **500+ iterations** on Ubuntu 24.04 (WSL2, AMD Ryzen 5 7535HS).
 
-- **Windows**: Windows 11, Windows 10, Windows Server (native Win32 x86_64)
-- **Debian Family**: Debian, Ubuntu, Linux Mint, Pop!_OS
-- **Red Hat Family**: Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream
-- **Arch Family**: Arch Linux, EndeavourOS, Manjaro
-- **Android**: Termux (ARM64 & x86_64)
-- **Independent Distributions**: Alpine Linux, Void Linux, Gentoo, openSUSE
+To eliminate terminal rendering and ANSI formatting differences, both tools were benchmarked using their machine-readable JSON output mode with shell process overhead disabled (`--shell=none`):
+
+```bash
+hyperfine --shell=none --warmup 50 --min-runs 500 \
+  'fastfetch --format json' \
+  'ferrisfetch --json'
+```
+
+### Results
+
+| Command | Mean Runtime | Min Latency | Max Latency | User CPU Time | System Syscall Time | Relative Speedup |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `fastfetch --format json` | `8.2 ms ± 3.4 ms` | `4.6 ms` | `26.2 ms` | `3.4 ms` | `4.8 ms` | `1.00` (Baseline) |
+| `ferrisfetch --json` | **`4.3 ms ± 3.6 ms`** | **`1.8 ms`** | `29.7 ms` | **`1.6 ms`** | **`2.7 ms`** | **1.89 ± 1.63x faster** |
+
+*FerrisFetch achieves 2.12x less user CPU time and 1.77x less kernel syscall overhead due to single-pass zero-copy parsing and parallel scoped thread execution.*
+
+---
+
+## Supported Operating Systems & Logos
+
+FerrisFetch includes high-contrast ASCII art logos with distro brand signature colors for **26 operating systems and distributions**:
+
+| Family / Ecosystem | Supported Distributions & Targets |
+| :--- | :--- |
+| **Debian / Ubuntu Family** | Ubuntu, Debian, Linux Mint, Pop!_OS |
+| **Red Hat Family** | Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream |
+| **Arch Family** | Arch Linux, EndeavourOS, Manjaro, Artix Linux |
+| **Independent Linux** | Alpine Linux, Gentoo Linux, Void Linux, openSUSE, NixOS |
+| **BSD Family** | FreeBSD, OpenBSD, NetBSD |
+| **Windows** | Windows 11, Windows 10, Windows 7 (native Win32 x86_64) |
+| **Android / Mobile** | Android (via Termux aarch64 & x86_64) |
+| **Mascots & Generic** | Ferris the Rust Crab (`ferris`), Linux Penguin (`tux`) |
 
 ---
 
 ## Installation
 
-### Windows (Manual / WinGet)
+### Ubuntu / Debian / Linux Mint / Pop!_OS
 
-*WinGet package submission is currently under review by Microsoft and will soon be live (`winget install ferrisfetch`).*
+**Via Personal Package Archive (PPA):**
+```bash
+sudo add-apt-repository -y ppa:kushagra376/ferrisfetch
+sudo apt update && sudo apt install -y ferrisfetch
+```
 
-To install and run manually in PowerShell, run these 3 short commands one by one:
+**Via Pre-built `.deb`:**
+```bash
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_amd64.deb
+sudo dpkg -i ferrisfetch_0.9.0-1_amd64.deb
+```
 
-#### Step 1: Download
+---
+
+### Fedora / RHEL / Rocky Linux / AlmaLinux
+
+**Via Fedora Copr:**
+```bash
+sudo dnf copr enable -y kk376/ferrisfetch
+sudo dnf install -y ferrisfetch
+```
+
+---
+
+### Arch Linux / Manjaro / EndeavourOS
+
+**Via Pre-built Pacman Package:**
+```bash
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
+```
+
+---
+
+### macOS / Linux (Homebrew Tap)
+
+```bash
+brew install kk376/tap/ferrisfetch
+```
+
+---
+
+### Android (Termux)
+
+```bash
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_termux_aarch64.deb
+dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
+```
+
+---
+
+### Windows (PowerShell)
+
 ```powershell
+# 1. Download
 curl.exe -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-windows-x86_64.zip
-```
 
-#### Step 2: Extract
-```powershell
+# 2. Extract
 tar.exe -xf ferrisfetch-windows-x86_64.zip
-```
 
-#### Step 3: Run
-```powershell
+# 3. Run
 .\ferrisfetch.exe
 ```
 
-### Ubuntu / Linux Mint / Pop!_OS (PPA)
-
-Enable the official Launchpad PPA and install:
-
-```bash
-sudo add-apt-repository -y ppa:kushagra376/ferrisfetch && sudo apt update && sudo apt install -y ferrisfetch
-```
-
 ---
 
-### Fedora (Copr)
+### Universal Standalone Binary (Any 64-bit Linux)
 
-Enable the official Copr repository and install:
+Statically linked with musl (zero external dependencies):
 
 ```bash
-sudo dnf copr enable kk376/ferrisfetch && sudo dnf install -y ferrisfetch
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-linux-musl-x86_64
+chmod +x ferrisfetch-linux-musl-x86_64
+sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
 ```
-
----
-
-### Pre-Built Packages & Binaries
-
-Direct packages and release binaries are available under [`releases/`](releases/) and the [GitHub Releases](https://github.com/kk376/ferrisfetch/releases) page:
-
-- **Debian / Ubuntu / Linux Mint / Pop!_OS** (`.deb`):
-  ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_amd64.deb
-  sudo dpkg -i ferrisfetch_0.9.0-1_amd64.deb
-  ```
-  *(Or install local file: `sudo dpkg -i releases/ferrisfetch_0.9.0-1_amd64.deb`)*
-
-- **Arch Linux / Manjaro / EndeavourOS** (`.pkg.tar.zst`):
-  ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
-  sudo pacman -U ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst
-  ```
-  *(Or install local file: `sudo pacman -U releases/ferrisfetch-0.9.0-1-x86_64.pkg.tar.zst`)*
-
-- **Android (Termux ARM64)** (`.deb`):
-  ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch_0.9.0-1_termux_aarch64.deb
-  dpkg -i ferrisfetch_0.9.0-1_termux_aarch64.deb
-  ```
-  *(Or install direct binary: `curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch`)*
-
-- **Standalone Static Binary** (Any 64-bit Linux / musl):
-  ```bash
-  curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.9.0/ferrisfetch-linux-musl-x86_64
-  chmod +x ferrisfetch-linux-musl-x86_64
-  sudo mv ferrisfetch-linux-musl-x86_64 /usr/local/bin/ferrisfetch
-  ```
 
 ---
 
@@ -129,24 +177,14 @@ sudo cp target/release/ferrisfetch /usr/local/bin/
 
 ---
 
-## Usage
-
-Run FerrisFetch directly:
-
-```bash
-cargo run --release
-# or after copying target/release/ferrisfetch to your PATH:
-ferrisfetch
-```
-
-### CLI Options
+## CLI Options
 
 | Flag / Option | Description |
 | :--- | :--- |
 | `-m, --modules <LIST>` | Select and order specific modules (e.g. `os,kernel,cpu,memory`) |
 | `-d, --disable <LIST>` | Disable specific modules from output (e.g. `gpu,disk`) |
 | `-l, --logo <NAME>` | Override ASCII logo (e.g. `arch`, `debian`, `ferris`, `ubuntu`, `fedora`, `tux`, `none`) |
-| `--no-logo` | Suppress the ASCII logo and print only system information |
+| `--no-logo` | Suppress the ASCII logo and print only system telemetry |
 | `--no-color` | Disable ANSI color escapes |
 | `--disk-path <PATH>` | Target filesystem path for disk statistics (default: `/`) |
 | `--list-modules` | Print all available information modules and exit |
@@ -156,17 +194,17 @@ ferrisfetch
 
 ### Examples
 
-**Select specific modules in custom order:**
+**Custom module ordering:**
 ```bash
 ferrisfetch -m os,cpu,memory,disk
 ```
 
-**Output structured JSON for scripts or status bars:**
+**JSON output for scripts and status bars:**
 ```bash
 ferrisfetch --json
 ```
 
-**Disable GPU and packages modules:**
+**Disable specific modules:**
 ```bash
 ferrisfetch -d gpu,packages
 ```
@@ -176,144 +214,75 @@ ferrisfetch -d gpu,packages
 ferrisfetch --logo ferris
 ```
 
-**Query a specific mount point for disk usage:**
-```bash
-ferrisfetch --disk-path /home
-```
-
----
-
-## Color and TTY Behavior
-
-- **Interactive Terminals**: Colors and bold accents are enabled automatically when stdout is a TTY.
-- **Redirected Output**: When stdout is redirected to a file or pipe (e.g. `ferrisfetch > output.txt`), ANSI escape codes are automatically stripped.
-- **Force Color**: Setting `CLICOLOR_FORCE=1` or `FORCE_COLOR=1` preserves ANSI escapes even when piped.
-- **Explicit Disable**: Passing `--no-color` or setting `NO_COLOR=1` or `TERM=dumb` disables all ANSI color escapes.
-
 ---
 
 ## Information Modules & Detection Strategies
 
-| Module | Detection Strategy | Fallback |
+| Module | Primary Source | Fallback Strategy |
 | :--- | :--- | :--- |
-| **Title** | `$USER` / `$LOGNAME` / `getpwuid` and `uname(2)` / `/proc/sys/kernel/hostname` | `"user@localhost"` |
-| **OS** | `/etc/os-release` and `/usr/lib/os-release` parsing with architecture | `/etc/debian_version`, `/etc/redhat-release`, `uname` |
-| **Host** | `/sys/devices/virtual/dmi/id/product_name` and devicetree model | Board name or omitted |
+| **Title** | `$USER` / `getpwuid` and `uname(2)` | `"user@localhost"` |
+| **OS** | `/etc/os-release` and `/usr/lib/os-release` parsing | `/etc/debian_version`, `/etc/redhat-release`, `uname` |
+| **Host** | `/sys/devices/virtual/dmi/id/product_name` and devicetree model | DMI board name or omitted |
 | **Kernel** | POSIX `libc::uname` release and machine fields | None required |
-| **Installed** | Root filesystem creation timestamp via `statx(2)` (`stx_btime`) and installer logs | Distribution log birth time |
+| **Installed** | Root filesystem creation timestamp via `statx(2)` (`stx_btime`) | Distribution install log birth times |
 | **Uptime** | Floating-point parse of `/proc/uptime` | `libc::sysinfo` uptime |
-| **Packages** | Local DB scans: `/var/lib/dpkg/status`, `/var/lib/pacman/local`, RPM DB, APK DB, flatpak, snap | `dpkg-query`, `rpm -qa`, `xbps-query` |
-| **Shell** | Ancestor process scan via `/proc/<pid>/status` & `comm`, `$SHELL` | Formatted shell name & version |
-| **Display** | DRM sysfs modes, `xrandr`, and `wlr-randr` refresh rate probing | Omitted if headless |
-| **Desktop** | `$XDG_CURRENT_DESKTOP`, metadata version files, and session type | Omitted if headless |
+| **Packages** | Local DB scans: `/var/lib/dpkg/status`, `pacman/local`, RPM, APK, flatpak, snap, cargo, npm, pip | `dpkg-query`, `rpm -qa`, `xbps-query` |
+| **Shell** | `/proc/<pid>/status` & `comm` ancestor inspection | `$SHELL` environment variable |
+| **Display** | DRM sysfs modes, `xrandr`, and `wlr-randr` refresh rates | Omitted if headless |
+| **Desktop** | `$XDG_CURRENT_DESKTOP`, desktop metadata files, session type | Omitted if headless |
 | **WM** | Active window manager detection (Mutter, KWin, Sway, Hyprland, WSLg) | Process scan |
-| **Terminal** | Dedicated environment signatures, `/proc` process ancestry, `$TERM` | `$TERM` variable |
-| **CPU** | `/proc/cpuinfo` parsing (model, clean brand, sockets, core count, clock freq) | Sanitized model string |
-| **GPU** | Sysfs PCI scan (`0x03xxxx`), local `pci.ids` lookup, VRAM and clock speeds | `lspci -mm` query |
-| **Memory** | `/proc/meminfo` active memory calculation (`MemTotal - MemAvailable`) | Pre-3.14 buffer/cache calculation |
-| **Swap** | `/proc/meminfo` swap statistics (`SwapTotal - SwapFree`) | Omitted if swap is 0 |
-| **Disk** | Sequential physical and virtual partition discovery via `statvfs` | Target mount path |
-| **Battery** | Direct `/sys/class/power_supply` capacity and charging status | Omitted if no battery |
+| **Terminal** | Environment signatures (`WT_SESSION`, `TERM_PROGRAM`), `/proc` process ancestry | `$TERM` variable |
+| **CPU** | `/proc/cpuinfo` parsing (model, clean brand, sockets, core count, frequency) | Sanitized model string |
+| **GPU** | Sysfs PCI class scan (`0x03xxxx`), local `pci.ids` lookup, VRAM calculation | `lspci -mm` query |
+| **Memory** | `/proc/meminfo` active memory calculation (`MemTotal - MemAvailable`) | Traditional buffer/cache calculation |
+| **Swap** | `/proc/meminfo` swap statistics and ZRAM algorithm detection | Omitted if swap is 0 |
+| **Disk** | Sequential filesystem partition discovery via `statvfs` (NTFS mapping on WSL) | Target mount path |
+| **Battery** | Direct `/sys/class/power_supply` capacity and charging status | Omitted if AC-only desktop |
 | **Local IP** | POSIX `getifaddrs` active interface address enumeration | Omitted if offline |
-| **Theme** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings, `$GTK_THEME` | Omitted if not configured |
-| **Icons** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, GSettings icon-theme | Omitted if not configured |
-| **Colors** | Terminal 8-color palette block renderer | Disabled if color is off |
+| **Theme** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml`, `$GTK_THEME` | Omitted if not configured |
+| **Icons** | GTK 3/4 `settings.ini`, KDE `kdeglobals`, XFCE `xsettings.xml` | Omitted if not configured |
+
+---
 
 ## Shell Completions
 
-FerrisFetch provides comprehensive shell completions for Bash, Zsh, and Fish with full support for flags, modules, and logo identifiers.
+FerrisFetch includes completions for Bash, Zsh, and Fish:
 
 ### Bash
 ```bash
-# Load in current session
 source completions/ferrisfetch.bash
-
-# Or install system-wide
-sudo cp completions/ferrisfetch.bash /usr/share/bash-completion/completions/ferrisfetch
+# System-wide: sudo cp completions/ferrisfetch.bash /usr/share/bash-completion/completions/ferrisfetch
 ```
 
 ### Zsh
 ```zsh
-# Add to your fpath in ~/.zshrc before compinit
+# Add to ~/.zshrc before compinit:
 fpath=(/path/to/ferrisfetch/completions $fpath)
 autoload -Uz compinit && compinit
-
-# Or install system-wide
-sudo cp completions/_ferrisfetch /usr/share/zsh/site-functions/_ferrisfetch
+# System-wide: sudo cp completions/_ferrisfetch /usr/share/zsh/site-functions/_ferrisfetch
 ```
 
 ### Fish
 ```fish
-# Install for current user
 cp completions/ferrisfetch.fish ~/.config/fish/completions/
-
-# Or install system-wide
-sudo cp completions/ferrisfetch.fish /usr/share/fish/vendor_completions.d/
+# System-wide: sudo cp completions/ferrisfetch.fish /usr/share/fish/vendor_completions.d/
 ```
 
 ---
 
-## Packaging
+## Community Acknowledgements
 
-Distribution packaging manifests and build instructions are documented in [`packaging/README.md`](packaging/README.md):
+Special thanks to community contributors for architectural recommendations:
 
-- **Arch Linux (AUR)**: [`packaging/arch/`](packaging/arch/) (`PKGBUILD`, `.SRCINFO`)
-- **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) (`control`, `rules`, `changelog`)
-- **Fedora / RHEL (Copr)**: [`packaging/rpm/`](packaging/rpm/) (`ferrisfetch.spec`)
-- **Android (Termux)**: [`packaging/termux/`](packaging/termux/) (`build.sh`)
-- **Nix / NixOS**: [`packaging/nix/`](packaging/nix/) (`default.nix`, `flake.nix`)
-- **Void Linux**: [`packaging/void/`](packaging/void/) (`template`)
-- **Alpine Linux**: [`packaging/alpine/`](packaging/alpine/) (`APKBUILD`)
-- **Gentoo Linux**: [`packaging/gentoo/`](packaging/gentoo/) (`ferrisfetch-0.2.5.ebuild`)
-- **Homebrew**: [`packaging/homebrew/`](packaging/homebrew/) (`ferrisfetch.rb`)
+* **[@Laynsb](https://github.com/Laynsb)**:
+  * **System Installation Date Module (`Installed`)**: Suggested adding OS installation date detection via root filesystem `statx` birth time (`stx_btime`) with relative time deltas.
+  * **Localized Installation Timestamps**: Suggested local timezone conversion for wall-clock consistency.
+  * **Filesystem Type Detection (`Disk`)**: Suggested partition filesystem labeling.
+  * **ZRAM Compression Algorithm Discovery (`Swap`)**: Suggested detecting active swap compression algorithms from `/sys/block/zram*/comp_algorithm`.
 
 ---
 
-## Development & Verification
+## Credits & License
 
-### Run unit and integration tests
-
-```bash
-cargo test
-```
-
-### Check code formatting
-
-```bash
-cargo fmt --check
-```
-
-### Run linter with zero warnings tolerance
-
-```bash
-cargo clippy --all-targets --all-features -- -D warnings
-```
-
-### Build release binary
-
-```bash
-cargo build --release
-```
-
----
-
-## Community Acknowledgements & Recommendations
-
-Special thanks to community contributors for architectural recommendations and feature suggestions:
-
-- **[@Laynsb](https://github.com/Laynsb)**:
-  - **System Installation Date Module (`Installed`)**: Recommended adding the OS installation date module, probing root filesystem creation timestamp (`stx_btime`) and distribution installer records with human-readable relative time deltas (e.g. `23 Jan 2026, 12:22 AM (211 days ago)`).
-  - **Localized Installation Timestamps**: Recommended native local timezone and daylight saving time conversion for the `Installed` module, ensuring timestamps reflect the user's localized wall-clock time instead of raw UTC+0.
-  - **Filesystem Type Detection (`Disk`)**: Recommended displaying explicit filesystem types (e.g. `ext4`, `btrfs`, `ntfs`, `9p`, `vfat`, `zfs`) for all mounted storage partitions.
-  - **ZRAM Compression Algorithm Discovery (`Swap`)**: Recommended detecting active in-memory swap compression algorithms from `/sys/block/zram*/comp_algorithm` (e.g. `Swap: 0.00 GiB / 4.00 GiB (0%) - LZ4`) while keeping traditional swap files/partitions clean.
-  - **High-Fidelity ASCII Art Logos**: Recommended redesigning distro ASCII art logos to be proportionally taller and visually balanced alongside multi-line telemetry.
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture guidelines, code standards, and PR instructions.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+* **FerrisFetch** is open-source software licensed under the **[MIT License](LICENSE)**.
+* **ASCII Art Outlines**: Distribution ASCII art boundary outlines are based on the classic art from **[Neofetch](https://github.com/dylanaraps/neofetch)** by Dylan Araps (also licensed under the **MIT License**, Copyright © 2016-2022 Dylan Araps), customized and enhanced in FerrisFetch with high-contrast white structural framing and distribution brand signature colors.
