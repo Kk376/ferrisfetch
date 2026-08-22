@@ -1,9 +1,9 @@
-ferrisfetch (0.5.0.5-1~ppa1~noble) noble; urgency=medium
+ferrisfetch (0.5.0.6-1~ppa1~noble) noble; urgency=medium
 
-  * Patch vendored crates for Ubuntu 24.04 toolchain (strip edition 2024 and rust-version constraints).
-  * Reset .cargo-checksum.json file hashes to avoid dh_clean *.orig pruning failures.
+  * Pin clap to 4.5.x series to avoid inspect_err unstable feature requiring rustc >= 1.76.
+  * Maintain strict compatibility with Ubuntu 24.04 noble toolchain (rustc 1.75.0).
 
- -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 03:20:00 +0000
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 03:38:00 +0000
 
 ferrisfetch (0.4.2-1) unstable; urgency=medium
 

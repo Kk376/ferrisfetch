@@ -23,12 +23,12 @@ include = [
 ]
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "~4.5.31", features = ["derive"] }
 libc = "0.2"
 
 [dev-dependencies]
 assert_cmd = "2.0"
-clap_complete = "4.5"
+clap_complete = "~4.5.31"
 predicates = "3.1"
 tempfile = "3.10"
 
