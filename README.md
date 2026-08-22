@@ -6,7 +6,7 @@ A fast, lightweight, zero-subprocess system information fetch tool written in Ru
             .-/+oossssoo+\-.               kk376@MSI-Thin-A15
         ´:+ssssssssssssssssss+:`           ------------------
       -+ssssssssssssssssssyyssss+-         OS: Ubuntu 24.04.4 LTS x86_64
-    .ossssssssssssssssssdMMMNysssso.       Host: Windows Subsystem for Linux (WSL2 2.7.12.0)
+    .ossssssssssssssssssdMMMNysssso.       Host: Windows Subsystem for Linux - 2.7.12.0
    /ssssssssssshdmmNNmmyNMMMMhssssss\      Kernel: 6.18.33.2-microsoft-standard-WSL2
   +ssssssssshmydMMMMMMMNddddyssssssss+     Installed: 23 Jan 2026, 12:22 AM (211 days ago)
  /sssssssshNMMMyhhyyyyhmNMMMNhssssssss\    Uptime: 3 hours, 14 mins

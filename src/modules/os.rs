@@ -331,9 +331,9 @@ pub fn detect_host() -> Option<String> {
 
     let wsl_suffix = if is_wsl {
         if let Some(wsl_ver) = detect_wsl_version() {
-            format!("(WSL2 {})", wsl_ver)
+            format!("- {}", wsl_ver)
         } else {
-            "(WSL2)".to_string()
+            String::new()
         }
     } else {
         String::new()
@@ -364,7 +364,9 @@ pub fn detect_host() -> Option<String> {
                 }
             }
             if is_wsl {
-                full = format!("{} {}", full, wsl_suffix);
+                if !wsl_suffix.is_empty() {
+                    full = format!("{} {}", full, wsl_suffix);
+                }
             }
             return Some(full);
         }
@@ -396,7 +398,9 @@ pub fn detect_host() -> Option<String> {
             if !clean.is_empty() && clean != "None" && clean != "Default string" {
                 let mut res = clean.to_string();
                 if is_wsl {
-                    res = format!("{} {}", res, wsl_suffix);
+                    if !wsl_suffix.is_empty() {
+                        res = format!("{} {}", res, wsl_suffix);
+                    }
                 }
                 return Some(res);
             }
@@ -404,7 +408,11 @@ pub fn detect_host() -> Option<String> {
     }
 
     if is_wsl {
-        return Some(format!("Windows Subsystem for Linux {}", wsl_suffix));
+        if let Some(wsl_ver) = detect_wsl_version() {
+            return Some(format!("Windows Subsystem for Linux - {}", wsl_ver));
+        } else {
+            return Some("Windows Subsystem for Linux".to_string());
+        }
     }
 
     None
