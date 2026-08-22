@@ -1,9 +1,9 @@
-ferrisfetch (0.5.0.6-1~ppa1~noble) noble; urgency=medium
+ferrisfetch (0.5.0.7-1~ppa1~noble) noble; urgency=medium
 
-  * Pin clap to 4.5.x series to avoid inspect_err unstable feature requiring rustc >= 1.76.
-  * Maintain strict compatibility with Ubuntu 24.04 noble toolchain (rustc 1.75.0).
+  * Pin all dev-dependencies (tempfile 3.10.1, assert_cmd 2.0.14, predicates 3.1.0) to eliminate getrandom 0.4.x.
+  * Ensure full compatibility with rustc 1.75.0 on Ubuntu 24.04 noble during dh_auto_test.
 
- -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 03:38:00 +0000
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 03:48:00 +0000
 
 ferrisfetch (0.4.2-1) unstable; urgency=medium
 
