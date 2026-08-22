@@ -318,6 +318,14 @@ Special thanks to community contributors for architectural recommendations:
 
 ---
 
+## Contributing & Security
+
+* **Contributing**: Pull requests, feature ideas, and packaging recipes are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for architectural guidelines, coding standards, and PR workflows.
+* **Security Policy**: For reporting security vulnerabilities or policy questions, please refer to [SECURITY.md](SECURITY.md).
+* **Changelog**: Complete release history across versions is tracked in [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 ## Credits & License
 
 * **FerrisFetch** is open-source software licensed under the **[MIT License](LICENSE)**.
