@@ -1,7 +1,7 @@
 # Contributor: FerrisFetch Packaging Team <packaging@ferrisfetch.rs>
 # Maintainer: FerrisFetch Packaging Team <packaging@ferrisfetch.rs>
 pkgname=ferrisfetch
-pkgver=0.8.5
+pkgver=0.8.6
 pkgrel=0
 pkgdesc="Fast, lightweight Linux and Android system information fetch CLI written in Rust"
 url="https://github.com/kk376/ferrisfetch"
@@ -48,5 +48,5 @@ fishcomp() {
 }
 
 sha512sums="
-1184134e96107122e1191275eaf7bce8cadf10625ec9dce38f48a3f2f00eec46db356e01792d32d52ce4097abfe9f0a066db7afb5024e666308a004019d7e19a  ferrisfetch-0.8.5.tar.gz
+1184134e96107122e1191275eaf7bce8cadf10625ec9dce38f48a3f2f00eec46db356e01792d32d52ce4097abfe9f0a066db7afb5024e666308a004019d7e19a  ferrisfetch-0.8.6.tar.gz
 "

@@ -705,7 +705,7 @@ Primary Color: Yellow (`\x1b[38;5;220m`), Accent: White (`\x1b[37m`)
 ```toml
 [package]
 name = "ferrisfetch"
-version = "0.8.5"
+version = "0.8.6"
 edition = "2021"
 rust-version = "1.75.0"
 

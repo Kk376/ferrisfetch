@@ -1,11 +1,11 @@
-ferrisfetch (0.8.5-2~ppa1~noble) noble; urgency=medium
+ferrisfetch (0.8.6-1~ppa1~noble) noble; urgency=medium
 
-  * Performance optimization update: sub-3ms parallel collection and zero-overhead caching.
+  * Release version 0.8.6: Sub-3ms parallel collection, fat LTO, and zero-overhead caching.
   * Enable fat LTO, single codegen units, and abort panic in release profile.
   * Implement concurrent collector execution using std::thread::scope.
   * Eliminate subprocess latency with mtime-aware persistent caches for GPU, Theme, Shell, and DPKG.
 
- -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 13:58:00 +0000
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 14:15:00 +0000
 
 ferrisfetch (0.8.5-1~ppa1~noble) noble; urgency=medium
 

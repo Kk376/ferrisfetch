@@ -1,6 +1,6 @@
-# FerrisFetch Releases (v0.8.5)
+# FerrisFetch Releases (v0.8.6)
 
-Official pre-built release binaries, native OS distribution packages, source archives, and build recipes for **FerrisFetch v0.8.5** — a fast, lightweight Linux system information fetch tool written in Rust.
+Official pre-built release binaries, native OS distribution packages, source archives, and build recipes for **FerrisFetch v0.8.6** — a fast, lightweight Linux system information fetch tool written in Rust.
 
 ---
 
@@ -10,8 +10,8 @@ Official pre-built release binaries, native OS distribution packages, source arc
 
 | Archive | Format | Description |
 | :--- | :--- | :--- |
-| `ferrisfetch-0.8.5-source.tar.gz` | `.tar.gz` | Clean source code distribution tarball (v0.8.5) |
-| `ferrisfetch-0.8.5-source.zip` | `.zip` | Clean source code distribution zip archive (v0.8.5) |
+| `ferrisfetch-0.8.6-source.tar.gz` | `.tar.gz` | Clean source code distribution tarball (v0.8.6) |
+| `ferrisfetch-0.8.6-source.zip` | `.zip` | Clean source code distribution zip archive (v0.8.6) |
 
 ### 2. Standalone Direct Executables
 
@@ -34,12 +34,12 @@ Official pre-built release binaries, native OS distribution packages, source arc
 
 | Package / Recipe | Target Distribution | Description |
 | :--- | :--- | :--- |
-| `ferrisfetch_0.8.5-1_amd64.deb` | Debian / Ubuntu / Mint / Pop!_OS | Native `.deb` package installable via `dpkg -i` or `apt install` |
-| `ferrisfetch_0.8.5-1_termux_aarch64.deb` | Android / Termux (`aarch64`) | Native Termux `.deb` package installable via `dpkg -i` in Termux |
-| `ferrisfetch-0.8.5-1.x86_64.rpm` | Fedora / RHEL / CentOS / Rocky / Alma | Native `.rpm` package installable via `rpm -i` or `dnf install` |
-| `ferrisfetch-0.8.5-1-x86_64.pkg.tar.zst` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Zstandard compressed) installable via `pacman -U` |
-| `ferrisfetch-0.8.5-1-x86_64.pkg.tar.gz` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Gzip compressed fallback) |
-| `ferrisfetch-0.8.5-fedora-x86_64.tar.gz` | Fedora / RHEL (`x86_64`) | Binary release bundle containing executable, documentation, and spec |
+| `ferrisfetch_0.8.6-1_amd64.deb` | Debian / Ubuntu / Mint / Pop!_OS | Native `.deb` package installable via `dpkg -i` or `apt install` |
+| `ferrisfetch_0.8.6-1_termux_aarch64.deb` | Android / Termux (`aarch64`) | Native Termux `.deb` package installable via `dpkg -i` in Termux |
+| `ferrisfetch-0.8.6-1.x86_64.rpm` | Fedora / RHEL / CentOS / Rocky / Alma | Native `.rpm` package installable via `rpm -i` or `dnf install` |
+| `ferrisfetch-0.8.6-1-x86_64.pkg.tar.zst` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Zstandard compressed) installable via `pacman -U` |
+| `ferrisfetch-0.8.6-1-x86_64.pkg.tar.gz` | Arch Linux / Manjaro / EndeavourOS | Native Pacman package (Gzip compressed fallback) |
+| `ferrisfetch-0.8.6-fedora-x86_64.tar.gz` | Fedora / RHEL (`x86_64`) | Binary release bundle containing executable, documentation, and spec |
 | `PKGBUILD` | Arch Linux AUR / Source | Standard Arch Linux build recipe for `makepkg` |
 | `ferrisfetch.spec` | Fedora / RPM Build | Standard RPM specification recipe for `rpmbuild` |
 
@@ -59,7 +59,7 @@ sha256sum -c SHA256SUMS.txt
 
 ### Debian / Ubuntu / Linux Mint / Pop!_OS
 ```bash
-sudo dpkg -i ferrisfetch_0.8.5-1_amd64.deb
+sudo dpkg -i ferrisfetch_0.8.6-1_amd64.deb
 ferrisfetch
 ```
 
@@ -68,27 +68,27 @@ ferrisfetch
 # Option A: Install via Termux package
 pkg update && pkg upgrade -y
 pkg install -y curl
-curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch_0.8.5-1_termux_aarch64.deb
-dpkg -i ferrisfetch_0.8.5-1_termux_aarch64.deb
+curl -LO https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch_0.8.6-1_termux_aarch64.deb
+dpkg -i ferrisfetch_0.8.6-1_termux_aarch64.deb
 ferrisfetch
 
 # Option B: One-liner to download standalone ARM64 executable
-pkg update && pkg upgrade -y && pkg install -y curl && curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.8.5/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch && ferrisfetch
+pkg update && pkg upgrade -y && pkg install -y curl && curl -fsSL https://github.com/kk376/ferrisfetch/releases/download/v0.8.6/ferrisfetch-termux-arm64 -o $PREFIX/bin/ferrisfetch && chmod +x $PREFIX/bin/ferrisfetch && ferrisfetch
 ```
 
 ### Fedora / RHEL / Rocky Linux / AlmaLinux
 ```bash
 # Using RPM directly:
-sudo rpm -Uvh ferrisfetch-0.8.5-1.x86_64.rpm
+sudo rpm -Uvh ferrisfetch-0.8.6-1.x86_64.rpm
 
 # Or using DNF:
-sudo dnf install ./ferrisfetch-0.8.5-1.x86_64.rpm
+sudo dnf install ./ferrisfetch-0.8.6-1.x86_64.rpm
 ferrisfetch
 ```
 
 ### Arch Linux / Manjaro / EndeavourOS
 ```bash
-sudo pacman -U ferrisfetch-0.8.5-1-x86_64.pkg.tar.zst
+sudo pacman -U ferrisfetch-0.8.6-1-x86_64.pkg.tar.zst
 ferrisfetch
 ```
 
