@@ -1,3 +1,9 @@
+ferrisfetch (0.8.6-2~ppa1~noble) noble; urgency=medium
+
+  * Fix vendored sources path in offline .cargo/config.toml (debian/vendor).
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 14:32:00 +0000
+
 ferrisfetch (0.8.6-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.8.6: Sub-3ms parallel collection, fat LTO, and zero-overhead caching.
