@@ -1,3 +1,10 @@
+ferrisfetch (0.7.0-1~ppa1~noble) noble; urgency=medium
+
+  * Release version 0.7.0: Localized system installation timestamp.
+  * Add native local timezone and DST resolution for Linux and Windows.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 08:35:00 +0000
+
 ferrisfetch (0.6.0-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.6.0: Native Windows platform support and cross-platform hardware detection.

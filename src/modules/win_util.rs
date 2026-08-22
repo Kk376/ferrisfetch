@@ -36,6 +36,31 @@ pub mod ffi {
         pub BatteryFullLifeTime: u32,
     }
 
+    #[repr(C)]
+    #[allow(non_snake_case)]
+    pub struct SYSTEMTIME {
+        pub wYear: u16,
+        pub wMonth: u16,
+        pub wDayOfWeek: u16,
+        pub wDay: u16,
+        pub wHour: u16,
+        pub wMinute: u16,
+        pub wSecond: u16,
+        pub wMilliseconds: u16,
+    }
+
+    #[repr(C)]
+    #[allow(non_snake_case)]
+    pub struct TIME_ZONE_INFORMATION {
+        pub Bias: i32,
+        pub StandardName: [u16; 32],
+        pub StandardDate: SYSTEMTIME,
+        pub StandardBias: i32,
+        pub DaylightName: [u16; 32],
+        pub DaylightDate: SYSTEMTIME,
+        pub DaylightBias: i32,
+    }
+
     #[allow(non_snake_case)]
     #[link(name = "advapi32")]
     extern "system" {
@@ -83,6 +108,7 @@ pub mod ffi {
         pub fn GetLogicalDrives() -> u32;
         pub fn GetDriveTypeW(lpRootPathName: *const u16) -> u32;
         pub fn GetSystemPowerStatus(lpSystemPowerStatus: *mut SYSTEM_POWER_STATUS) -> i32;
+        pub fn GetTimeZoneInformation(lpTimeZoneInformation: *mut TIME_ZONE_INFORMATION) -> u32;
     }
 
     fn to_wide(s: &str) -> Vec<u16> {

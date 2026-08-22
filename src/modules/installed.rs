@@ -4,7 +4,6 @@ use crate::modules::{Collector, ModuleId, ModuleOutput};
 use std::ffi::CString;
 #[cfg(not(windows))]
 use std::fs;
-#[cfg(not(windows))]
 use std::mem::MaybeUninit;
 use std::time::UNIX_EPOCH;
 
@@ -161,9 +160,48 @@ pub fn epoch_to_datetime(epoch_secs: u64) -> (i32, u8, u8, u8, u8, u8) {
     (year, m as u8, d as u8, hour, minute, second)
 }
 
-/// Formats installation timestamp into `DD Mon YYYY, hh:mm AM/PM (X days ago)`
-pub fn format_install_date(timestamp: u64, now_sec: u64) -> String {
-    let (year, month_num, day, hour, minute, _) = epoch_to_datetime(timestamp);
+/// Queries the system local timezone offset from UTC in seconds for a given epoch timestamp.
+/// Uses native OS C-FFI (`localtime_r` / `tm_gmtoff` on POSIX, `GetTimeZoneInformation` on Windows).
+/// Implements localized wall-clock date formatting suggested by @Laynsb (https://github.com/Laynsb).
+#[cfg(not(windows))]
+pub fn get_local_timezone_offset_secs(epoch: u64) -> i64 {
+    unsafe {
+        let time = epoch as libc::time_t;
+        let mut tm = MaybeUninit::<libc::tm>::zeroed();
+        if !libc::localtime_r(&time, tm.as_mut_ptr()).is_null() {
+            let tm = tm.assume_init();
+            return tm.tm_gmtoff;
+        }
+    }
+    0
+}
+
+/// Queries the system local timezone offset from UTC in seconds for a given epoch timestamp on Windows.
+#[cfg(windows)]
+pub fn get_local_timezone_offset_secs(_epoch: u64) -> i64 {
+    use crate::modules::win_util::ffi;
+    unsafe {
+        let mut tzi = MaybeUninit::<ffi::TIME_ZONE_INFORMATION>::zeroed();
+        let res = ffi::GetTimeZoneInformation(tzi.as_mut_ptr());
+        if res != 0xFFFFFFFF {
+            let tzi = tzi.assume_init();
+            let total_bias = tzi.Bias
+                + if res == 2 {
+                    tzi.DaylightBias
+                } else {
+                    tzi.StandardBias
+                };
+            return -(total_bias as i64) * 60;
+        }
+    }
+    0
+}
+
+/// Formats installation timestamp into `DD Mon YYYY, hh:mm AM/PM (X days ago)` with explicit timezone offset.
+/// Implements localized wall-clock formatting suggested by @Laynsb (https://github.com/Laynsb).
+pub fn format_install_date_with_offset(timestamp: u64, now_sec: u64, offset_secs: i64) -> String {
+    let local_ts = (timestamp as i64 + offset_secs).max(0) as u64;
+    let (year, month_num, day, hour, minute, _) = epoch_to_datetime(local_ts);
     let month = match month_num {
         1 => "Jan",
         2 => "Feb",
@@ -215,6 +253,12 @@ pub fn format_install_date(timestamp: u64, now_sec: u64) -> String {
     };
 
     format!("{} ({})", date_str, relative_str)
+}
+
+/// Formats installation timestamp into `DD Mon YYYY, hh:mm AM/PM (X days ago)` in local timezone.
+pub fn format_install_date(timestamp: u64, now_sec: u64) -> String {
+    let offset = get_local_timezone_offset_secs(timestamp);
+    format_install_date_with_offset(timestamp, now_sec, offset)
 }
 
 pub struct InstalledCollector;
@@ -287,6 +331,42 @@ mod tests {
         assert_eq!(h, 0);
         assert_eq!(min, 0);
         assert_eq!(s, 0);
+    }
+
+    #[test]
+    fn test_format_install_date_with_positive_offset() {
+        // 2026-08-19 11:46:40 UTC
+        let utc_ts = 1787140000;
+        // IST: UTC+5:30 = +19800 seconds -> 17:16:40 (05:16 PM)
+        let formatted = format_install_date_with_offset(utc_ts, utc_ts, 19800);
+        assert!(formatted.starts_with("19 Aug 2026, 05:16 PM"));
+        assert!(formatted.contains("(today)"));
+    }
+
+    #[test]
+    fn test_format_install_date_with_negative_offset() {
+        // 2026-08-19 11:46:40 UTC
+        let utc_ts = 1787140000;
+        // EDT: UTC-4:00 = -14400 seconds -> 07:46:40 (07:46 AM)
+        let formatted = format_install_date_with_offset(utc_ts, utc_ts, -14400);
+        assert!(formatted.starts_with("19 Aug 2026, 07:46 AM"));
+        assert!(formatted.contains("(today)"));
+    }
+
+    #[test]
+    fn test_format_install_date_midnight_crossover() {
+        // 2026-08-19 23:00:00 UTC (1787180400)
+        let utc_ts = 1787180400;
+        // JST: UTC+9:00 = +32400 seconds -> next day 2026-08-20 08:00:00 (08:00 AM)
+        let formatted = format_install_date_with_offset(utc_ts, utc_ts, 32400);
+        assert!(formatted.starts_with("20 Aug 2026, 08:00 AM"));
+    }
+
+    #[test]
+    fn test_get_local_timezone_offset_live() {
+        let offset = get_local_timezone_offset_secs(1787140000);
+        // Valid earth timezones range from -12h (-43200s) to +14h (+50400s)
+        assert!((-43200..=50400).contains(&offset));
     }
 
     #[cfg(not(windows))]

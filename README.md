@@ -4,14 +4,12 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ---
 
-## Latest Changes (v0.6.0)
+## Latest Changes (v0.7.0)
 
-- **Native Windows NT Support**: Native Win32 execution with zero external runtime dependencies.
-- **Win32 Probers**: Full support for Windows OS, Kernel, Host, CPU, GPU, Memory, Disks, Battery, Theme, Uptime, and Installation Date.
-- **Windows Package Managers**: Direct counting for **WinGet**, **Chocolatey**, and **Cargo**.
-- **Windows Shells & Terminals**: Recognition for **PowerShell 7** (`pwsh`), **Windows PowerShell 5.1**, **Command Prompt** (`cmd`), **Nushell**, and **Windows Terminal**.
+- **Localized Installation Timestamps**: Formats system installation time (`Installed:`) according to the user's local timezone and daylight saving time via native POSIX (`localtime_r` / `tm_gmtoff`) and Win32 (`GetTimeZoneInformation`) APIs, replacing raw UTC+0 display (suggested by [@Laynsb](https://github.com/Laynsb)).
+- **Native Windows NT Support**: Direct Win32 hardware and subsystem detection without spawning shell subprocesses.
+- **Windows Package Managers**: Native package counting for **WinGet**, **Chocolatey**, and **Cargo**.
 - **Windows ASCII Art Logos**: High-resolution ANSI ASCII art for **Windows 11**, **Windows 10**, and **Classic Windows**.
-- **Distribution Channels**: Added packaging manifests for **WinGet**.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -284,6 +282,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```bash
 cargo build --release
 ```
+
+---
+
+## Community Acknowledgements & Recommendations
+
+Special thanks to community contributors for architectural recommendations and feature suggestions:
+
+- **[@Laynsb](https://github.com/Laynsb)**:
+  - **Localized Installation Timestamps**: Recommended native local timezone conversion for the `Installed` module (converting raw UTC kernel/registry epoch timestamps to the user's localized wall-clock time according to system timezone and DST).
 
 ---
 

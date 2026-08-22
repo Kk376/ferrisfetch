@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-22
+
+### Added
+- **Localized Installation Timestamps**: System installation date and time (`Installed:`) is now automatically formatted in the user's local timezone (including daylight saving time adjustments) using native OS APIs (`localtime_r` / `tm_gmtoff` on POSIX systems and `GetTimeZoneInformation` on Windows), replacing raw UTC+0 display (suggested by [@Laynsb](https://github.com/Laynsb)).
+
 ## [0.6.0] - 2026-08-22
 
 ### Added
