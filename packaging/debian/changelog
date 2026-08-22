@@ -1,3 +1,10 @@
+ferrisfetch (0.9.5-1~ppa2~noble) noble; urgency=medium
+
+  * Fix vendored cargo checksums for offline Launchpad builds.
+  * Add WSL version discovery to Host module (WSL2 <version>).
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sun, 23 Aug 2026 00:00:00 +0530
+
 ferrisfetch (0.9.5-1~ppa1~noble) noble; urgency=medium
 
   * Release version 0.9.5: WSLg version discovery and GPU type classification.

@@ -243,6 +243,74 @@ impl Collector for OsCollector {
     }
 }
 
+/// Decodes raw process output bytes as UTF-16LE if null-byte padded, or falls back to UTF-8.
+pub fn decode_utf16le_or_utf8(bytes: &[u8]) -> String {
+    if bytes.len() >= 2 && (bytes[1] == 0 || bytes[0] == 0) {
+        let u16_slice: Vec<u16> = bytes
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect();
+        String::from_utf16_lossy(&u16_slice)
+    } else {
+        String::from_utf8_lossy(bytes).to_string()
+    }
+}
+
+/// Parses the WSL version from `wsl.exe --version` command output text.
+pub fn parse_wsl_version_output(text: &str) -> Option<String> {
+    for line in text.lines() {
+        let clean = line.trim();
+        if clean.starts_with("WSL version:") || clean.starts_with("WSL version :") {
+            if let Some((_, ver)) = clean.split_once(':') {
+                let trimmed = ver.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Probes the host WSL version from persistent cache or `wsl.exe --version`.
+#[cfg(not(windows))]
+pub fn detect_wsl_version() -> Option<String> {
+    let cache_dir = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))
+        .map(|p| p.join("ferrisfetch"));
+
+    let cache_file = cache_dir.as_ref().map(|d| d.join("wsl_version.cache"));
+
+    if let Some(ref path) = cache_file {
+        if let Ok(cached) = fs::read_to_string(path) {
+            let trimmed = cached.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
+    for cmd in &["wsl.exe", "/mnt/c/Windows/System32/wsl.exe", "/mnt/c/Program Files/WSL/wsl.exe"] {
+        if let Ok(output) = std::process::Command::new(cmd).arg("--version").output() {
+            if output.status.success() {
+                let text = decode_utf16le_or_utf8(&output.stdout);
+                if let Some(ver) = parse_wsl_version_output(&text) {
+                    if let Some(ref dir) = cache_dir {
+                        let _ = fs::create_dir_all(dir);
+                    }
+                    if let Some(ref path) = cache_file {
+                        let _ = fs::write(path, &ver);
+                    }
+                    return Some(ver);
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Detects hardware product/host model from sysfs DMI or Open Firmware devicetree.
 #[cfg(not(windows))]
 pub fn detect_host() -> Option<String> {
@@ -260,6 +328,16 @@ pub fn detect_host() -> Option<String> {
         .map(|v| v.contains("microsoft") || v.contains("WSL"))
         .unwrap_or(false)
         || std::env::var_os("WSL_DISTRO_NAME").is_some();
+
+    let wsl_suffix = if is_wsl {
+        if let Some(wsl_ver) = detect_wsl_version() {
+            format!("(WSL2 {})", wsl_ver)
+        } else {
+            "(WSL2)".to_string()
+        }
+    } else {
+        String::new()
+    };
 
     if let Some(ref name) = product_name {
         let name_lower = name.to_lowercase();
@@ -286,7 +364,7 @@ pub fn detect_host() -> Option<String> {
                 }
             }
             if is_wsl {
-                full = format!("{} (WSL2)", full);
+                full = format!("{} {}", full, wsl_suffix);
             }
             return Some(full);
         }
@@ -318,7 +396,7 @@ pub fn detect_host() -> Option<String> {
             if !clean.is_empty() && clean != "None" && clean != "Default string" {
                 let mut res = clean.to_string();
                 if is_wsl {
-                    res = format!("{} (WSL2)", res);
+                    res = format!("{} {}", res, wsl_suffix);
                 }
                 return Some(res);
             }
@@ -326,7 +404,7 @@ pub fn detect_host() -> Option<String> {
     }
 
     if is_wsl {
-        return Some("Windows Subsystem for Linux (WSL2)".to_string());
+        return Some(format!("Windows Subsystem for Linux {}", wsl_suffix));
     }
 
     None
@@ -503,5 +581,23 @@ ID=custom
         let info2 = parse_windows_os_info("Windows 10", Some("21H2"), Some("19044"));
         assert_eq!(info2.display_name, "Windows 10 21H2 (Build 19044)");
         assert_eq!(info2.distro_id, "windows10");
+    }
+
+    #[test]
+    fn test_parse_wsl_version_output() {
+        let sample = "WSL version: 2.7.12.0\r\nKernel version: 6.18.33.2-2\r\nWSLg version: 1.0.73.2\r\n";
+        assert_eq!(
+            parse_wsl_version_output(sample),
+            Some("2.7.12.0".to_string())
+        );
+
+        let sample_spaced = "WSL version : 2.4.4.0\n";
+        assert_eq!(
+            parse_wsl_version_output(sample_spaced),
+            Some("2.4.4.0".to_string())
+        );
+
+        let none_sample = "Ubuntu Linux 24.04\n";
+        assert_eq!(parse_wsl_version_output(none_sample), None);
     }
 }
