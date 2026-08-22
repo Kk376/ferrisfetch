@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           ferrisfetch
-Version:        0.9.5
+Version:        0.9.6
 Release:        1%{?dist}
 Summary:        Fast, lightweight Linux system information fetch tool written in Rust
 
@@ -52,6 +52,11 @@ install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 %{_datadir}/fish/vendor_completions.d/%{name}.fish
 
 %changelog
+* Sun Aug 23 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.9.6-1
+- Release version 0.9.6
+- WSL Host Version Discovery: Reports host WSL version on Host line
+- Vendored cargo checksum fix for offline builds
+
 * Sat Aug 22 2026 FerrisFetch Packaging Team <packaging@ferrisfetch.rs> - 0.9.5-1
 - Release version 0.9.5
 - WSLg Version Discovery: Probes and reports active WSLg version
