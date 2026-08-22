@@ -1,3 +1,9 @@
+ferrisfetch (0.8.6-4~ppa1~noble) noble; urgency=medium
+
+  * Clear files mapping in vendored .cargo-checksum.json to prevent build failures on debian-stripped dotfiles.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 15:00:00 +0000
+
 ferrisfetch (0.8.6-3~ppa1~noble) noble; urgency=medium
 
   * Patch vendored clap_lex crate to edition 2021 for Cargo 1.75 compatibility on Ubuntu 24.04 Noble.
