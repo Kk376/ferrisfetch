@@ -1,5 +1,6 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
 
 const KNOWN_TERMINALS: &[(&str, &str)] = &[
@@ -54,7 +55,15 @@ pub fn detect_terminal_from_env(
     // 1. Check $TERM_PROGRAM
     if let Some(prog) = term_program {
         let clean_prog = prog.trim();
-        if !clean_prog.is_empty() {
+        if clean_prog.eq_ignore_ascii_case("vscode") || clean_prog == "Code" {
+            if let Some(ver) = term_program_version {
+                let clean_ver = ver.trim();
+                if !clean_ver.is_empty() {
+                    return Some(format!("Visual Studio Code {}", clean_ver));
+                }
+            }
+            return Some("Visual Studio Code".to_string());
+        } else if !clean_prog.is_empty() {
             if let Some(ver) = term_program_version {
                 let clean_ver = ver.trim();
                 if !clean_ver.is_empty() {
@@ -73,6 +82,10 @@ pub fn detect_terminal_from_env(
             .find(|&&(k, _)| k == var_name)
             .map(|&(_, v)| v.trim())
     };
+
+    if has_env("VSCODE_INJECTION") {
+        return Some("Visual Studio Code".to_string());
+    }
 
     if let Some(ver) = get_env_val("PTYXIS_VERSION") {
         if !ver.is_empty() {
@@ -115,10 +128,6 @@ pub fn detect_terminal_from_env(
 
     if has_env("WT_SESSION") {
         return Some("Windows Terminal".to_string());
-    }
-
-    if has_env("FOOT_PID") {
-        return Some("foot".to_string());
     }
 
     if let Some(ver) = get_env_val("CONTOUR_VERSION") {
@@ -177,6 +186,10 @@ pub fn detect_terminal_from_env(
         return Some("Zellij".to_string());
     }
 
+    if has_env("FOOT_PID") {
+        return Some("foot".to_string());
+    }
+
     // 3. Fallback to $TERM
     if let Some(t) = term {
         let clean = t.trim();
@@ -202,7 +215,55 @@ pub fn match_terminal_proc(comm: &str) -> Option<&'static str> {
     None
 }
 
+/// Pure helper to detect terminal on Windows from environment variables.
+pub fn detect_windows_terminal_from_env(
+    term_program: Option<&str>,
+    term_program_version: Option<&str>,
+    env_vars: &[(&str, &str)],
+) -> String {
+    detect_terminal_from_env(term_program, term_program_version, env_vars, None)
+        .unwrap_or_else(|| "Console Window Host (ConHost)".to_string())
+}
+
 /// Inspects environment variables and process ancestry to detect terminal emulator.
+#[cfg(windows)]
+pub fn detect_terminal() -> Option<String> {
+    let term_prog = std::env::var("TERM_PROGRAM").ok();
+    let term_prog_ver = std::env::var("TERM_PROGRAM_VERSION").ok();
+
+    let env_signatures = [
+        "WT_SESSION",
+        "VSCODE_INJECTION",
+        "ALACRITTY_LOG",
+        "ALACRITTY_WINDOW_ID",
+        "ALACRITTY_SOCKET",
+        "WEZTERM_PANE",
+        "KONSOLE_VERSION",
+        "GHOSTTY_VERSION",
+    ];
+
+    let mut present_vars = Vec::new();
+    for &sig in &env_signatures {
+        if let Ok(val) = std::env::var(sig) {
+            present_vars.push((sig, val));
+        }
+    }
+    let ref_vars: Vec<(&str, &str)> = present_vars.iter().map(|(k, v)| (*k, v.as_str())).collect();
+
+    if let Some(term) = detect_terminal_from_env(
+        term_prog.as_deref(),
+        term_prog_ver.as_deref(),
+        &ref_vars,
+        None,
+    ) {
+        return Some(term);
+    }
+
+    Some("Console Window Host (ConHost)".to_string())
+}
+
+/// Inspects environment variables and process ancestry to detect terminal emulator.
+#[cfg(not(windows))]
 pub fn detect_terminal() -> Option<String> {
     let term_prog = std::env::var("TERM_PROGRAM").ok();
     let term_prog_ver = std::env::var("TERM_PROGRAM_VERSION").ok();
@@ -217,6 +278,7 @@ pub fn detect_terminal() -> Option<String> {
         "KITTY_WINDOW_ID",
         "KONSOLE_VERSION",
         "WT_SESSION",
+        "VSCODE_INJECTION",
         "FOOT_PID",
         "TERMINOLOGY",
         "XTERM_VERSION",
@@ -347,6 +409,53 @@ mod tests {
 
         let res_none = detect_terminal_from_env(None, None, &[], None);
         assert_eq!(res_none, None);
+    }
+
+    #[test]
+    fn test_detect_windows_terminals() {
+        // 1. Windows Terminal
+        let wt_env = [("WT_SESSION", "3f2e1a0b-1234-5678-9abc-def012345678")];
+        assert_eq!(
+            detect_windows_terminal_from_env(None, None, &wt_env),
+            "Windows Terminal"
+        );
+
+        // 2. Visual Studio Code via TERM_PROGRAM
+        assert_eq!(
+            detect_windows_terminal_from_env(Some("vscode"), Some("1.87.2"), &[]),
+            "Visual Studio Code 1.87.2"
+        );
+        assert_eq!(
+            detect_windows_terminal_from_env(Some("Code"), None, &[]),
+            "Visual Studio Code"
+        );
+
+        // 3. Visual Studio Code via VSCODE_INJECTION
+        let vscode_inj = [("VSCODE_INJECTION", "1")];
+        assert_eq!(
+            detect_windows_terminal_from_env(None, None, &vscode_inj),
+            "Visual Studio Code"
+        );
+
+        // 4. Alacritty
+        let alacritty_env = [("ALACRITTY_LOG", "C:\\alacritty.log")];
+        assert_eq!(
+            detect_windows_terminal_from_env(None, None, &alacritty_env),
+            "Alacritty"
+        );
+
+        // 5. WezTerm
+        let wezterm_env = [("WEZTERM_PANE", "0")];
+        assert_eq!(
+            detect_windows_terminal_from_env(None, None, &wezterm_env),
+            "WezTerm"
+        );
+
+        // 6. ConHost fallback
+        assert_eq!(
+            detect_windows_terminal_from_env(None, None, &[]),
+            "Console Window Host (ConHost)"
+        );
     }
 
     #[test]

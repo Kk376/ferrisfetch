@@ -1,5 +1,6 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(unix)]
 use std::fs;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -8,7 +9,40 @@ pub struct BatteryInfo {
     pub status: String,
 }
 
+/// Parses Windows SYSTEM_POWER_STATUS fields into BatteryInfo.
+pub fn parse_windows_battery_status(
+    ac_line_status: u8,
+    battery_flag: u8,
+    battery_life_percent: u8,
+) -> Option<BatteryInfo> {
+    // BatteryFlag: 128 indicates no system battery, 255 indicates unknown status
+    if battery_flag == 128 || battery_life_percent > 100 {
+        return None;
+    }
+
+    let is_charging = (battery_flag & 8) != 0;
+    let is_ac = ac_line_status == 1;
+
+    let status = if is_charging {
+        "Charging".to_string()
+    } else if is_ac {
+        if battery_life_percent >= 99 {
+            "Full [AC]".to_string()
+        } else {
+            "AC Connected".to_string()
+        }
+    } else {
+        "Discharging".to_string()
+    };
+
+    Some(BatteryInfo {
+        capacity: battery_life_percent,
+        status,
+    })
+}
+
 /// Checks if any AC adapter power supply (`AC`, `ACAD`, `Mains`) is connected.
+#[cfg(not(windows))]
 fn is_ac_online() -> bool {
     let power_supply_dir = "/sys/class/power_supply";
     if let Ok(entries) = fs::read_dir(power_supply_dir) {
@@ -27,6 +61,7 @@ fn is_ac_online() -> bool {
 }
 
 /// Probes battery capacity and state from `/sys/class/power_supply/BAT*`.
+#[cfg(not(windows))]
 pub fn detect_battery() -> Option<BatteryInfo> {
     let power_supply_dir = "/sys/class/power_supply";
     let entries = fs::read_dir(power_supply_dir).ok()?;
@@ -77,6 +112,23 @@ pub fn detect_battery() -> Option<BatteryInfo> {
     None
 }
 
+/// Probes battery status on Windows via Win32 GetSystemPowerStatus API.
+#[cfg(windows)]
+pub fn detect_battery() -> Option<BatteryInfo> {
+    use crate::modules::win_util::ffi;
+    unsafe {
+        let mut status = std::mem::zeroed::<ffi::SYSTEM_POWER_STATUS>();
+        if ffi::GetSystemPowerStatus(&mut status) != 0 {
+            return parse_windows_battery_status(
+                status.ACLineStatus,
+                status.BatteryFlag,
+                status.BatteryLifePercent,
+            );
+        }
+    }
+    None
+}
+
 pub struct BatteryCollector;
 
 impl Collector for BatteryCollector {
@@ -119,5 +171,26 @@ mod tests {
             .parse::<u8>()
             .unwrap();
         assert_eq!(cap, 97);
+    }
+
+    #[test]
+    fn test_parse_windows_battery_status() {
+        // Desktop PC (no battery)
+        assert_eq!(parse_windows_battery_status(1, 128, 255), None);
+
+        // Laptop plugged in and charging at 65%
+        let charging = parse_windows_battery_status(1, 8, 65).unwrap();
+        assert_eq!(charging.capacity, 65);
+        assert_eq!(charging.status, "Charging");
+
+        // Laptop discharging on battery at 80%
+        let discharging = parse_windows_battery_status(0, 0, 80).unwrap();
+        assert_eq!(discharging.capacity, 80);
+        assert_eq!(discharging.status, "Discharging");
+
+        // Laptop full on AC
+        let full = parse_windows_battery_status(1, 0, 100).unwrap();
+        assert_eq!(full.capacity, 100);
+        assert_eq!(full.status, "Full [AC]");
     }
 }

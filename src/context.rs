@@ -32,13 +32,52 @@ impl FetchContext {
     }
 }
 
-/// Detects terminal column width via direct kernel ioctl TIOCGWINSZ or $COLUMNS fallback.
+/// Detects terminal column width via direct kernel ioctl TIOCGWINSZ, Win32 console info, or $COLUMNS fallback.
 pub fn get_terminal_width() -> u16 {
-    // Direct ioctl on standard output line discipline avoids shelling out to tput or stty
+    #[cfg(unix)]
     unsafe {
         let mut ws: libc::winsize = std::mem::zeroed();
         if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut ws) == 0 && ws.ws_col > 0 {
             return ws.ws_col;
+        }
+    }
+
+    #[cfg(windows)]
+    unsafe {
+        #[repr(C)]
+        struct Coord {
+            x: i16,
+            y: i16,
+        }
+        #[repr(C)]
+        struct SmallRect {
+            left: i16,
+            top: i16,
+            right: i16,
+            bottom: i16,
+        }
+        #[repr(C)]
+        struct ConsoleScreenBufferInfo {
+            dw_size: Coord,
+            dw_cursor_position: Coord,
+            w_attributes: u16,
+            sr_window: SmallRect,
+            dw_maximum_window_size: Coord,
+        }
+        extern "system" {
+            fn GetStdHandle(n_std_handle: u32) -> isize;
+            fn GetConsoleScreenBufferInfo(
+                h_console_output: isize,
+                lp_console_screen_buffer_info: *mut ConsoleScreenBufferInfo,
+            ) -> i32;
+        }
+        let handle = GetStdHandle(0xfffffff5); // STD_OUTPUT_HANDLE = -11
+        let mut csbi = std::mem::zeroed::<ConsoleScreenBufferInfo>();
+        if GetConsoleScreenBufferInfo(handle, &mut csbi) != 0 {
+            let width = csbi.sr_window.right - csbi.sr_window.left + 1;
+            if width > 0 {
+                return width as u16;
+            }
         }
     }
 

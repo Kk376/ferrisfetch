@@ -1,9 +1,10 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
-use std::path::Path;
 
 /// Retrieves the parent process ID from `/proc/<pid>/status`.
+#[cfg(not(windows))]
 fn get_ppid(pid: u32) -> Option<u32> {
     let path = format!("/proc/{}/status", pid);
     let content = fs::read_to_string(path).ok()?;
@@ -16,6 +17,7 @@ fn get_ppid(pid: u32) -> Option<u32> {
 }
 
 /// Retrieves the process command name from `/proc/<pid>/comm` or `/proc/<pid>/exe`.
+#[cfg(not(windows))]
 fn get_proc_name(pid: u32) -> Option<String> {
     let exe_path = format!("/proc/{}/exe", pid);
     if let Ok(target) = fs::read_link(exe_path) {
@@ -36,7 +38,20 @@ fn get_proc_name(pid: u32) -> Option<String> {
 }
 
 const KNOWN_SHELLS: &[&str] = &[
-    "bash", "zsh", "fish", "sh", "dash", "ksh", "csh", "tcsh", "nu", "ion", "elvish", "pwsh",
+    "bash",
+    "zsh",
+    "fish",
+    "sh",
+    "dash",
+    "ksh",
+    "csh",
+    "tcsh",
+    "nu",
+    "ion",
+    "elvish",
+    "pwsh",
+    "powershell",
+    "cmd",
 ];
 
 /// Extracts and normalizes the shell name from a path or process command.
@@ -46,13 +61,15 @@ pub fn extract_shell_name(path: &str) -> String {
         return String::new();
     }
 
-    let file_name = Path::new(clean)
-        .file_name()
-        .map(|s| s.to_string_lossy())
-        .unwrap_or_else(|| clean.into());
+    // Split on either '/' or '\' to ensure cross-platform path compatibility
+    let file_name = clean.rsplit(['/', '\\']).next().unwrap_or(clean);
 
     // Login shells prepend a leading hyphen in argv[0] (e.g. "-bash" or "-zsh" per POSIX exec/login convention)
-    file_name.trim_start_matches('-').to_lowercase()
+    let mut name = file_name.trim_start_matches('-').to_lowercase();
+    if name.ends_with(".exe") {
+        name.truncate(name.len() - 4);
+    }
+    name
 }
 
 /// Formats shell name with optional version information.
@@ -85,6 +102,10 @@ pub fn format_shell_name_version(
                 return format!("fish {}", clean_ver);
             }
         }
+    } else if clean_name == "powershell" || clean_name == "powershell.exe" {
+        return "PowerShell 5.1".to_string();
+    } else if clean_name == "cmd" || clean_name == "cmd.exe" {
+        return "cmd.exe".to_string();
     }
 
     clean_name.to_string()
@@ -138,6 +159,29 @@ fn format_shell_with_version(shell_name: &str) -> String {
     );
 
     if res == shell_name {
+        if shell_name == "pwsh" {
+            if let Ok(ver) = std::env::var("POWERSHELL_VERSION") {
+                return format!("pwsh {}", ver.trim());
+            }
+            if let Some(cli_ver) = get_shell_cli_version("pwsh") {
+                return format!("pwsh {}", cli_ver);
+            }
+        } else if shell_name == "nu" {
+            if let Ok(ver) = std::env::var("NU_VERSION") {
+                return format!("nu {}", ver.trim());
+            }
+            if let Some(cli_ver) = get_shell_cli_version("nu") {
+                return format!("nu {}", cli_ver);
+            }
+        } else if shell_name == "cmd" {
+            return "cmd.exe".to_string();
+        } else if shell_name == "powershell" {
+            if let Ok(ver) = std::env::var("PSVERSION") {
+                return format!("PowerShell {}", ver.trim());
+            }
+            return "PowerShell 5.1".to_string();
+        }
+
         if let Some(cli_ver) = get_shell_cli_version(shell_name) {
             return format!("{} {}", shell_name, cli_ver);
         }
@@ -165,7 +209,116 @@ pub fn is_known_shell(name_clean: &str) -> bool {
     false
 }
 
+/// Pure helper to detect shell on Windows from environment variables.
+pub fn detect_windows_shell_from_env(env_vars: &[(&str, &str)]) -> String {
+    let get_env = |key: &str| {
+        env_vars
+            .iter()
+            .find(|&&(k, _)| k.eq_ignore_ascii_case(key))
+            .map(|&(_, v)| v.trim())
+    };
+
+    if let Some(shell_path) = get_env("SHELL") {
+        let name_clean = extract_shell_name(shell_path);
+        if !name_clean.is_empty() && is_known_shell(&name_clean) {
+            return format_shell_name_version(&name_clean, None, None, None);
+        }
+    }
+
+    if get_env("POWERSHELL_DISTRIBUTION_CHANNEL").is_some() {
+        if let Some(ver) = get_env("POWERSHELL_VERSION") {
+            return format!("pwsh {}", ver);
+        }
+        return "pwsh".to_string();
+    }
+
+    if let Some(ver) = get_env("NU_VERSION") {
+        return format!("nu {}", ver);
+    }
+
+    if let Some(ps_mod) = get_env("PSModulePath") {
+        if ps_mod.contains("PowerShell\\7")
+            || ps_mod.contains("PowerShell/7")
+            || ps_mod.to_lowercase().contains("pwsh")
+        {
+            if let Some(ver) = get_env("POWERSHELL_VERSION") {
+                return format!("pwsh {}", ver);
+            }
+            return "pwsh".to_string();
+        }
+        if ps_mod.contains("WindowsPowerShell") {
+            if let Some(ver) = get_env("PSVERSION") {
+                return format!("PowerShell {}", ver);
+            }
+            return "PowerShell 5.1".to_string();
+        }
+    }
+
+    if let Some(comspec) = get_env("COMSPEC") {
+        let name = extract_shell_name(comspec);
+        if name == "cmd" || is_known_shell(&name) {
+            return "cmd.exe".to_string();
+        }
+    }
+
+    if get_env("PROMPT").is_some() {
+        return "cmd.exe".to_string();
+    }
+
+    "cmd.exe".to_string()
+}
+
 /// Probes process hierarchy or environment to determine active user shell.
+#[cfg(windows)]
+pub fn detect_shell() -> Option<String> {
+    // 1. Check $SHELL (Git Bash, MSYS2, Cygwin)
+    if let Ok(shell_path) = std::env::var("SHELL") {
+        let name_clean = extract_shell_name(&shell_path);
+        if !name_clean.is_empty() && is_known_shell(&name_clean) {
+            return Some(format_shell_with_version(&name_clean));
+        }
+    }
+
+    // 2. Check PowerShell Core / 7 signature
+    if std::env::var("POWERSHELL_DISTRIBUTION_CHANNEL").is_ok() {
+        return Some(format_shell_with_version("pwsh"));
+    }
+
+    // 3. Check Nushell signature
+    if std::env::var("NU_VERSION").is_ok() {
+        return Some(format_shell_with_version("nu"));
+    }
+
+    // 4. Check PSModulePath
+    if let Ok(ps_mod) = std::env::var("PSModulePath") {
+        if ps_mod.contains("PowerShell\\7")
+            || ps_mod.contains("PowerShell/7")
+            || ps_mod.to_lowercase().contains("pwsh")
+        {
+            return Some(format_shell_with_version("pwsh"));
+        }
+        if ps_mod.contains("WindowsPowerShell") {
+            return Some(format_shell_with_version("powershell"));
+        }
+    }
+
+    // 5. Check COMSPEC and PROMPT
+    if let Ok(comspec) = std::env::var("COMSPEC") {
+        let name = extract_shell_name(&comspec);
+        if name == "cmd" || is_known_shell(&name) {
+            return Some(format_shell_with_version(&name));
+        }
+    }
+
+    if std::env::var("PROMPT").is_ok() {
+        return Some("cmd.exe".to_string());
+    }
+
+    Some("cmd.exe".to_string())
+}
+
+/// Probes process hierarchy or environment to determine active user shell.
+#[cfg(not(windows))]
 pub fn detect_shell() -> Option<String> {
     let mut current_pid = unsafe { libc::getpid() as u32 };
 
@@ -193,6 +346,14 @@ pub fn detect_shell() -> Option<String> {
         if !name_clean.is_empty() {
             return Some(format_shell_with_version(&name_clean));
         }
+    }
+
+    // Check PowerShell Core or Nushell environment signatures on Unix
+    if std::env::var("POWERSHELL_DISTRIBUTION_CHANNEL").is_ok() {
+        return Some(format_shell_with_version("pwsh"));
+    }
+    if std::env::var("NU_VERSION").is_ok() {
+        return Some(format_shell_with_version("nu"));
     }
 
     None
@@ -228,6 +389,17 @@ mod tests {
         assert_eq!(extract_shell_name("/usr/bin/nu"), "nu");
         assert_eq!(extract_shell_name("sh"), "sh");
         assert_eq!(extract_shell_name(""), "");
+
+        // Windows shell paths with .exe
+        assert_eq!(extract_shell_name("pwsh.exe"), "pwsh");
+        assert_eq!(extract_shell_name("powershell.exe"), "powershell");
+        assert_eq!(extract_shell_name("cmd.exe"), "cmd");
+        assert_eq!(extract_shell_name("nu.exe"), "nu");
+        assert_eq!(extract_shell_name("C:\\Windows\\System32\\cmd.exe"), "cmd");
+        assert_eq!(
+            extract_shell_name("C:\\Program Files\\PowerShell\\7\\pwsh.exe"),
+            "pwsh"
+        );
     }
 
     #[test]
@@ -245,6 +417,14 @@ mod tests {
             "fish 3.7.0"
         );
         assert_eq!(
+            format_shell_name_version("powershell", None, None, None),
+            "PowerShell 5.1"
+        );
+        assert_eq!(
+            format_shell_name_version("cmd", None, None, None),
+            "cmd.exe"
+        );
+        assert_eq!(
             format_shell_name_version("custom_shell", None, None, None),
             "custom_shell"
         );
@@ -257,6 +437,9 @@ mod tests {
         assert!(is_known_shell("fish"));
         assert!(is_known_shell("nu"));
         assert!(is_known_shell("sh"));
+        assert!(is_known_shell("pwsh"));
+        assert!(is_known_shell("powershell"));
+        assert!(is_known_shell("cmd"));
         assert!(is_known_shell("bash-5.2"));
         assert!(is_known_shell("sh4"));
 
@@ -265,5 +448,34 @@ mod tests {
         assert!(!is_known_shell("shared-mime"));
         assert!(!is_known_shell("nuget"));
         assert!(!is_known_shell("shark"));
+        assert!(!is_known_shell("cmder"));
+    }
+
+    #[test]
+    fn test_detect_windows_shell_from_env() {
+        // 1. PowerShell 7 (pwsh)
+        let pwsh_env = [
+            ("POWERSHELL_DISTRIBUTION_CHANNEL", "MSI:Windows 10"),
+            ("POWERSHELL_VERSION", "7.4.1"),
+        ];
+        assert_eq!(detect_windows_shell_from_env(&pwsh_env), "pwsh 7.4.1");
+
+        // 2. Windows PowerShell 5.1
+        let ps5_env = [(
+            "PSModulePath",
+            "C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
+        )];
+        assert_eq!(detect_windows_shell_from_env(&ps5_env), "PowerShell 5.1");
+
+        // 3. Nushell
+        let nu_env = [("NU_VERSION", "0.91.0")];
+        assert_eq!(detect_windows_shell_from_env(&nu_env), "nu 0.91.0");
+
+        // 4. Command Prompt
+        let cmd_env = [
+            ("COMSPEC", "C:\\Windows\\system32\\cmd.exe"),
+            ("PROMPT", "$P$G"),
+        ];
+        assert_eq!(detect_windows_shell_from_env(&cmd_env), "cmd.exe");
     }
 }

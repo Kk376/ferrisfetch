@@ -1,4 +1,6 @@
+#[cfg(not(windows))]
 use std::path::{Path, PathBuf};
+#[cfg(not(windows))]
 use std::process::Command;
 
 use crate::context::FetchContext;
@@ -21,6 +23,7 @@ pub enum ThemeSource {
     Xfce,
     GSettings,
     Env,
+    Windows,
 }
 
 impl ThemeSource {
@@ -31,6 +34,7 @@ impl ThemeSource {
             ThemeSource::Xfce => "[XFCE]",
             ThemeSource::GSettings => "[GTK/GNOME]",
             ThemeSource::Env => "[Env]",
+            ThemeSource::Windows => "[Windows]",
         }
     }
 }
@@ -171,6 +175,7 @@ fn extract_xml_property_value(line: &str) -> Option<String> {
 }
 
 /// Attempts to query GSettings for GNOME/GTK theme and icon properties.
+#[cfg(not(windows))]
 fn query_gsettings_theme() -> ThemeInfo {
     let mut info = ThemeInfo {
         source: Some(ThemeSource::GSettings),
@@ -226,6 +231,7 @@ fn query_gsettings_theme() -> ThemeInfo {
     info
 }
 
+#[cfg(not(windows))]
 fn get_config_dir() -> PathBuf {
     if let Ok(cfg) = std::env::var("XDG_CONFIG_HOME") {
         if !cfg.is_empty() {
@@ -240,6 +246,22 @@ fn get_config_dir() -> PathBuf {
     PathBuf::from("/root/.config")
 }
 
+/// Parses Windows light/dark theme preference from AppsUseLightTheme DWORD.
+pub fn parse_windows_theme(apps_use_light_theme: u32) -> ThemeInfo {
+    let (theme_name, is_dark) = if apps_use_light_theme == 0 {
+        ("Dark", true)
+    } else {
+        ("Light", false)
+    };
+
+    ThemeInfo {
+        theme: Some(theme_name.to_string()),
+        dark_mode: is_dark,
+        source: Some(ThemeSource::Windows),
+        ..Default::default()
+    }
+}
+
 /// Detects theme information across GTK 3/4, KDE Plasma, XFCE, and GSettings.
 /// Probing precedence:
 /// 1. GTK 3.0 / 4.0 `settings.ini` (standard for GNOME/Cinnamon/MATE/modern apps)
@@ -248,6 +270,7 @@ fn get_config_dir() -> PathBuf {
 /// 4. Legacy GTK 2 `~/.gtkrc-2.0`
 /// 5. GSettings dconf query for active GNOME desktop interface schemas
 /// 6. `$GTK_THEME` environment variable override
+#[cfg(not(windows))]
 pub fn detect_theme_info() -> Option<ThemeInfo> {
     let config_dir = get_config_dir();
 
@@ -317,6 +340,16 @@ pub fn detect_theme_info() -> Option<ThemeInfo> {
     }
 
     None
+}
+
+/// Detects active Windows application theme (Dark / Light) from user registry.
+#[cfg(windows)]
+pub fn detect_theme_info() -> Option<ThemeInfo> {
+    use crate::modules::win_util::ffi;
+    let key = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+    let light_theme =
+        ffi::reg_read_u32(ffi::HKEY_CURRENT_USER, key, "AppsUseLightTheme").unwrap_or(1);
+    Some(parse_windows_theme(light_theme))
 }
 
 /// Formats the theme output string with optional framework tag.
@@ -479,5 +512,25 @@ ColorScheme=BreezeDark
 
         let formatted = format_theme_value(&info);
         assert_eq!(formatted.as_deref(), Some("Adwaita (dark) [GTK/GNOME]"));
+    }
+
+    #[test]
+    fn test_parse_windows_theme() {
+        // Dark theme (0)
+        let dark = parse_windows_theme(0);
+        assert_eq!(dark.theme.as_deref(), Some("Dark"));
+        assert!(dark.dark_mode);
+        assert_eq!(dark.source, Some(ThemeSource::Windows));
+        assert_eq!(format_theme_value(&dark).as_deref(), Some("Dark [Windows]"));
+
+        // Light theme (1)
+        let light = parse_windows_theme(1);
+        assert_eq!(light.theme.as_deref(), Some("Light"));
+        assert!(!light.dark_mode);
+        assert_eq!(light.source, Some(ThemeSource::Windows));
+        assert_eq!(
+            format_theme_value(&light).as_deref(),
+            Some("Light [Windows]")
+        );
     }
 }

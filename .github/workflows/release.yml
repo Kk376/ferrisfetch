@@ -22,12 +22,12 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools zstd gcc-aarch64-linux-gnu
+          sudo apt-get install -y musl-tools zstd gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64 zip
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu,x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+          targets: x86_64-unknown-linux-gnu,x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,x86_64-pc-windows-gnu
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
@@ -43,6 +43,7 @@ jobs:
           cargo build --release --target x86_64-unknown-linux-musl
           CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc \
             cargo build --release --target aarch64-unknown-linux-musl
+          cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Package release artifacts
         run: |
@@ -57,7 +58,14 @@ jobs:
           cp target/aarch64-unknown-linux-musl/release/ferrisfetch dist/ferrisfetch-termux-arm64
           chmod 755 dist/ferrisfetch-termux-arm64
 
-          # Termux .deb
+          # 2. Windows x86_64 Release Zip
+          mkdir -p pkg-windows
+          cp target/x86_64-pc-windows-gnu/release/ferrisfetch.exe pkg-windows/
+          cp README.md LICENSE pkg-windows/
+          (cd pkg-windows && zip -r "../dist/ferrisfetch-windows-x86_64.zip" ferrisfetch.exe README.md LICENSE)
+          rm -rf pkg-windows
+
+          # 3. Termux .deb
           mkdir -p pkg-termux/data/data/com.termux/files/usr/bin pkg-termux/DEBIAN
           cp target/aarch64-unknown-linux-musl/release/ferrisfetch pkg-termux/data/data/com.termux/files/usr/bin/
           cat <<EOF > pkg-termux/DEBIAN/control

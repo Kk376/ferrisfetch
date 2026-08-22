@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-22
+
+### Added
+- **Native Windows NT Platform Support**: Full native Win32 execution without WSL or external runtime dependencies.
+- **Win32 Hardware & System Probers**:
+  - **OS**: Probes Windows product name, display version, and build number from registry (`HKLM\...\CurrentVersion`), with automatic Windows 11 upgrade build detection.
+  - **Kernel**: Reports `Windows NT <version>.<build>`.
+  - **Host**: Resolves manufacturer, product name, and BIOS version from `HKLM\HARDWARE\DESCRIPTION\System\BIOS`.
+  - **CPU**: Probes processor name and clock frequency from central processor registry keys and queries active logical processor count.
+  - **Memory & Swap**: Queries physical RAM and pagefile capacity via Win32 `GlobalMemoryStatusEx`.
+  - **GPU**: Discovers display adapters and dedicated VRAM from video controller registry keys.
+  - **Disks**: Enumerates Windows drive letters (`C:\`, `D:\`, etc.) and storage metrics via Win32 `GetDiskFreeSpaceExW`.
+  - **Battery**: Queries battery capacity, charging status, and AC line state via `GetSystemPowerStatus`.
+  - **Uptime**: Computes system elapsed uptime via `GetTickCount64`.
+  - **Install Date**: Formats system installation timestamp from registry records with relative time delta.
+  - **Theme**: Detects Windows Light/Dark mode preference from personalization registry keys.
+  - **Desktop & WM**: Reports `Windows Explorer` and `Desktop Window Manager (DWM)`.
+- **Windows Package Managers**: Native package counting for **WinGet** (`%LOCALAPPDATA%\Microsoft\WinGet`), **Scoop** (`%USERPROFILE%\scoop\apps`), **Chocolatey** (`C:\ProgramData\chocolatey\lib`), and **Cargo** (`.crates.toml`).
+- **Windows Shells & Terminals**: Detection and version parsing for **PowerShell 7** (`pwsh`), **Windows PowerShell 5.1** (`powershell`), **Command Prompt** (`cmd`), **Nushell** (`nu`), **Windows Terminal** (`$WT_SESSION`), and **Console Window Host** (`ConHost`).
+- **Windows ASCII Art Logos**: Added high-resolution ANSI logos for **Windows 11**, **Windows 10**, and **Classic Windows / Windows 7**.
+- **Distribution Channels**: Added packaging manifests for **Scoop** and **Winget**.
+
 ## [0.5.0] - 2026-08-19
 
 ### Added

@@ -35,6 +35,10 @@ pub fn vendor_id_to_name(vendor: &str) -> Option<&'static str> {
 /// Cleans redundant vendor suffixes and bracketed tags from GPU names.
 pub fn clean_gpu_name(name: &str) -> String {
     let cleaned = name
+        .replace("(R)", "")
+        .replace("(r)", "")
+        .replace("(TM)", "")
+        .replace("(tm)", "")
         .replace("Corporation", "")
         .replace("Technologies Inc", "")
         .replace("Advanced Micro Devices, Inc.", "AMD")
@@ -521,6 +525,26 @@ pub fn detect_gpu_clock_mhz(card_idx: usize) -> Option<u64> {
     None
 }
 
+/// Parses and filters raw display adapter DriverDesc strings from Windows registry.
+pub fn parse_windows_gpu_names(adapters: &[String]) -> Vec<String> {
+    let mut gpus = Vec::new();
+    for desc in adapters {
+        let clean = clean_gpu_name(desc);
+        let lower = clean.to_lowercase();
+        if !lower.is_empty()
+            && !lower.contains("rdpdd chained dd")
+            && !lower.contains("mirage driver")
+            && !lower.contains("remote desktop")
+            && !lower.contains("indirect display")
+            && !gpus.contains(&clean)
+        {
+            gpus.push(clean);
+        }
+    }
+    gpus
+}
+
+#[cfg(not(windows))]
 pub fn get_gpu_list() -> Vec<String> {
     let sysfs_gpus = detect_gpus_sysfs();
 
@@ -566,6 +590,32 @@ pub fn get_gpu_list() -> Vec<String> {
             gpu
         })
         .collect()
+}
+
+/// Reads display adapter names from Windows registry under Display Class GUID.
+#[cfg(windows)]
+pub fn get_gpu_list() -> Vec<String> {
+    use crate::modules::win_util::ffi;
+    let class_key =
+        "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
+    let subkeys = ffi::reg_enum_subkeys(ffi::HKEY_LOCAL_MACHINE, class_key);
+
+    let mut raw_adapters = Vec::new();
+    for sub in subkeys {
+        if sub.chars().all(|c| c.is_ascii_digit()) {
+            let key = format!("{}\\{}", class_key, sub);
+            if let Some(desc) = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, &key, "DriverDesc") {
+                raw_adapters.push(desc);
+            }
+        }
+    }
+
+    let parsed = parse_windows_gpu_names(&raw_adapters);
+    if !parsed.is_empty() {
+        parsed
+    } else {
+        vec!["Display Adapter".to_string()]
+    }
 }
 
 pub fn get_gpu_info() -> Option<String> {
@@ -784,5 +834,20 @@ mod tests {
         assert_eq!(outputs[0].value, "Intel Iris Xe Graphics");
         assert_eq!(outputs[1].label, "GPU1");
         assert_eq!(outputs[1].value, "NVIDIA GeForce RTX 4070");
+    }
+
+    #[test]
+    fn test_parse_windows_gpu_names() {
+        let raw = vec![
+            "NVIDIA GeForce RTX 4080".to_string(),
+            "Intel(R) UHD Graphics 770".to_string(),
+            "RDPDD Chained DD".to_string(),
+            "Mirage Driver".to_string(),
+            "NVIDIA GeForce RTX 4080".to_string(),
+        ];
+        let parsed = parse_windows_gpu_names(&raw);
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0], "NVIDIA GeForce RTX 4080");
+        assert_eq!(parsed[1], "Intel UHD Graphics 770");
     }
 }

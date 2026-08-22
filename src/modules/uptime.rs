@@ -1,6 +1,8 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
+#[cfg(not(windows))]
 use std::mem::MaybeUninit;
 
 /// Parses total uptime seconds from `/proc/uptime` content.
@@ -38,6 +40,7 @@ pub fn format_uptime(total_seconds: u64) -> String {
 }
 
 /// Reads system uptime from `/proc/uptime` with fallback to `libc::sysinfo`.
+#[cfg(not(windows))]
 pub fn get_uptime() -> Option<u64> {
     // Primary fast path via procfs
     if let Ok(content) = fs::read_to_string("/proc/uptime") {
@@ -58,6 +61,19 @@ pub fn get_uptime() -> Option<u64> {
     }
 
     None
+}
+
+/// Reads system uptime on Windows via GetTickCount64.
+#[cfg(windows)]
+pub fn get_uptime() -> Option<u64> {
+    unsafe {
+        let ms = crate::modules::win_util::ffi::GetTickCount64();
+        if ms > 0 {
+            Some(ms / 1000)
+        } else {
+            None
+        }
+    }
 }
 
 pub struct UptimeCollector;

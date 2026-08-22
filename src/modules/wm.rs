@@ -1,7 +1,9 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
 
+#[cfg(not(windows))]
 const KNOWN_WMS: &[&str] = &[
     "kwin_wayland",
     "kwin_x11",
@@ -29,6 +31,7 @@ const KNOWN_WMS: &[&str] = &[
 ];
 
 /// Probes active Window Manager from running processes, environment, or WSLg.
+#[cfg(not(windows))]
 pub fn detect_wm() -> Option<String> {
     // 1. WSLg environment check: Weston Wayland server provides X11/Wayland bridge on /mnt/wslg
     if (fs::metadata("/mnt/wslg").is_ok() || std::env::var_os("WSL_DISTRO_NAME").is_some())
@@ -106,6 +109,12 @@ pub fn detect_wm() -> Option<String> {
     }
 
     None
+}
+
+/// Returns Desktop Window Manager on Windows.
+#[cfg(windows)]
+pub fn detect_wm() -> Option<String> {
+    Some("Desktop Window Manager (DWM)".to_string())
 }
 
 pub struct WmCollector;

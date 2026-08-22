@@ -1,5 +1,6 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,9 +95,35 @@ pub fn format_memory(info: &MemoryInfo) -> String {
     }
 }
 
+#[cfg(not(windows))]
 pub fn get_memory_info() -> Option<MemoryInfo> {
     if let Ok(content) = fs::read_to_string("/proc/meminfo") {
         return parse_meminfo(&content);
+    }
+    None
+}
+
+#[cfg(windows)]
+pub fn get_memory_info() -> Option<MemoryInfo> {
+    use crate::modules::win_util::ffi;
+    unsafe {
+        let mut status = std::mem::zeroed::<ffi::MEMORYSTATUSEX>();
+        status.dwLength = std::mem::size_of::<ffi::MEMORYSTATUSEX>() as u32;
+        if ffi::GlobalMemoryStatusEx(&mut status) != 0 {
+            let total_kb = status.ullTotalPhys / 1024;
+            let avail_kb = status.ullAvailPhys / 1024;
+            if total_kb > 0 {
+                let used_kb = total_kb.saturating_sub(avail_kb);
+                let percent = ((used_kb as f64 / total_kb as f64) * 100.0)
+                    .round()
+                    .min(100.0) as u64;
+                return Some(MemoryInfo {
+                    total_kb,
+                    used_kb,
+                    percent,
+                });
+            }
+        }
     }
     None
 }
@@ -165,9 +192,42 @@ pub fn parse_swapinfo(content: &str) -> Option<SwapInfo> {
     })
 }
 
+#[cfg(not(windows))]
 pub fn get_swap_info() -> Option<SwapInfo> {
     if let Ok(content) = fs::read_to_string("/proc/meminfo") {
         return parse_swapinfo(&content);
+    }
+    None
+}
+
+#[cfg(windows)]
+pub fn get_swap_info() -> Option<SwapInfo> {
+    use crate::modules::win_util::ffi;
+    unsafe {
+        let mut status = std::mem::zeroed::<ffi::MEMORYSTATUSEX>();
+        status.dwLength = std::mem::size_of::<ffi::MEMORYSTATUSEX>() as u32;
+        if ffi::GlobalMemoryStatusEx(&mut status) != 0 {
+            let total_page_kb = status.ullTotalPageFile / 1024;
+            let total_phys_kb = status.ullTotalPhys / 1024;
+            let avail_page_kb = status.ullAvailPageFile / 1024;
+
+            let swap_total_kb = total_page_kb.saturating_sub(total_phys_kb);
+            if swap_total_kb > 0 {
+                let total_avail_kb = status.ullAvailPhys / 1024;
+                let swap_avail_kb = avail_page_kb.saturating_sub(total_avail_kb);
+                let swap_used_kb = swap_total_kb
+                    .saturating_sub(swap_avail_kb)
+                    .min(swap_total_kb);
+                let percent = ((swap_used_kb as f64 / swap_total_kb as f64) * 100.0)
+                    .round()
+                    .min(100.0) as u64;
+                return Some(SwapInfo {
+                    total_kb: swap_total_kb,
+                    used_kb: swap_used_kb,
+                    percent,
+                });
+            }
+        }
     }
     None
 }

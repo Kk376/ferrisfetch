@@ -1,10 +1,14 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::ffi::CString;
+#[cfg(not(windows))]
 use std::fs;
+#[cfg(not(windows))]
 use std::mem::MaybeUninit;
 use std::time::UNIX_EPOCH;
 
+#[cfg(not(windows))]
 #[repr(C)]
 #[derive(Default)]
 struct StatxTimestamp {
@@ -13,6 +17,7 @@ struct StatxTimestamp {
     __statx_pad1: i32,
 }
 
+#[cfg(not(windows))]
 #[repr(C)]
 #[derive(Default)]
 struct Statx {
@@ -40,8 +45,11 @@ struct Statx {
     __statx_pad2: [u64; 14],
 }
 
+#[cfg(not(windows))]
 const STATX_BTIME: u32 = 0x00000800;
+#[cfg(not(windows))]
 const STATX_MTIME: u32 = 0x00000020;
+#[cfg(not(windows))]
 const STATX_CTIME: u32 = 0x00000040;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +61,7 @@ pub struct InstallInfo {
 /// Direct statx syscall wrapper (Linux >= 4.11).
 /// Direct syscall invocation is required because `std::fs::Metadata::created()` is unsupported
 /// on older kernels/glibc versions and filesystems lacking explicit btime support.
+#[cfg(not(windows))]
 fn get_statx_birth_time(path: &str) -> Option<u64> {
     let c_path = CString::new(path).ok()?;
     let mut statx_buf = MaybeUninit::<Statx>::zeroed();
@@ -80,6 +89,7 @@ fn get_statx_birth_time(path: &str) -> Option<u64> {
     None
 }
 
+#[cfg(not(windows))]
 fn get_metadata_ctime(path: &str) -> Option<u64> {
     let meta = fs::metadata(path).ok()?;
     let created = meta.created().or_else(|_| meta.modified()).ok()?;
@@ -88,6 +98,7 @@ fn get_metadata_ctime(path: &str) -> Option<u64> {
 }
 
 /// Probes OS installation timestamp via filesystem root birth time and installer logs.
+#[cfg(not(windows))]
 pub fn detect_install_timestamp() -> Option<u64> {
     // 1. Filesystem root `/` birth time is the primary installation indicator
     if let Some(ts) = get_statx_birth_time("/") {
@@ -121,48 +132,65 @@ pub fn detect_install_timestamp() -> Option<u64> {
     None
 }
 
+/// Reads OS installation timestamp from Windows registry.
+#[cfg(windows)]
+pub fn detect_install_timestamp() -> Option<u64> {
+    use crate::modules::win_util::ffi;
+    let key = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+    ffi::reg_read_u64(ffi::HKEY_LOCAL_MACHINE, key, "InstallDate")
+}
+
+/// Converts UNIX epoch seconds into (year, month 1-12, day 1-31, hour 0-23, minute 0-59, second 0-59).
+pub fn epoch_to_datetime(epoch_secs: u64) -> (i32, u8, u8, u8, u8, u8) {
+    let secs = epoch_secs % 86400;
+    let hour = (secs / 3600) as u8;
+    let minute = ((secs % 3600) / 60) as u8;
+    let second = (secs % 60) as u8;
+
+    let mut days = (epoch_secs / 86400) as i64;
+    days += 719468;
+    let era = if days >= 0 { days } else { days - 146096 } / 146097;
+    let doe = (days - era * 146097) as u32;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y } as i32;
+    (year, m as u8, d as u8, hour, minute, second)
+}
+
 /// Formats installation timestamp into `DD Mon YYYY, hh:mm AM/PM (X days ago)`
 pub fn format_install_date(timestamp: u64, now_sec: u64) -> String {
-    let time_t = timestamp as i64;
-    let mut tm = MaybeUninit::<libc::tm>::zeroed();
-    let tm_ptr = unsafe { libc::localtime_r(&time_t as *const i64 as *const _, tm.as_mut_ptr()) };
-
-    let date_str = if !tm_ptr.is_null() {
-        let tm = unsafe { tm.assume_init() };
-        let year = tm.tm_year + 1900;
-        let month = match tm.tm_mon {
-            0 => "Jan",
-            1 => "Feb",
-            2 => "Mar",
-            3 => "Apr",
-            4 => "May",
-            5 => "Jun",
-            6 => "Jul",
-            7 => "Aug",
-            8 => "Sep",
-            9 => "Oct",
-            10 => "Nov",
-            _ => "Dec",
-        };
-        let day = tm.tm_mday;
-        let hour = tm.tm_hour;
-        let minute = tm.tm_min;
-        let (h12, ampm) = if hour == 0 {
-            (12, "AM")
-        } else if hour < 12 {
-            (hour, "AM")
-        } else if hour == 12 {
-            (12, "PM")
-        } else {
-            (hour - 12, "PM")
-        };
-        format!(
-            "{:02} {} {}, {:02}:{:02} {}",
-            day, month, year, h12, minute, ampm
-        )
-    } else {
-        format!("{}", timestamp)
+    let (year, month_num, day, hour, minute, _) = epoch_to_datetime(timestamp);
+    let month = match month_num {
+        1 => "Jan",
+        2 => "Feb",
+        3 => "Mar",
+        4 => "Apr",
+        5 => "May",
+        6 => "Jun",
+        7 => "Jul",
+        8 => "Aug",
+        9 => "Sep",
+        10 => "Oct",
+        11 => "Nov",
+        _ => "Dec",
     };
+    let (h12, ampm) = if hour == 0 {
+        (12, "AM")
+    } else if hour < 12 {
+        (hour, "AM")
+    } else if hour == 12 {
+        (12, "PM")
+    } else {
+        (hour - 12, "PM")
+    };
+    let date_str = format!(
+        "{:02} {} {}, {:02}:{:02} {}",
+        day, month, year, h12, minute, ampm
+    );
 
     let diff_sec = now_sec.saturating_sub(timestamp);
     let total_days = diff_sec / 86400;
@@ -240,6 +268,28 @@ mod tests {
         assert!(s.contains("(2 years, 10 days ago)"));
     }
 
+    #[test]
+    fn test_epoch_to_datetime() {
+        // 2026-08-19 11:46:40 UTC
+        let (y, m, d, h, min, s) = epoch_to_datetime(1787140000);
+        assert_eq!(y, 2026);
+        assert_eq!(m, 8);
+        assert_eq!(d, 19);
+        assert_eq!(h, 11);
+        assert_eq!(min, 46);
+        assert_eq!(s, 40);
+
+        // 1970-01-01 00:00:00 UTC
+        let (y, m, d, h, min, s) = epoch_to_datetime(0);
+        assert_eq!(y, 1970);
+        assert_eq!(m, 1);
+        assert_eq!(d, 1);
+        assert_eq!(h, 0);
+        assert_eq!(min, 0);
+        assert_eq!(s, 0);
+    }
+
+    #[cfg(not(windows))]
     #[test]
     fn test_detect_install_timestamp_live() {
         let ts = detect_install_timestamp();

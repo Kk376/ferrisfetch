@@ -1,7 +1,9 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
 
+#[cfg(not(windows))]
 const KNOWN_WMS: &[&str] = &[
     "i3", "bspwm", "awesome", "dwm", "openbox", "xmonad", "qtile", "mutter", "kwin", "xfwm4",
     "compiz", "marco", "sway", "hyprland", "wayfire", "river", "labwc",
@@ -69,6 +71,7 @@ pub fn format_desktop_info(
 }
 
 /// Probes desktop environment version from metadata files or fast version queries.
+#[cfg(not(windows))]
 pub fn detect_de_version(de_name: &str) -> Option<String> {
     let lower = de_name.to_lowercase();
     if lower.contains("gnome") {
@@ -159,6 +162,7 @@ pub fn detect_de_version(de_name: &str) -> Option<String> {
 }
 
 /// Probes the system for active Desktop Environment (DE), Window Manager (WM), and session type.
+#[cfg(not(windows))]
 pub fn detect_desktop() -> Option<String> {
     let mut de = None;
     let mut wm = None;
@@ -226,6 +230,12 @@ pub fn detect_desktop() -> Option<String> {
     let session_type = std::env::var("XDG_SESSION_TYPE").ok();
 
     format_desktop_info(de.as_deref(), wm.as_deref(), session_type.as_deref())
+}
+
+/// Returns Windows Shell on Windows.
+#[cfg(windows)]
+pub fn detect_desktop() -> Option<String> {
+    Some("Windows Explorer".to_string())
 }
 
 pub fn capitalize_first(s: &str) -> String {

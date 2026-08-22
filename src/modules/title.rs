@@ -3,12 +3,19 @@ use crate::modules::kernel::get_uname_info;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 use crate::output::color::RESET;
 use crate::output::logo::match_logo;
+#[cfg(unix)]
 use std::ffi::CStr;
+#[cfg(unix)]
 use std::fs;
 
 /// Retrieves the current username from environment or POSIX passwd database.
 pub fn get_username() -> String {
     if let Ok(user) = std::env::var("USER") {
+        if !user.trim().is_empty() {
+            return user.trim().to_string();
+        }
+    }
+    if let Ok(user) = std::env::var("USERNAME") {
         if !user.trim().is_empty() {
             return user.trim().to_string();
         }
@@ -20,6 +27,7 @@ pub fn get_username() -> String {
     }
 
     // Fallback to POSIX user database entry for effective UID
+    #[cfg(unix)]
     unsafe {
         let uid = libc::geteuid();
         let pw = libc::getpwuid(uid);
@@ -32,7 +40,7 @@ pub fn get_username() -> String {
     "user".to_string()
 }
 
-/// Retrieves the system hostname from uname nodename, /proc, or /etc.
+/// Retrieves the system hostname from uname nodename, environment, /proc, or /etc.
 pub fn get_hostname() -> String {
     // 1. Direct uname nodename field
     if let Some(uname) = get_uname_info() {
@@ -41,19 +49,30 @@ pub fn get_hostname() -> String {
         }
     }
 
-    // 2. Kernel sysctl procfs hostname
-    if let Ok(host) = fs::read_to_string("/proc/sys/kernel/hostname") {
+    // 2. Windows COMPUTERNAME environment variable
+    if let Ok(host) = std::env::var("COMPUTERNAME") {
         let clean = host.trim();
-        if !clean.is_empty() && clean != "(none)" {
+        if !clean.is_empty() {
             return clean.to_string();
         }
     }
 
-    // 3. Static configuration file fallback
-    if let Ok(host) = fs::read_to_string("/etc/hostname") {
-        let clean = host.trim();
-        if !clean.is_empty() && clean != "(none)" {
-            return clean.to_string();
+    // 3. Kernel sysctl procfs hostname
+    #[cfg(unix)]
+    {
+        if let Ok(host) = fs::read_to_string("/proc/sys/kernel/hostname") {
+            let clean = host.trim();
+            if !clean.is_empty() && clean != "(none)" {
+                return clean.to_string();
+            }
+        }
+
+        // 4. Static configuration file fallback
+        if let Ok(host) = fs::read_to_string("/etc/hostname") {
+            let clean = host.trim();
+            if !clean.is_empty() && clean != "(none)" {
+                return clean.to_string();
+            }
         }
     }
 

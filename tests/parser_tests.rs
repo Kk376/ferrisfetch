@@ -390,6 +390,15 @@ fn test_logo_resolution() {
 
     let rhel_fallback = match_logo(None, "alma", &["rhel".to_string()]).unwrap();
     assert_eq!(rhel_fallback.name, "almalinux");
+
+    let win11 = match_logo(None, "windows11", &[]).unwrap();
+    assert_eq!(win11.name, "windows11");
+
+    let win10 = match_logo(None, "windows 10", &[]).unwrap();
+    assert_eq!(win10.name, "windows10");
+
+    let win7 = match_logo(None, "windows 7", &[]).unwrap();
+    assert_eq!(win7.name, "windows7");
 }
 
 #[test]

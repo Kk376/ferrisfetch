@@ -1,6 +1,8 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::fs;
+#[cfg(not(windows))]
 use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,7 +81,55 @@ pub fn parse_os_release(content: &str) -> OsInfo {
     }
 }
 
+/// Formats Windows OS display name according to ProductName, DisplayVersion, and BuildNumber.
+/// Handles Microsoft's build >= 22000 Windows 11 branding mapping.
+pub fn parse_windows_os_info(
+    product_name: &str,
+    display_version: Option<&str>,
+    build_number: Option<&str>,
+) -> OsInfo {
+    let build_num: Option<u32> = build_number.and_then(|b| b.trim().parse().ok());
+    let is_win11 = build_num.map(|b| b >= 22000).unwrap_or(false);
+
+    let mut name = product_name.trim().to_string();
+    if is_win11 && name.contains("Windows 10") {
+        name = name.replace("Windows 10", "Windows 11");
+    }
+
+    let distro_id = if is_win11 || name.contains("Windows 11") {
+        "windows11".to_string()
+    } else if name.contains("Windows 10") {
+        "windows10".to_string()
+    } else if name.contains("Windows 7") {
+        "windows7".to_string()
+    } else {
+        "windows".to_string()
+    };
+
+    let mut display_name = name;
+    if let Some(dv) = display_version {
+        let dv_clean = dv.trim();
+        if !dv_clean.is_empty() && !display_name.contains(dv_clean) {
+            display_name = format!("{} {}", display_name, dv_clean);
+        }
+    }
+
+    if let Some(b) = build_number {
+        let b_clean = b.trim();
+        if !b_clean.is_empty() {
+            display_name = format!("{} (Build {})", display_name, b_clean);
+        }
+    }
+
+    OsInfo {
+        display_name,
+        distro_id,
+        distro_like: Vec::new(),
+    }
+}
+
 /// Detects the operating system using standard and legacy paths.
+#[cfg(not(windows))]
 pub fn detect_os() -> OsInfo {
     // 1. Primary standard os-release files (/usr/lib fallback handles stateless/immutable systems)
     for path in &["/etc/os-release", "/usr/lib/os-release"] {
@@ -152,6 +202,25 @@ pub fn detect_os() -> OsInfo {
     }
 }
 
+/// Detects Windows OS version and build metadata from the system registry.
+#[cfg(windows)]
+pub fn detect_os() -> OsInfo {
+    use crate::modules::win_util::ffi;
+    let key = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+    let product_name = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, key, "ProductName")
+        .unwrap_or_else(|| "Windows".to_string());
+    let display_version = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, key, "DisplayVersion")
+        .or_else(|| ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, key, "ReleaseId"));
+    let build_number = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, key, "CurrentBuildNumber")
+        .or_else(|| ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, key, "CurrentBuild"));
+
+    parse_windows_os_info(
+        &product_name,
+        display_version.as_deref(),
+        build_number.as_deref(),
+    )
+}
+
 pub struct OsCollector;
 
 impl Collector for OsCollector {
@@ -175,6 +244,7 @@ impl Collector for OsCollector {
 }
 
 /// Detects hardware product/host model from sysfs DMI or Open Firmware devicetree.
+#[cfg(not(windows))]
 pub fn detect_host() -> Option<String> {
     // Check DMI product name and version (sysfs /sys/devices/virtual/dmi and /sys/class/dmi)
     let product_name = fs::read_to_string("/sys/devices/virtual/dmi/id/product_name")
@@ -259,6 +329,41 @@ pub fn detect_host() -> Option<String> {
         return Some("Windows Subsystem for Linux (WSL2)".to_string());
     }
 
+    None
+}
+
+/// Detects hardware product/host model from Windows BIOS registry.
+#[cfg(windows)]
+pub fn detect_host() -> Option<String> {
+    use crate::modules::win_util::ffi;
+    let bios_key = "HARDWARE\\DESCRIPTION\\System\\BIOS";
+    let product = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, bios_key, "SystemProductName")
+        .or_else(|| ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, bios_key, "BaseBoardProduct"));
+    let manufacturer =
+        ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, bios_key, "SystemManufacturer").or_else(
+            || ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, bios_key, "BaseBoardManufacturer"),
+        );
+
+    if let Some(prod) = product {
+        let lower = prod.to_lowercase();
+        if !lower.is_empty()
+            && lower != "system product name"
+            && lower != "to be filled by o.e.m."
+            && lower != "default string"
+            && lower != "none"
+        {
+            if let Some(mfg) = manufacturer {
+                let mfg_lower = mfg.to_lowercase();
+                if !mfg_lower.is_empty()
+                    && !lower.starts_with(&mfg_lower)
+                    && mfg_lower != "system manufacturer"
+                {
+                    return Some(format!("{} {}", mfg, prod));
+                }
+            }
+            return Some(prod);
+        }
+    }
     None
 }
 
@@ -353,5 +458,50 @@ ID=custom
         let info = parse_os_release(text);
         assert_eq!(info.display_name, "Debian GNU/Linux 12 (\"Bookworm\")");
         assert_eq!(info.distro_id, "debian");
+    }
+
+    #[test]
+    fn test_parse_windows_os_info_windows_11_upgrade() {
+        // Windows 11 build >= 22000 with legacy "Windows 10 Pro" registry key
+        let info = parse_windows_os_info("Windows 10 Pro", Some("23H2"), Some("22631"));
+        assert_eq!(info.display_name, "Windows 11 Pro 23H2 (Build 22631)");
+        assert_eq!(info.distro_id, "windows11");
+        assert!(info.distro_like.is_empty());
+    }
+
+    #[test]
+    fn test_parse_windows_os_info_windows_10() {
+        // True Windows 10 build < 22000
+        let info = parse_windows_os_info("Windows 10 Home", Some("22H2"), Some("19045"));
+        assert_eq!(info.display_name, "Windows 10 Home 22H2 (Build 19045)");
+        assert_eq!(info.distro_id, "windows10");
+    }
+
+    #[test]
+    fn test_parse_windows_os_info_windows_7() {
+        let info = parse_windows_os_info("Windows 7 Ultimate", Some("SP1"), Some("7601"));
+        assert_eq!(info.display_name, "Windows 7 Ultimate SP1 (Build 7601)");
+        assert_eq!(info.distro_id, "windows7");
+    }
+
+    #[test]
+    fn test_parse_windows_os_info_native_win11() {
+        let info = parse_windows_os_info("Windows 11 Enterprise", Some("24H2"), Some("26100"));
+        assert_eq!(
+            info.display_name,
+            "Windows 11 Enterprise 24H2 (Build 26100)"
+        );
+        assert_eq!(info.distro_id, "windows11");
+    }
+
+    #[test]
+    fn test_parse_windows_os_info_missing_fields() {
+        let info = parse_windows_os_info("Windows 10 Pro", None, Some("22000"));
+        assert_eq!(info.display_name, "Windows 11 Pro (Build 22000)");
+        assert_eq!(info.distro_id, "windows11");
+
+        let info2 = parse_windows_os_info("Windows 10", Some("21H2"), Some("19044"));
+        assert_eq!(info2.display_name, "Windows 10 21H2 (Build 19044)");
+        assert_eq!(info2.distro_id, "windows10");
     }
 }

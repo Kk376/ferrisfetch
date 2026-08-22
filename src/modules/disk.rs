@@ -1,6 +1,8 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
+#[cfg(not(windows))]
 use std::ffi::CString;
+#[cfg(not(windows))]
 use std::mem::MaybeUninit;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,6 +14,7 @@ pub struct DiskUsage {
 }
 
 /// Queries filesystem storage capacity and usage via POSIX statvfs syscall.
+#[cfg(not(windows))]
 #[allow(clippy::unnecessary_cast)]
 pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
     let c_path = CString::new(path).ok()?;
@@ -51,6 +54,45 @@ pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
     }
 }
 
+/// Queries filesystem storage capacity and usage on Windows via GetDiskFreeSpaceExW.
+#[cfg(windows)]
+pub fn get_disk_usage(path: &str) -> Option<DiskUsage> {
+    let path_str = if path.is_empty() || path == "/" {
+        "C:\\".to_string()
+    } else if path.ends_with('\\') || path.ends_with('/') {
+        path.replace('/', "\\")
+    } else {
+        format!("{}\\", path.replace('/', "\\"))
+    };
+    let wide: Vec<u16> = path_str.encode_utf16().chain(std::iter::once(0)).collect();
+
+    unsafe {
+        let mut free_avail: u64 = 0;
+        let mut total: u64 = 0;
+        let mut free_total: u64 = 0;
+        if crate::modules::win_util::ffi::GetDiskFreeSpaceExW(
+            wide.as_ptr(),
+            &mut free_avail,
+            &mut total,
+            &mut free_total,
+        ) != 0
+        {
+            if total == 0 {
+                return None;
+            }
+            let used = total.saturating_sub(free_avail);
+            let percentage = ((used as f64 / total as f64) * 100.0).round().min(100.0) as u8;
+            return Some(DiskUsage {
+                total_bytes: total,
+                used_bytes: used,
+                free_bytes: free_avail,
+                percentage,
+            });
+        }
+    }
+    None
+}
+
 /// Formats disk usage into TiB, GiB, or MiB representation.
 pub fn format_disk_usage(info: &DiskUsage) -> String {
     const TIB: f64 = 1024.0 * 1024.0 * 1024.0 * 1024.0;
@@ -84,6 +126,7 @@ pub fn format_disk_usage(info: &DiskUsage) -> String {
     }
 }
 
+#[cfg(not(windows))]
 const IGNORED_FS_TYPES: &[&str] = &[
     "tmpfs",
     "devtmpfs",
@@ -116,6 +159,7 @@ const IGNORED_FS_TYPES: &[&str] = &[
     "sdcardfs",
 ];
 
+#[cfg(not(windows))]
 const IGNORED_MOUNT_PREFIXES: &[&str] = &[
     "/mnt/wsl",
     "/mnt/wslg",
@@ -164,6 +208,7 @@ pub struct PartitionEntry {
 
 /// Enumerates all real physical/virtual mount partitions from `/proc/mounts`.
 /// Filters virtual kernel filesystems, snap/container overlays, and Android mount points.
+#[cfg(not(windows))]
 pub fn get_all_disks() -> Vec<PartitionEntry> {
     let mut entries = Vec::new();
     let Ok(content) = std::fs::read_to_string("/proc/mounts") else {
@@ -249,6 +294,55 @@ pub fn get_all_disks() -> Vec<PartitionEntry> {
     entries
 }
 
+/// Enumerates all accessible logical drives on Windows.
+#[cfg(windows)]
+pub fn get_all_disks() -> Vec<PartitionEntry> {
+    use crate::modules::win_util::ffi;
+    let mut entries = Vec::new();
+    let drives_mask = unsafe { ffi::GetLogicalDrives() };
+
+    for i in 0..26 {
+        if (drives_mask & (1 << i)) != 0 {
+            let drive_letter = (b'A' + i) as char;
+            let root_path = format!("{}:\\", drive_letter);
+            let wide: Vec<u16> = root_path.encode_utf16().chain(std::iter::once(0)).collect();
+            let drive_type = unsafe { ffi::GetDriveTypeW(wide.as_ptr()) };
+            // DRIVE_REMOVABLE = 2, DRIVE_FIXED = 3
+            if drive_type == 2 || drive_type == 3 {
+                if let Some(usage) = get_disk_usage(&root_path) {
+                    entries.push(PartitionEntry {
+                        mount_point: root_path,
+                        display_name: format!("{}:", drive_letter),
+                        usage,
+                    });
+                }
+            }
+        }
+    }
+
+    if entries.is_empty() {
+        if let Some(usage) = get_disk_usage("C:\\") {
+            entries.push(PartitionEntry {
+                mount_point: "C:\\".to_string(),
+                display_name: "C:".to_string(),
+                usage,
+            });
+        }
+    }
+
+    entries.sort_by(|a, b| {
+        if a.display_name == "C:" {
+            std::cmp::Ordering::Less
+        } else if b.display_name == "C:" {
+            std::cmp::Ordering::Greater
+        } else {
+            a.display_name.cmp(&b.display_name)
+        }
+    });
+
+    entries
+}
+
 pub struct DiskCollector;
 
 impl Collector for DiskCollector {
@@ -257,17 +351,30 @@ impl Collector for DiskCollector {
     }
 
     fn collect(&self, ctx: &FetchContext) -> Option<ModuleOutput> {
-        let usage = get_disk_usage(&ctx.disk_target_path)?;
+        let is_default_root = ctx.disk_target_path == "/";
+        let target = if cfg!(windows) && is_default_root {
+            "C:\\"
+        } else {
+            &ctx.disk_target_path
+        };
+        let usage = get_disk_usage(target)?;
+        let display_label = if cfg!(windows) && is_default_root {
+            "(C:)".to_string()
+        } else {
+            format!("({})", ctx.disk_target_path)
+        };
         Some(ModuleOutput {
             id: ModuleId::Disk,
             label: "Disk0".to_string(),
-            value: format!("(/) {}", format_disk_usage(&usage)),
+            value: format!("{} {}", display_label, format_disk_usage(&usage)),
             custom_rendered: None,
         })
     }
 
     fn collect_multiple(&self, ctx: &FetchContext) -> Vec<ModuleOutput> {
-        if ctx.disk_target_path != "/" {
+        let is_default =
+            ctx.disk_target_path == "/" || (cfg!(windows) && ctx.disk_target_path == "C:\\");
+        if !is_default {
             if let Some(usage) = get_disk_usage(&ctx.disk_target_path) {
                 return vec![ModuleOutput {
                     id: ModuleId::Disk,

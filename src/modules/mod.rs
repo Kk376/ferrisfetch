@@ -18,6 +18,7 @@ pub mod terminal;
 pub mod theme;
 pub mod title;
 pub mod uptime;
+pub mod win_util;
 pub mod wm;
 
 use crate::context::FetchContext;

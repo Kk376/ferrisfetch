@@ -1,17 +1,17 @@
 # FerrisFetch
 
-FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux systems. It queries system metrics directly from virtual filesystems (`/proc`, `/sys`) and standard POSIX interfaces (`libc`) without spawning shell subprocesses.
+FerrisFetch is a fast, lightweight system information fetch tool written in Rust for Linux, macOS, and native Windows systems. It queries system metrics directly from virtual filesystems (`/proc`, `/sys`), Win32 APIs, and standard interfaces without spawning shell subprocesses.
 
 ---
 
-## Latest Changes (v0.5.0)
+## Latest Changes (v0.6.0)
 
-- **System Installation Date Module (`Installed`)**: Probes root filesystem creation timestamp (`stx_btime`) and distribution installer records, formatting as intuitive `DD Mon YYYY, hh:mm AM/PM (X days ago)` (e.g. `Installed: 16 Aug 2026, 02:32 PM (3 days ago)`). Suggested by [@Laynsb](https://github.com/Laynsb).
-- **Universal Terminal Detection Expansion**: Added native detection signatures and version resolution for **Ptyxis** (`$PTYXIS_VERSION`), **Ghostty** (`$GHOSTTY_VERSION`), **GNOME Console** (`kgx`), **BlackBox**, **Contour**, **Rio**, **Yakuake**, **Guake**, **LXTerminal**, **MATE Terminal**, **QTerminal**, **Deepin Terminal**, **Pantheon Terminal**, **Warp**, and **Zellij**.
-- **Desktop Environment Version Resolution**: Appends detected DE versions from metadata files and version queries (e.g. `GNOME 50.1`, `KDE Plasma 6.1`, `XFCE 4.18`, `MATE 1.28`, `Cinnamon 6.0`).
-- **Intel iGPU & Linux GPU Clock Speed**: Probes maximum graphics clock frequency from `/sys/class/drm/card*/gt_max_freq_mhz` and hwmon sysfs (e.g. `GPU0: Intel HD Graphics 620 @ 1.000GHz`).
-- **Wayland Display Refresh Rate**: Added native refresh rate resolution for Wayland compositors via `wlr-randr` and DRM sysfs.
-- **Android / Termux Disk Filtering**: Filtered out Android internal loop mounts and read-only system subsystems (`/apex`, `/bootstrap-apex`, `/data/app`, `/data/user`, `/metadata`, `/product`, `/vendor`, `/system`), preventing internal APEX/app partition spam in Termux.
+- **Native Windows NT Support**: Native Win32 execution with zero external runtime dependencies.
+- **Win32 Probers**: Full support for Windows OS, Kernel, Host, CPU, GPU, Memory, Disks, Battery, Theme, Uptime, and Installation Date.
+- **Windows Package Managers**: Direct counting for **WinGet**, **Scoop**, **Chocolatey**, and **Cargo**.
+- **Windows Shells & Terminals**: Recognition for **PowerShell 7** (`pwsh`), **Windows PowerShell 5.1**, **Command Prompt** (`cmd`), **Nushell**, and **Windows Terminal**.
+- **Windows ASCII Art Logos**: High-resolution ANSI ASCII art for **Windows 11**, **Windows 10**, and **Classic Windows**.
+- **Distribution Channels**: Added packaging manifests for **Scoop** and **WinGet**.
 
 *For complete version history, see [CHANGELOG.md](CHANGELOG.md).*
 
@@ -19,18 +19,19 @@ FerrisFetch is a fast, lightweight system information fetch tool written in Rust
 
 ## Features
 
-- **Direct kernel probing**: Reads `/proc`, `/sys`, and POSIX `libc` calls directly without spawning shell subprocesses.
-- **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`) without network calls or database locks.
+- **Direct OS kernel probing**: Reads `/proc`, `/sys`, POSIX APIs, and Win32 registry/system calls directly without spawning shell subprocesses.
+- **Fast package counts**: Reads local package database files directly (`dpkg/status`, `pacman/local`, `apk`, `flatpak`, `snap`, `winget`, `scoop`, `chocolatey`, `cargo`, `npm`, `pip`) without network calls or locks.
 - **Dynamic layout engine**: Computes column alignment and ANSI visible widths dynamically with automatic vertical fallback on narrow terminals (< 60 columns).
-- **Distro logos & Ferris mascot**: Includes compact ASCII art logos for major Linux distributions (Arch, Debian, Ubuntu, Fedora, Mint, RHEL, Rocky, Alma, EndeavourOS, Manjaro, openSUSE, Alpine, Gentoo, Void, Pop!_OS) and the Ferris mascot.
+- **Distro & OS logos**: Includes compact ASCII art logos for Windows (11, 10, Classic), major Linux distributions (Arch, Debian, Ubuntu, Fedora, Mint, RHEL, Rocky, Alma, EndeavourOS, Manjaro, openSUSE, Alpine, Gentoo, Void, Pop!_OS), and the Ferris mascot.
 - **Resilient fallback design**: Modules degrade gracefully when optional hardware, environment variables, or metadata files are missing.
 
 ---
 
-## Supported Distribution Families
+## Supported Operating Systems
 
-FerrisFetch is built and tested across the following Linux distribution families:
+FerrisFetch is built and tested across:
 
+- **Windows**: Windows 11, Windows 10, Windows Server (native Win32 x86_64)
 - **Debian Family**: Debian, Ubuntu, Linux Mint, Pop!_OS
 - **Red Hat Family**: Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS Stream
 - **Arch Family**: Arch Linux, EndeavourOS, Manjaro
@@ -40,6 +41,18 @@ FerrisFetch is built and tested across the following Linux distribution families
 ---
 
 ## Installation
+
+### Windows (Scoop / WinGet)
+
+- **Scoop**:
+  ```powershell
+  scoop install ferrisfetch
+  ```
+
+- **WinGet**:
+  ```powershell
+  winget install ferrisfetch
+  ```
 
 ### Ubuntu / Linux Mint / Pop!_OS (PPA)
 

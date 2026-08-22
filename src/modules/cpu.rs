@@ -1,6 +1,7 @@
 use crate::context::FetchContext;
 use crate::modules::{Collector, ModuleId, ModuleOutput};
 use std::collections::HashSet;
+#[cfg(unix)]
 use std::fs;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,6 +138,7 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     let cores = if processor_count > 0 {
         processor_count
     } else {
+        #[cfg(unix)]
         unsafe {
             let n = libc::sysconf(libc::_SC_NPROCESSORS_ONLN);
             if n > 0 {
@@ -144,6 +146,10 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
             } else {
                 1
             }
+        }
+        #[cfg(not(unix))]
+        {
+            1
         }
     };
 
@@ -162,7 +168,19 @@ pub fn parse_cpu_info(content: &str) -> Option<CpuInfo> {
     })
 }
 
+/// Formats Windows CPU registry values into a structured CpuInfo.
+pub fn format_windows_cpu_info(model: &str, mhz: Option<u32>, cores: usize) -> CpuInfo {
+    let freq_ghz = mhz.map(|m| m as f64 / 1000.0);
+    CpuInfo {
+        model: model.to_string(),
+        cores: if cores > 0 { cores } else { 1 },
+        sockets: 1,
+        freq_ghz,
+    }
+}
+
 /// Fallback cpufreq sysfs reader.
+#[cfg(not(windows))]
 pub fn get_cpu_freq_ghz() -> Option<f64> {
     for path in &[
         "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
@@ -180,11 +198,43 @@ pub fn get_cpu_freq_ghz() -> Option<f64> {
     None
 }
 
+#[cfg(not(windows))]
 pub fn get_cpu_info() -> Option<CpuInfo> {
     if let Ok(content) = fs::read_to_string("/proc/cpuinfo") {
         return parse_cpu_info(&content);
     }
     None
+}
+
+/// Queries Windows registry for CPU model name, clock speed, and core count.
+#[cfg(windows)]
+pub fn get_cpu_info() -> Option<CpuInfo> {
+    use crate::modules::win_util::ffi;
+    let cpu0_key = "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0";
+    let model = ffi::reg_read_string(ffi::HKEY_LOCAL_MACHINE, cpu0_key, "ProcessorNameString")
+        .unwrap_or_else(|| "Unknown CPU".to_string());
+    let mhz = ffi::reg_read_u32(ffi::HKEY_LOCAL_MACHINE, cpu0_key, "~MHz");
+
+    let subkeys = ffi::reg_enum_subkeys(
+        ffi::HKEY_LOCAL_MACHINE,
+        "HARDWARE\\DESCRIPTION\\System\\CentralProcessor",
+    );
+    let cores = if !subkeys.is_empty() {
+        subkeys.len()
+    } else {
+        std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1)
+    };
+
+    Some(format_windows_cpu_info(&model, mhz, cores))
+}
+
+#[cfg(windows)]
+pub fn get_cpu_freq_ghz() -> Option<f64> {
+    use crate::modules::win_util::ffi;
+    let cpu0_key = "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0";
+    ffi::reg_read_u32(ffi::HKEY_LOCAL_MACHINE, cpu0_key, "~MHz").map(|m| m as f64 / 1000.0)
 }
 
 pub struct CpuCollector;
@@ -290,5 +340,18 @@ physical id	: 1
     fn test_clean_cpu_model_multi_core_tokens() {
         let raw = "AMD EPYC 7763 64-Core Processor";
         assert_eq!(clean_cpu_model(raw), "AMD EPYC 7763");
+    }
+
+    #[test]
+    fn test_format_windows_cpu_info() {
+        let info = format_windows_cpu_info("12th Gen Intel(R) Core(TM) i7-12700K", Some(3600), 20);
+        assert_eq!(info.model, "12th Gen Intel(R) Core(TM) i7-12700K");
+        assert_eq!(info.cores, 20);
+        assert_eq!(info.sockets, 1);
+        assert_eq!(info.freq_ghz, Some(3.6));
+        assert_eq!(
+            clean_cpu_model(&info.model),
+            "12th Gen Intel Core i7-12700K"
+        );
     }
 }

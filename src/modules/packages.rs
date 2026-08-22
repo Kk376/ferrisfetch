@@ -307,6 +307,301 @@ pub fn count_emerge() -> Option<usize> {
     None
 }
 
+/// Counts installed WinGet packages from Packages directory or Links fallback.
+pub fn count_winget_from_dirs(packages_path: &Path, links_path: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(packages_path) {
+        let count = entries
+            .flatten()
+            .filter(|e| {
+                e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+                    && !e.file_name().to_string_lossy().starts_with('.')
+            })
+            .count();
+        if count > 0 {
+            return Some(count);
+        }
+    }
+
+    if let Ok(entries) = fs::read_dir(links_path) {
+        let count = entries
+            .flatten()
+            .filter(|e| !e.file_name().to_string_lossy().starts_with('.'))
+            .count();
+        if count > 0 {
+            return Some(count);
+        }
+    }
+
+    None
+}
+
+/// Counts installed WinGet packages.
+pub fn count_winget() -> Option<usize> {
+    let local_app_data = std::env::var("LOCALAPPDATA")
+        .or_else(|_| std::env::var("USERPROFILE").map(|p| format!("{}\\AppData\\Local", p)))
+        .ok()?;
+    let base = Path::new(&local_app_data);
+    let packages = base.join("Microsoft").join("WinGet").join("Packages");
+    let links = base.join("Microsoft").join("WinGet").join("Links");
+    count_winget_from_dirs(&packages, &links)
+}
+
+/// Counts installed Scoop applications from apps directory, excluding Scoop itself.
+pub fn count_scoop_from_dir(apps_path: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(apps_path) {
+        let count = entries
+            .flatten()
+            .filter(|e| {
+                if let Ok(ft) = e.file_type() {
+                    if ft.is_dir() {
+                        let name = e.file_name();
+                        let s = name.to_string_lossy();
+                        return !s.starts_with('.') && !s.eq_ignore_ascii_case("scoop");
+                    }
+                }
+                false
+            })
+            .count();
+        if count > 0 {
+            return Some(count);
+        }
+    }
+    None
+}
+
+/// Counts installed Scoop applications.
+pub fn count_scoop() -> Option<usize> {
+    if let Ok(scoop_dir) = std::env::var("SCOOP") {
+        if let Some(c) = count_scoop_from_dir(&Path::new(&scoop_dir).join("apps")) {
+            return Some(c);
+        }
+    }
+    let user_profile = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .ok()?;
+    let apps = Path::new(&user_profile).join("scoop").join("apps");
+    count_scoop_from_dir(&apps)
+}
+
+/// Counts installed Chocolatey packages from lib directory.
+pub fn count_choco_from_dir(lib_path: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(lib_path) {
+        let count = entries
+            .flatten()
+            .filter(|e| {
+                if let Ok(ft) = e.file_type() {
+                    if ft.is_dir() {
+                        let name = e.file_name();
+                        let s = name.to_string_lossy();
+                        return !s.starts_with('.');
+                    }
+                }
+                false
+            })
+            .count();
+        if count > 0 {
+            return Some(count);
+        }
+    }
+    None
+}
+
+/// Counts installed Chocolatey packages.
+pub fn count_choco() -> Option<usize> {
+    if let Ok(choco_install) = std::env::var("ChocolateyInstall") {
+        if let Some(c) = count_choco_from_dir(&Path::new(&choco_install).join("lib")) {
+            return Some(c);
+        }
+    }
+    if let Ok(all_users) =
+        std::env::var("ALLUSERSPROFILE").or_else(|_| std::env::var("ProgramData"))
+    {
+        let lib = Path::new(&all_users).join("chocolatey").join("lib");
+        if let Some(c) = count_choco_from_dir(&lib) {
+            return Some(c);
+        }
+    }
+    count_choco_from_dir(Path::new("C:\\ProgramData\\chocolatey\\lib"))
+}
+
+/// Parses `.crates.toml` content and counts installed global binary crates.
+pub fn parse_cargo_crates_toml(content: &str) -> usize {
+    let mut count = 0;
+    let mut in_v_section = false;
+    for line in content.lines() {
+        let line = line.trim();
+        if line.starts_with('[') && line.ends_with(']') {
+            in_v_section = line == "[v1]" || line == "[v2]";
+            continue;
+        }
+        if in_v_section && line.starts_with('"') && line.contains('=') {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// Counts installed global Cargo crates from a `.crates.toml` path.
+pub fn count_cargo_from_path(path: &Path) -> Option<usize> {
+    if let Ok(content) = fs::read_to_string(path) {
+        let count = parse_cargo_crates_toml(&content);
+        if count > 0 {
+            return Some(count);
+        }
+    }
+    None
+}
+
+/// Counts installed global Cargo crates.
+pub fn count_cargo() -> Option<usize> {
+    if let Ok(cargo_home) = std::env::var("CARGO_HOME") {
+        if let Some(c) = count_cargo_from_path(&Path::new(&cargo_home).join(".crates.toml")) {
+            return Some(c);
+        }
+    }
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .ok()?;
+    let crates_path = Path::new(&home).join(".cargo").join(".crates.toml");
+    count_cargo_from_path(&crates_path)
+}
+
+/// Counts installed global npm packages from a `node_modules` directory.
+pub fn count_npm_from_dir(node_modules: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(node_modules) {
+        let mut total = 0;
+        for entry in entries.flatten() {
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_dir() {
+                    let name = entry.file_name();
+                    let s = name.to_string_lossy();
+                    if s.starts_with('@') {
+                        if let Ok(scoped_entries) = fs::read_dir(entry.path()) {
+                            total += scoped_entries
+                                .flatten()
+                                .filter(|e| {
+                                    e.file_type().map(|t| t.is_dir()).unwrap_or(false)
+                                        && !e.file_name().to_string_lossy().starts_with('.')
+                                })
+                                .count();
+                        }
+                    } else if !s.starts_with('.') && s != "npm" && s != "corepack" {
+                        total += 1;
+                    }
+                }
+            }
+        }
+        if total > 0 {
+            return Some(total);
+        }
+    }
+    None
+}
+
+/// Counts installed global npm packages.
+pub fn count_npm() -> Option<usize> {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let win_npm = Path::new(&appdata).join("npm").join("node_modules");
+        if let Some(c) = count_npm_from_dir(&win_npm) {
+            return Some(c);
+        }
+    }
+
+    let standard_paths = [
+        Path::new("/usr/lib/node_modules"),
+        Path::new("/usr/local/lib/node_modules"),
+    ];
+    for p in &standard_paths {
+        if let Some(c) = count_npm_from_dir(p) {
+            return Some(c);
+        }
+    }
+
+    if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        let home_path = Path::new(&home);
+        let user_npm = home_path.join(".npm-global/lib/node_modules");
+        if let Some(c) = count_npm_from_dir(&user_npm) {
+            return Some(c);
+        }
+
+        let nvm_versions = home_path.join(".nvm/versions/node");
+        if let Ok(versions) = fs::read_dir(nvm_versions) {
+            for ver in versions.flatten() {
+                if ver.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    let nvm_modules = ver.path().join("lib").join("node_modules");
+                    if let Some(c) = count_npm_from_dir(&nvm_modules) {
+                        return Some(c);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Counts installed Python packages from a `site-packages` directory.
+pub fn count_pip_from_dir(site_packages: &Path) -> Option<usize> {
+    if let Ok(entries) = fs::read_dir(site_packages) {
+        let count = entries
+            .flatten()
+            .filter(|e| {
+                let name = e.file_name();
+                let s = name.to_string_lossy();
+                (s.ends_with(".dist-info") || s.ends_with(".egg-info")) && !s.starts_with('.')
+            })
+            .count();
+        if count > 0 {
+            return Some(count);
+        }
+    }
+    None
+}
+
+/// Counts installed Python packages across standard site-packages paths.
+pub fn count_pip() -> Option<usize> {
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let py_dir = Path::new(&local_app_data).join("Programs").join("Python");
+        if let Ok(entries) = fs::read_dir(py_dir) {
+            for entry in entries.flatten() {
+                let site_pkg = entry.path().join("Lib").join("site-packages");
+                if let Some(c) = count_pip_from_dir(&site_pkg) {
+                    return Some(c);
+                }
+            }
+        }
+    }
+
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let py_dir = Path::new(&app_data).join("Python");
+        if let Ok(entries) = fs::read_dir(py_dir) {
+            for entry in entries.flatten() {
+                let site_pkg = entry.path().join("site-packages");
+                if let Some(c) = count_pip_from_dir(&site_pkg) {
+                    return Some(c);
+                }
+            }
+        }
+    }
+
+    if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        let py_local = Path::new(&home).join(".local").join("lib");
+        if let Ok(entries) = fs::read_dir(py_local) {
+            for entry in entries.flatten() {
+                let s = entry.file_name().to_string_lossy().to_string();
+                if s.starts_with("python") {
+                    let site_pkg = entry.path().join("site-packages");
+                    if let Some(c) = count_pip_from_dir(&site_pkg) {
+                        return Some(c);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Gathers and formats package counts across all active package managers.
 pub fn get_packages_summary() -> Option<String> {
     let mut parts = Vec::new();
@@ -337,6 +632,24 @@ pub fn get_packages_summary() -> Option<String> {
     }
     if let Some(brew) = count_brew() {
         parts.push(format!("{} (brew)", brew));
+    }
+    if let Some(winget) = count_winget() {
+        parts.push(format!("{} (winget)", winget));
+    }
+    if let Some(scoop) = count_scoop() {
+        parts.push(format!("{} (scoop)", scoop));
+    }
+    if let Some(choco) = count_choco() {
+        parts.push(format!("{} (choco)", choco));
+    }
+    if let Some(cargo) = count_cargo() {
+        parts.push(format!("{} (cargo)", cargo));
+    }
+    if let Some(npm) = count_npm() {
+        parts.push(format!("{} (npm)", npm));
+    }
+    if let Some(pip) = count_pip() {
+        parts.push(format!("{} (pip)", pip));
     }
 
     if !parts.is_empty() {
@@ -497,5 +810,136 @@ Section: libs
             }
         }
         assert_eq!(total, 3);
+    }
+
+    #[test]
+    fn test_count_winget_from_dirs_mock() {
+        let pkgs_tmp = tempfile::tempdir().unwrap();
+        let links_tmp = tempfile::tempdir().unwrap();
+
+        // 1. Initially empty
+        assert_eq!(
+            count_winget_from_dirs(pkgs_tmp.path(), links_tmp.path()),
+            None
+        );
+
+        // 2. Packages dir populated
+        fs::create_dir(pkgs_tmp.path().join("Microsoft.PowerToys_8wekyb3d8bbwe")).unwrap();
+        fs::create_dir(pkgs_tmp.path().join("Git.Git_8wekyb3d8bbwe")).unwrap();
+        fs::create_dir(pkgs_tmp.path().join(".hidden")).unwrap();
+
+        assert_eq!(
+            count_winget_from_dirs(pkgs_tmp.path(), links_tmp.path()),
+            Some(2)
+        );
+
+        // 3. Fallback to Links dir if Packages is empty
+        let empty_pkgs = tempfile::tempdir().unwrap();
+        fs::write(links_tmp.path().join("code.exe"), b"").unwrap();
+        fs::write(links_tmp.path().join("rg.exe"), b"").unwrap();
+        fs::write(links_tmp.path().join(".hidden"), b"").unwrap();
+
+        assert_eq!(
+            count_winget_from_dirs(empty_pkgs.path(), links_tmp.path()),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn test_count_scoop_from_dir_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let apps = temp_dir.path().join("apps");
+        fs::create_dir_all(&apps).unwrap();
+
+        // Scoop itself must be excluded from count
+        fs::create_dir(apps.join("scoop")).unwrap();
+        fs::create_dir(apps.join("7zip")).unwrap();
+        fs::create_dir(apps.join("neovim")).unwrap();
+        fs::create_dir(apps.join("ripgrep")).unwrap();
+        fs::create_dir(apps.join(".hidden")).unwrap();
+        fs::write(apps.join("README.txt"), b"").unwrap();
+
+        assert_eq!(count_scoop_from_dir(&apps), Some(3));
+    }
+
+    #[test]
+    fn test_count_choco_from_dir_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let lib = temp_dir.path().join("lib");
+        fs::create_dir_all(&lib).unwrap();
+
+        fs::create_dir(lib.join("git")).unwrap();
+        fs::create_dir(lib.join("curl")).unwrap();
+        fs::create_dir(lib.join("7zip.install")).unwrap();
+        fs::create_dir(lib.join(".hidden")).unwrap();
+
+        assert_eq!(count_choco_from_dir(&lib), Some(3));
+    }
+
+    #[test]
+    fn test_parse_cargo_crates_toml() {
+        let fixture = r#"
+[v1]
+"bat 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = ["bat.exe"]
+"eza 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)" = ["eza.exe"]
+"ripgrep 14.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = ["rg.exe"]
+
+[other_section]
+"ignored 1.0.0" = ["foo.exe"]
+"#;
+        assert_eq!(parse_cargo_crates_toml(fixture), 3);
+        assert_eq!(parse_cargo_crates_toml(""), 0);
+        assert_eq!(parse_cargo_crates_toml("[v1]\n"), 0);
+    }
+
+    #[test]
+    fn test_count_cargo_from_path_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join(".crates.toml");
+
+        fs::write(
+            &file_path,
+            "[v1]\n\"ferrisfetch 0.5.0 (registry+...)\" = [\"ferrisfetch\"]\n",
+        )
+        .unwrap();
+
+        assert_eq!(count_cargo_from_path(&file_path), Some(1));
+    }
+
+    #[test]
+    fn test_count_npm_from_dir_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let node_modules = temp_dir.path().join("node_modules");
+        fs::create_dir_all(&node_modules).unwrap();
+
+        // Top level packages
+        fs::create_dir(node_modules.join("typescript")).unwrap();
+        fs::create_dir(node_modules.join("eslint")).unwrap();
+        fs::create_dir(node_modules.join("npm")).unwrap(); // excluded
+        fs::create_dir(node_modules.join(".bin")).unwrap(); // excluded
+
+        // Scoped packages
+        let scope = node_modules.join("@angular");
+        fs::create_dir(&scope).unwrap();
+        fs::create_dir(scope.join("cli")).unwrap();
+        fs::create_dir(scope.join("core")).unwrap();
+
+        // typescript (1) + eslint (1) + @angular/cli (1) + @angular/core (1) = 4
+        assert_eq!(count_npm_from_dir(&node_modules), Some(4));
+    }
+
+    #[test]
+    fn test_count_pip_from_dir_mock() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let site_packages = temp_dir.path().join("site-packages");
+        fs::create_dir_all(&site_packages).unwrap();
+
+        fs::create_dir(site_packages.join("requests-2.31.0.dist-info")).unwrap();
+        fs::create_dir(site_packages.join("numpy-1.26.4.dist-info")).unwrap();
+        fs::create_dir(site_packages.join("setuptools-68.0.0.egg-info")).unwrap();
+        fs::create_dir(site_packages.join("requests")).unwrap(); // not dist-info
+        fs::create_dir(site_packages.join("__pycache__")).unwrap();
+
+        assert_eq!(count_pip_from_dir(&site_packages), Some(3));
     }
 }

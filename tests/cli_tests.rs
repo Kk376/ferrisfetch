@@ -174,6 +174,13 @@ fn test_various_logo_overrides() {
         ("fedora", "_____"),
         ("mint", "___________"),
         ("tux", ".--."),
+        ("windows11", "#######  #######"),
+        ("windows10", "+-------"),
+        ("windows7", "_.-;;-._"),
+        ("windows", "#######  #######"),
+        ("win11", "#######  #######"),
+        ("win10", "+-------"),
+        ("win7", "_.-;;-._"),
     ];
 
     for (name, snippet) in logos {
@@ -196,7 +203,10 @@ fn test_cli_version() {
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("ferrisfetch 0.5.0"));
+        .stdout(predicate::str::contains(format!(
+            "ferrisfetch {}",
+            env!("CARGO_PKG_VERSION")
+        )));
 }
 
 #[test]

@@ -292,6 +292,46 @@ pub const ALL_LOGOS: &[Logo] = &[
         primary_color: "\x1b[38;5;39m",
         accent_color: "\x1b[37m",
     },
+    Logo {
+        name: "windows11",
+        raw_lines: &[
+            "#######  #######",
+            "#######  #######",
+            "#######  #######",
+            "",
+            "#######  #######",
+            "#######  #######",
+            "#######  #######",
+        ],
+        primary_color: "\x1b[38;5;39m",
+        accent_color: "\x1b[38;5;45m",
+    },
+    Logo {
+        name: "windows10",
+        raw_lines: &[
+            "      ..  ........",
+            "    .###  |#######",
+            "  .#####  |#######",
+            "  ------  +-------",
+            "  '#####  |#######",
+            "    '###  |#######",
+            "      ''  ''''''''",
+        ],
+        primary_color: "\x1b[38;5;33m",
+        accent_color: "\x1b[38;5;39m",
+    },
+    Logo {
+        name: "windows7",
+        raw_lines: &[
+            "       _.-;;-._",
+            " '-..-'|   ||   |",
+            " '-..-'|_.-''-._|",
+            " '-..-'|   ||   |",
+            " '-..-'|_.-''-._|",
+        ],
+        primary_color: "\x1b[38;5;33m",
+        accent_color: "\x1b[38;5;220m",
+    },
 ];
 
 pub fn get_all_logos() -> &'static [Logo] {
@@ -364,7 +404,43 @@ fn find_logo_by_key(key: &str, logos: &'static [Logo]) -> Option<&'static Logo> 
         "slackware" | "slack" => logos.iter().find(|l| l.name == "slackware"),
         "artix" => logos.iter().find(|l| l.name == "artix"),
         "zorin" | "zorinos" => logos.iter().find(|l| l.name == "zorin"),
-        _ => None,
+        "windows11"
+        | "win11"
+        | "windows 11"
+        | "microsoft windows 11"
+        | "mswindows 11"
+        | "windows"
+        | "microsoft windows"
+        | "mswindows" => logos.iter().find(|l| l.name == "windows11"),
+        "windows10" | "win10" | "windows 10" | "microsoft windows 10" | "mswindows 10" => {
+            logos.iter().find(|l| l.name == "windows10")
+        }
+        "windows7"
+        | "win7"
+        | "windows 7"
+        | "classic_windows"
+        | "classic windows"
+        | "microsoft windows 7"
+        | "mswindows 7"
+        | "windows vista"
+        | "windows xp" => logos.iter().find(|l| l.name == "windows7"),
+        _ => {
+            if normalized.contains("win11") || normalized.contains("windows 11") {
+                logos.iter().find(|l| l.name == "windows11")
+            } else if normalized.contains("win10") || normalized.contains("windows 10") {
+                logos.iter().find(|l| l.name == "windows10")
+            } else if normalized.contains("win7")
+                || normalized.contains("windows 7")
+                || normalized.contains("classic_windows")
+                || normalized.contains("classic windows")
+            {
+                logos.iter().find(|l| l.name == "windows7")
+            } else if normalized.contains("windows") {
+                logos.iter().find(|l| l.name == "windows11")
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -408,5 +484,66 @@ mod tests {
         let logo = match_logo(None, "unknowndistro", &[]);
         assert!(logo.is_some());
         assert_eq!(logo.unwrap().name, "ferris");
+    }
+
+    #[test]
+    fn test_match_logo_windows() {
+        // Windows 11 matching
+        for key in &[
+            "windows11",
+            "win11",
+            "windows 11",
+            "windows",
+            "microsoft windows",
+            "microsoft windows 11",
+            "Windows 11 Pro",
+        ] {
+            let logo = match_logo(Some(key), "unknown", &[]);
+            assert!(logo.is_some(), "Failed to match key '{}'", key);
+            assert_eq!(
+                logo.unwrap().name,
+                "windows11",
+                "Key '{}' matched wrong logo",
+                key
+            );
+        }
+
+        // Windows 10 matching
+        for key in &[
+            "windows10",
+            "win10",
+            "windows 10",
+            "microsoft windows 10",
+            "Windows 10 Enterprise",
+        ] {
+            let logo = match_logo(Some(key), "unknown", &[]);
+            assert!(logo.is_some(), "Failed to match key '{}'", key);
+            assert_eq!(
+                logo.unwrap().name,
+                "windows10",
+                "Key '{}' matched wrong logo",
+                key
+            );
+        }
+
+        // Windows 7 matching
+        for key in &[
+            "windows7",
+            "win7",
+            "windows 7",
+            "classic_windows",
+            "classic windows",
+            "microsoft windows 7",
+            "windows xp",
+        ] {
+            let logo = match_logo(Some(key), "unknown", &[]);
+            assert!(logo.is_some(), "Failed to match key '{}'", key);
+            assert_eq!(
+                logo.unwrap().name,
+                "windows7",
+                "Key '{}' matched wrong logo",
+                key
+            );
+        }
     }
 }
