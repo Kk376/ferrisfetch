@@ -1,8 +1,9 @@
-ferrisfetch (0.5.0.4-1~ppa1~noble) noble; urgency=medium
+ferrisfetch (0.5.0.5-1~ppa1~noble) noble; urgency=medium
 
-  * Fix Cargo vendor checksum validation for dh_clean *.orig pruning.
+  * Patch vendored crates for Ubuntu 24.04 toolchain (strip edition 2024 and rust-version constraints).
+  * Reset .cargo-checksum.json file hashes to avoid dh_clean *.orig pruning failures.
 
- -- Kushagra Kumar <kkushagra86@gmail.com>  Fri, 21 Aug 2026 04:20:00 +0000
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 22 Aug 2026 03:20:00 +0000
 
 ferrisfetch (0.4.2-1) unstable; urgency=medium
 
